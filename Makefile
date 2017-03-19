@@ -1,3 +1,6 @@
+CC=clang
+CFLAGS+=-g
+
 all: lexer_tests
 
 
