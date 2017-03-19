@@ -27,8 +27,10 @@
  * SUCH DAMAGE.
  */
 
+#include <ctype.h>
 #include <err.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lexer.h"
 #include "token.h"
@@ -47,6 +49,64 @@ lexer_init(char *input)
 	return l;
 }
 
+#define is_character(c) isalnum(c) || c == '_'
+
+static char *
+read_identifier(lexer *l)
+{
+	size_t position = l->current_offset;
+	while (is_character(l->input[l->current_offset])) {
+		l->current_offset++;
+	}
+	size_t nchars = l->current_offset - position;
+	char *identifier = malloc(nchars + 1);
+	memcpy(identifier, l->input + position, nchars); 
+	identifier[nchars] = 0;
+	l->read_offset = l->current_offset + 1;
+	l->ch = l->input[l->current_offset];
+	return identifier;
+}
+
+static void
+read_char(lexer *l)
+{
+	if (l->ch) {
+		l->current_offset = l->read_offset;
+		l->read_offset++;
+		l->ch = l->input[l->current_offset];
+	}
+}
+
+static int
+is_number(char *literal)
+{
+	while (1) {
+		char c = *literal;
+		if (!c)
+			break;
+
+		if (!isdigit(c))
+			return 0;
+		literal++;
+	}
+	return 1;
+}
+
+static token_type
+get_token_type(char *literal)
+{
+	if (strcmp(literal, "let") == 0)
+		return LET;
+
+	if (strcmp(literal, "fn") == 0)
+		return FUNCTION;
+
+	if (is_number(literal))
+		return INT;
+
+	return IDENT;
+}
+
 token *
 lexer_next_token(lexer *l)
 {
@@ -58,50 +118,64 @@ lexer_next_token(lexer *l)
 	case '=':	
 		t->literal = "=";
 		t->type = ASSIGN;
+		read_char(l);
 		break;
 	case '+':
 		t->literal = "+";
 		t->type = PLUS;
+		read_char(l);
 		break;
 	case ',':
 		t->literal = ",";
 		t->type = COMMA;
+		read_char(l);
 		break;
 	case ';':
 		t->literal = ";";
 		t->type = SEMICOLON;
+		read_char(l);
 		break;
 	case '(':
 		t->literal = "(";
 		t->type = LPAREN;
+		read_char(l);
 		break;
 	case ')':
 		t->literal = ")";
 		t->type = RPAREN;
+		read_char(l);
 		break;
 	case '{':
 		t->literal = "{";
 		t->type = LBRACE;
+		read_char(l);
 		break;
 	case '}':
 		t->literal = "}";
 		t->type = RBRACE;
+		read_char(l);
 		break;
 	case 0:
 		t->literal = "";
 		t->type = END_OF_FILE;
 		break;
+	case ' ':
+	case '\t':
+	case '\n':
+		read_char(l);
+		return lexer_next_token(l);
 	default:
-		t->literal = NULL;
-		t->type = ILLEGAL;
+		if (is_character(*(l->input))) {
+			t->literal = read_identifier(l);
+			t->type = get_token_type(t->literal);
+		} else {
+			t->literal = NULL;
+			t->type = ILLEGAL;
+			read_char(l);
+	}
 		break;
 	}
 
-	if (l->ch) {
-		l->current_offset = l->read_offset;
-		l->read_offset++;
-		l->ch = l->input[l->current_offset];
-	}
 	return t;
 }
 

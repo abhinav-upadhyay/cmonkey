@@ -37,28 +37,66 @@
 int
 main(int argc, char **argv)
 {
-	const char *input = "=+(){},;";
+	const char *input = "let five = 5; \n"\
+						 "let ten = 10;"\
+						 "\n"\
+						 "\n"\
+						 "let add = fn(x, y) {\n"\
+						 "	x + y;\n"\
+						 "};\n"\
+						 "\n"\
+						 "let result = add(five, ten);";
+	printf("%s\n", input);
+
 	token tests[] = {
+		{ LET, "let"},
+		{ IDENT, "five"},
 		{ ASSIGN, "="},
-		{ PLUS, "+"},
-		{ LPAREN, "("},
-		{ RPAREN, ")"},
-		{ LBRACE, "{"},
-		{ RBRACE, "}"},
-		{ COMMA, ","},
-		{ SEMICOLON, ";"}
+		{ INT, "5"},
+		{ SEMICOLON, ";"},
+		{ LET, "let"},
+		{ IDENT, "ten"},
+		{ ASSIGN, "="},
+		{ INT, "10" },
+		{ SEMICOLON, ";" },
+		{ LET, "let" },
+		{ IDENT, "add" },
+		{ ASSIGN, "=" },
+		{ FUNCTION, "fn" },
+		{ LPAREN, "(" },
+		{ IDENT, "x" },
+		{ COMMA, "," },
+		{ IDENT, "y" },
+		{ RPAREN, ")" },
+		{ LBRACE, "{" },
+		{ IDENT, "x" },
+		{ PLUS, "+" },
+		{ IDENT, "y" },
+		{ SEMICOLON, ";" },
+		{ RBRACE, "}" },
+		{ SEMICOLON, ";" },
+		{ LET, "let" },
+		{ IDENT, "result" },
+		{ ASSIGN, "=" },
+		{ IDENT, "add" },
+		{ LPAREN, "(" },
+		{ IDENT, "five" },
+		{ COMMA, "," },
+		{ IDENT, "ten" },
+		{ RPAREN, ")" },
+		{ SEMICOLON, ";" },
+		{ END_OF_FILE, "" }
+
 	};
 
 	lexer *l = lexer_init((char *) input);
 	int i = 0;
 	token *t;
-	while ((t = lexer_next_token(l)) != NULL) {
-		if (t->type == END_OF_FILE)
-			break;
+	for (i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
+		t = lexer_next_token(l);
 		assert (t->type == tests[i].type);
 		assert(strcmp(t->literal, tests[i].literal) == 0);
 		printf("Test %d passed\n", i);
-		i++;
 	}
 	return 0;
 }
