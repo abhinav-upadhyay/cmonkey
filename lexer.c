@@ -101,6 +101,21 @@ get_token_type(char *literal)
 	if (strcmp(literal, "fn") == 0)
 		return FUNCTION;
 
+	if (strcmp(literal, "if") == 0)
+		return IF;
+
+	if (strcmp(literal, "else") == 0)
+		return ELSE;
+
+	if (strcmp(literal, "return") == 0)
+		return RETURN;
+
+	if (strcmp(literal, "true") == 0)
+		return TRUE;
+
+	if (strcmp(literal, "false") == 0)
+		return FALSE;
+
 	if (is_number(literal))
 		return INT;
 
@@ -116,6 +131,13 @@ lexer_next_token(lexer *l)
 
 	switch (l->ch) {
 	case '=':	
+		if (l->input[l->read_offset] == '=') {
+			t->literal = "==";
+			t->type = EQ;
+			read_char(l);
+			read_char(l);
+			break;
+		}
 		t->literal = "=";
 		t->type = ASSIGN;
 		read_char(l);
@@ -156,6 +178,13 @@ lexer_next_token(lexer *l)
 		read_char(l);
 		break;
 	case '!':
+		if (l->input[l->read_offset] == '=') {
+			t->literal = "!=";
+			t->type = NOT_EQ;
+			read_char(l);
+			read_char(l);
+			break;
+		}
 		t->literal = "!";
 		t->type = BANG;
 		read_char(l);

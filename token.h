@@ -47,6 +47,8 @@ typedef enum token_type {
 	ASTERISK,
 	LT,
 	GT,
+	EQ,
+	NOT_EQ,
 
 	//delimiters
 	COMMA,
@@ -58,7 +60,12 @@ typedef enum token_type {
 
 	//keywords
 	FUNCTION,
-	LET
+	LET,
+	IF,
+	ELSE,
+	RETURN,
+	TRUE,
+	FALSE
 } token_type;
 
 typedef struct {

@@ -47,7 +47,16 @@ main(int argc, char **argv)
 						 "\n"\
 						 "let result = add(five, ten);\n"\
 						 "!-/*5;\n"\
-						 "5 < 10 > 5;";
+						 "5 < 10 > 5;\n"\
+						 "if (5 < 10 ) {\n"\
+						 "	return true;\n"\
+						 "} else {\n"\
+						 "	return false;\n"\
+						 "}\n"\
+						 "\n"\
+						 "10 == 10;\n"\
+						 "10 != 9;\n";
+
 	printf("%s\n", input);
 
 	token tests[] = {
@@ -98,6 +107,31 @@ main(int argc, char **argv)
 		{ INT, "10" },
 		{ GT, ">" },
 		{ INT, "5" },
+		{ SEMICOLON, ";" },
+		{ IF, "if" },
+		{ LPAREN, "(" },
+		{ INT, "5" },
+		{ LT, "<" },
+		{ INT, "10" },
+		{ RPAREN, ")" },
+		{ LBRACE, "{" },
+		{ RETURN, "return" },
+		{ TRUE, "true" },
+		{ SEMICOLON, ";" },
+		{ RBRACE, "}" },
+		{ ELSE, "else" },
+		{ LBRACE, "{" },
+		{ RETURN, "return" },
+		{ FALSE, "false" },
+		{ SEMICOLON, ";" },
+		{ RBRACE, "}" },
+		{ INT, "10" },
+		{ EQ, "==" },
+		{ INT, "10" },
+		{ SEMICOLON, ";" },
+		{ INT, "10" },
+		{ NOT_EQ, "!=" },
+		{ INT, "9" },
 		{ SEMICOLON, ";" },
 		{ END_OF_FILE, "" }
 
