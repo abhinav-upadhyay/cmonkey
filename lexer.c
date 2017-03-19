@@ -237,4 +237,3 @@ lexer_next_token(lexer *l)
 
 	return t;
 }
-
