@@ -1,0 +1,5 @@
+lexer_tests
+*.o
+*.core
+*.swp
+*.tmp
