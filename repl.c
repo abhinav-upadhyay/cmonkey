@@ -48,8 +48,8 @@ main(int argc, char **argv)
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
 		l = lexer_init(line);
 		for (tok = lexer_next_token(l);
-			tok->type != END_OF_FILE;
-			tok = lexer_next_token(l)) {
+				tok->type != END_OF_FILE;
+				tok = lexer_next_token(l)) {
 			printf("{Type: %s Literal: %s}\n", get_token_name(tok), tok->literal);
 			token_free(tok);
 		}
