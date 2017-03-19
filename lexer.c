@@ -155,6 +155,36 @@ lexer_next_token(lexer *l)
 		t->type = RBRACE;
 		read_char(l);
 		break;
+	case '!':
+		t->literal = "!";
+		t->type = BANG;
+		read_char(l);
+		break;
+	case '-':
+		t->literal = "-";
+		t->type = MINUS;
+		read_char(l);
+		break;
+	case '/':
+		t->literal = "/";
+		t->type = SLASH;
+		read_char(l);
+		break;
+	case '*':
+		t->literal = "*";
+		t->type = ASTERISK;
+		read_char(l);
+		break;
+	case '<':
+		t->literal = "<";
+		t->type = LT;
+		read_char(l);
+		break;
+	case '>':
+		t->literal = ">";
+		t->type = GT;
+		read_char(l);
+		break;
 	case 0:
 		t->literal = "";
 		t->type = END_OF_FILE;

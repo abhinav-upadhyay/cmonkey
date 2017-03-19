@@ -45,7 +45,9 @@ main(int argc, char **argv)
 						 "	x + y;\n"\
 						 "};\n"\
 						 "\n"\
-						 "let result = add(five, ten);";
+						 "let result = add(five, ten);\n"\
+						 "!-/*5;\n"\
+						 "5 < 10 > 5;";
 	printf("%s\n", input);
 
 	token tests[] = {
@@ -84,6 +86,18 @@ main(int argc, char **argv)
 		{ COMMA, "," },
 		{ IDENT, "ten" },
 		{ RPAREN, ")" },
+		{ SEMICOLON, ";" },
+		{ BANG, "!" },
+		{ MINUS, "-" },
+		{ SLASH, "/" },
+		{ ASTERISK, "*" },
+		{ INT, "5" },
+		{ SEMICOLON, ";"},
+		{ INT, "5" },
+		{ LT, "<" },
+		{ INT, "10" },
+		{ GT, ">" },
+		{ INT, "5" },
 		{ SEMICOLON, ";" },
 		{ END_OF_FILE, "" }
 

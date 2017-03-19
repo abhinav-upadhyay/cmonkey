@@ -41,6 +41,12 @@ typedef enum token_type {
 	//operators
 	ASSIGN,
 	PLUS,
+	MINUS,
+	BANG,
+	SLASH,
+	ASTERISK,
+	LT,
+	GT,
 
 	//delimiters
 	COMMA,
