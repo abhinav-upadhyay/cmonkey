@@ -42,7 +42,10 @@ lexer_init(char *input)
 	if (l == NULL)
 		err(EXIT_FAILURE, "malloc failed");
 
-	l->input = input;
+	l->input = strdup(input);
+	if (l->input == NULL)
+		err(EXIT_FAILURE, "strdup failed");
+
 	l->current_offset = 0;
 	l->read_offset = 1;
 	l->ch = input[0];
@@ -77,49 +80,11 @@ read_char(lexer *l)
 	}
 }
 
-static int
-is_number(char *literal)
+static void
+eat_whitespace(lexer *l)
 {
-	while (1) {
-		char c = *literal;
-		if (!c)
-			break;
-
-		if (!isdigit(c))
-			return 0;
-		literal++;
-	}
-	return 1;
-}
-
-static token_type
-get_token_type(char *literal)
-{
-	if (strcmp(literal, "let") == 0)
-		return LET;
-
-	if (strcmp(literal, "fn") == 0)
-		return FUNCTION;
-
-	if (strcmp(literal, "if") == 0)
-		return IF;
-
-	if (strcmp(literal, "else") == 0)
-		return ELSE;
-
-	if (strcmp(literal, "return") == 0)
-		return RETURN;
-
-	if (strcmp(literal, "true") == 0)
-		return TRUE;
-
-	if (strcmp(literal, "false") == 0)
-		return FALSE;
-
-	if (is_number(literal))
-		return INT;
-
-	return IDENT;
+	while (l->ch && (l->ch == ' ' || l->ch == '\n' || l->ch == '\r' || l->ch == '\t'))
+		read_char(l);
 }
 
 token *
@@ -128,6 +93,8 @@ lexer_next_token(lexer *l)
 	token *t = malloc(sizeof(*t));
 	if (t == NULL)
 		err(EXIT_FAILURE, "malloc failed");
+
+	eat_whitespace(l);
 
 	switch (l->ch) {
 	case '=':	
@@ -218,11 +185,6 @@ lexer_next_token(lexer *l)
 		t->literal = "";
 		t->type = END_OF_FILE;
 		break;
-	case ' ':
-	case '\t':
-	case '\n':
-		read_char(l);
-		return lexer_next_token(l);
 	default:
 		if (is_character(*(l->input))) {
 			t->literal = read_identifier(l);
@@ -236,4 +198,11 @@ lexer_next_token(lexer *l)
 	}
 
 	return t;
+}
+
+void
+lexer_free(lexer *l)
+{
+	free(l->input);
+	free(l);
 }

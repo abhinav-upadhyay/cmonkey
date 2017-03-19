@@ -68,7 +68,7 @@ typedef enum token_type {
 	FALSE
 } token_type;
 
-const char *token_names[] = {
+static const char *token_names[] = {
 	"ILLEGAL",
 	"END_OF_FILE",
 
@@ -106,13 +106,13 @@ const char *token_names[] = {
 	"FALSE"
 };
 
+#define get_token_name(tok) token_names[tok->type]
+
 typedef struct {
 	token_type type;
 	char *literal;
 } token;
 
+void token_free(token *);
+token_type get_token_type(char *);
 #endif
-
-
-
-

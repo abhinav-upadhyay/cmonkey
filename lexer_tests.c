@@ -145,6 +145,8 @@ main(int argc, char **argv)
 		assert (t->type == tests[i].type);
 		assert(strcmp(t->literal, tests[i].literal) == 0);
 		printf("Test %d passed\n", i);
+		token_free(t);
 	}
+	lexer_free(l);
 	return 0;
 }

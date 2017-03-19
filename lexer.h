@@ -41,5 +41,6 @@ typedef struct {
 
 lexer * lexer_init(char *);
 token * lexer_next_token(lexer *);
+void lexer_free(lexer *);
 
 #endif

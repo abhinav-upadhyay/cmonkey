@@ -27,36 +27,77 @@
  * SUCH DAMAGE.
  */
 
-#include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "token.h"
-#include "lexer.h"
 
-static const char * PROMPT = ">> ";
-
-int
-main(int argc, char **argv)
+void
+token_free(token *tok)
 {
-	ssize_t bytes_read;
-	size_t linesize = 0;
-	char *line = NULL;
-	lexer *l;
-	token *tok;
-
-	printf("%s", PROMPT);
-	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
-		l = lexer_init(line);
-		for (tok = lexer_next_token(l);
-			tok->type != END_OF_FILE;
-			tok = lexer_next_token(l)) {
-			printf("{Type: %s Literal: %s}\n", get_token_name(tok), tok->literal);
-			token_free(tok);
-		}
-		free(line);
-		line = NULL;
-		lexer_free(l);
-		printf("%s", PROMPT);
+	switch (tok->type) {
+	case LET:	
+	case FUNCTION:
+	case IF:
+	case ELSE:
+	case RETURN:
+	case TRUE:
+	case FALSE:
+	case INT:
+	case IDENT:
+		free(tok->literal);
+		break;
+	default:
+		break;
 	}
 
+	free(tok);
 }
+
+static int
+is_number(char *literal)
+{
+	while (1) {
+		char c = *literal;
+		if (!c)
+			break;
+
+		if (!isdigit(c))
+			return 0;
+		literal++;
+	}
+	return 1;
+}
+
+token_type
+get_token_type(char *literal)
+{
+	if (strcmp(literal, "let") == 0)
+		return LET;
+
+	if (strcmp(literal, "fn") == 0)
+		return FUNCTION;
+
+	if (strcmp(literal, "if") == 0)
+		return IF;
+
+	if (strcmp(literal, "else") == 0)
+		return ELSE;
+
+	if (strcmp(literal, "return") == 0)
+		return RETURN;
+
+	if (strcmp(literal, "true") == 0)
+		return TRUE;
+
+	if (strcmp(literal, "false") == 0)
+		return FALSE;
+
+	if (is_number(literal))
+		return INT;
+
+	return IDENT;
+}
+
+
