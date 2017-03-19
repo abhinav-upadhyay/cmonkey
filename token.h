@@ -68,6 +68,44 @@ typedef enum token_type {
 	FALSE
 } token_type;
 
+const char *token_names[] = {
+	"ILLEGAL",
+	"END_OF_FILE",
+
+	// identifiers, literals
+	"IDENT",
+	"INT",
+
+	//operators
+	"ASSIGN",
+	"PLUS",
+	"MINUS",
+	"BANG",
+	"SLASH",
+	"ASTERISK",
+	"LT",
+	"GT",
+	"EQ",
+	"NOT_EQ",
+
+	//delimiters
+	"COMMA",
+	"SEMICOLON",
+	"LPAREN",
+	"RPAREN",
+	"LBRACE",
+	"RBRACE",
+
+	//keywords
+	"FUNCTION",
+	"LET",
+	"IF",
+	"ELSE",
+	"RETURN",
+	"TRUE",
+	"FALSE"
+};
+
 typedef struct {
 	token_type type;
 	char *literal;
