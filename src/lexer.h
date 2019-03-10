@@ -27,92 +27,21 @@
  * SUCH DAMAGE.
  */
 
-#ifndef TOKEN_H
-#define TOKEN_H
+#ifndef LEXER_H
+#define LEXER_H
 
-typedef enum token_type {
-	ILLEGAL,
-	END_OF_FILE,
+#include <stdlib.h>
+#include "token.h"
 
-	// identifiers, literals
-	IDENT,
-	INT,
+typedef struct lexer_t {
+	char *input;
+	size_t current_offset;
+	size_t read_offset;
+	char ch;
+} lexer_t;
 
-	//operators
-	ASSIGN,
-	PLUS,
-	MINUS,
-	BANG,
-	SLASH,
-	ASTERISK,
-	LT,
-	GT,
-	EQ,
-	NOT_EQ,
+lexer_t * lexer_init(const char *);
+token_t * lexer_next_token(lexer_t *);
+void lexer_free(lexer_t *);
 
-	//delimiters
-	COMMA,
-	SEMICOLON,
-	LPAREN,
-	RPAREN,
-	LBRACE,
-	RBRACE,
-
-	//keywords
-	FUNCTION,
-	LET,
-	IF,
-	ELSE,
-	RETURN,
-	TRUE,
-	FALSE
-} token_type;
-
-static const char *token_names[] = {
-	"ILLEGAL",
-	"END_OF_FILE",
-
-	// identifiers, literals
-	"IDENT",
-	"INT",
-
-	//operators
-	"ASSIGN",
-	"PLUS",
-	"MINUS",
-	"BANG",
-	"SLASH",
-	"ASTERISK",
-	"LT",
-	"GT",
-	"EQ",
-	"NOT_EQ",
-
-	//delimiters
-	"COMMA",
-	"SEMICOLON",
-	"LPAREN",
-	"RPAREN",
-	"LBRACE",
-	"RBRACE",
-
-	//keywords
-	"FUNCTION",
-	"LET",
-	"IF",
-	"ELSE",
-	"RETURN",
-	"TRUE",
-	"FALSE"
-};
-
-#define get_token_name(tok) token_names[tok->type]
-
-typedef struct {
-	token_type type;
-	char *literal;
-} token;
-
-void token_free(token *);
-token_type get_token_type(char *);
 #endif

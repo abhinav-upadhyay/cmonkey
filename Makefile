@@ -1,26 +1,35 @@
 CC=clang
-CFLAGS+=-g
+CFLAGS+=-g -D_GNU_SOURCE
+SRCDIR := src
+OBJDIR := obj
+BINDIR := bin
 
-all: lexer_tests repl
+OBJS := $(addprefix $(OBJDIR)/, lexer_tests.o lexer.o token.o repl.o parser_tests.o)
+BINS := $(addprefix $(BINDIR)/, lexer_tests parser_tests repl)
 
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	${COMPILE.c} ${OUTPUT_OPTION}  $<
 
-lexer_tests:	lexer_tests.o lexer.o token.o
-	${CC} ${CFLAGS} -o lexer_tests lexer_tests.o lexer.o token.o
+all: $(OBJS) $(BINS) lexer_tests parser_tests repl
 
-repl:	repl.o lexer.o token.o
-	${CC} ${CFLAGS} -o repl repl.o lexer.o token.o
+$(OBJS): | $(OBJDIR)
 
-lexer_tests.o:	lexer_tests.c
-	${CC}  ${CFLAGS} -c lexer_tests.c
+$(BINS): $(OBJS) | ${BINDIR}
 
-repl.o:	repl.c
-	${CC} ${CFLAGS} -c repl.c
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
 
-lexer.o:	lexer.c
-	${CC} ${CFLAGS} -c lexer.c
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
-token.o:	token.c
-	${CC} ${CFLAGS} -c token.c
+lexer_tests:	${OBJDIR}/lexer_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
+	${CC} ${CFLAGS} -o ${BINDIR}/lexer_tests ${OBJDIR}/lexer_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
+
+parser_tests:	${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o
+	${CC} ${CFLAGS} -o ${BINDIR}/parser_tests ${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o
+
+repl:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
+	${CC} ${CFLAGS} -o ${BINDIR}/repl ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
 
 clean:
-	rm -f lexer_tests repl *.o
+	rm -rf $(BINDIR) $(OBJDIR)

@@ -57,7 +57,7 @@ main(int argc, char **argv)
 			 "10 == 10;\n"\
 			 "10 != 9;\n";
 
-	token tests[] = {
+	token_t tests[] = {
 		{ LET, "let"},
 		{ IDENT, "five"},
 		{ ASSIGN, "="},
@@ -135,9 +135,9 @@ main(int argc, char **argv)
 
 	};
 
-	lexer *l = lexer_init((char *) input);
+	lexer_t *l = lexer_init((char *) input);
 	int i = 0;
-	token *t;
+	token_t *t;
 	for (i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
 		t = lexer_next_token(l);
 		assert (t->type == tests[i].type);

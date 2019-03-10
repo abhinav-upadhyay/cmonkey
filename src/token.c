@@ -34,7 +34,7 @@
 #include "token.h"
 
 void
-token_free(token *tok)
+token_free(token_t *tok)
 {
 	switch (tok->type) {
 	case LET:	

@@ -35,10 +35,10 @@
 #include "lexer.h"
 #include "token.h"
 
-lexer *
-lexer_init(char *input)
+lexer_t *
+lexer_init(const char *input)
 {
-	lexer *l = malloc(sizeof(*l));
+	lexer_t *l = malloc(sizeof(*l));
 	if (l == NULL)
 		err(EXIT_FAILURE, "malloc failed");
 
@@ -55,7 +55,7 @@ lexer_init(char *input)
 #define is_character(c) isalnum(c) || c == '_'
 
 static char *
-read_identifier(lexer *l)
+read_identifier(lexer_t *l)
 {
 	size_t position = l->current_offset;
 	while (is_character(l->input[l->current_offset])) {
@@ -71,7 +71,7 @@ read_identifier(lexer *l)
 }
 
 static void
-read_char(lexer *l)
+read_char(lexer_t *l)
 {
 	if (l->ch) {
 		l->current_offset = l->read_offset;
@@ -81,16 +81,16 @@ read_char(lexer *l)
 }
 
 static void
-eat_whitespace(lexer *l)
+eat_whitespace(lexer_t *l)
 {
 	while (l->ch && (l->ch == ' ' || l->ch == '\n' || l->ch == '\r' || l->ch == '\t'))
 		read_char(l);
 }
 
-token *
-lexer_next_token(lexer *l)
+token_t *
+lexer_next_token(lexer_t *l)
 {
-	token *t = malloc(sizeof(*t));
+	token_t *t = malloc(sizeof(*t));
 	if (t == NULL)
 		err(EXIT_FAILURE, "malloc failed");
 
@@ -201,7 +201,7 @@ lexer_next_token(lexer *l)
 }
 
 void
-lexer_free(lexer *l)
+lexer_free(lexer_t *l)
 {
 	free(l->input);
 	free(l);

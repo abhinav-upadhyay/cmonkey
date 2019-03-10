@@ -41,8 +41,8 @@ main(int argc, char **argv)
 	ssize_t bytes_read;
 	size_t linesize = 0;
 	char *line = NULL;
-	lexer *l;
-	token *tok;
+	lexer_t *l;
+	token_t *tok;
 
 	printf("%s", PROMPT);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
