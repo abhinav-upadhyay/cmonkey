@@ -47,16 +47,30 @@ create_letstatement(parser_t *parser)
     let_stmt = malloc(sizeof(*let_stmt));
     if (let_stmt == NULL)
         return NULL;
+    let_stmt->token = token_copy(parser->cur_tok);
+    if (let_stmt->token == NULL) {
+        free(let_stmt);
+        return NULL;
+    }
     let_stmt->statement.statement_type = LET_STATEMENT;
     let_stmt->statement.node.token_literal = letstatement_token_literal;
     let_stmt->name = NULL;
     let_stmt->value = NULL;
-    let_stmt->token = parser->cur_tok;
     return let_stmt;
 }
 
 void
-free_program(program_t *program)
+parser_free(parser_t *parser)
+{
+    lexer_free(parser->lexer);
+    token_free(parser->cur_tok);
+    token_free(parser->peek_tok);
+    cm_list_free(parser->errors, NULL);
+    free(parser);
+}
+
+void
+program_free(program_t *program)
 {
     if (program == NULL)
         return;
@@ -69,8 +83,6 @@ free_program(program_t *program)
     free(program->statements);
     free(program);
 }
-
-
 
 void *
 create_statement(parser_t *parser, statement_type_t stmt_type)
@@ -97,6 +109,8 @@ free_letstatement(letstatement_t *let_stmt)
     //TODO: free other things also
     if (let_stmt->name)
         free_identifier(let_stmt->name);
+    if (let_stmt->token)
+        token_free(let_stmt->token);
     free(let_stmt);
 }
 
@@ -125,6 +139,7 @@ parser_init(lexer_t *l)
     parser->lexer = l;
     parser->cur_tok = NULL;
     parser->peek_tok = NULL;
+    parser->errors = NULL;
     parser_next_token(parser);
     parser_next_token(parser);
     return parser;
@@ -134,6 +149,8 @@ parser_init(lexer_t *l)
 void
 parser_next_token(parser_t *parser)
 {
+    if (parser->cur_tok)
+        token_free(parser->cur_tok);
     parser->cur_tok = parser->peek_tok;
     parser->peek_tok = lexer_next_token(parser->lexer);
 }
@@ -153,6 +170,23 @@ add_statement(program_t *program, statement_t *stmt)
 
 }
 
+static void
+peek_error(parser_t *parser, token_type tok_type)
+{
+    char *msg = NULL;
+    asprintf(&msg, "expected next token to be %s, got %s instead",
+        get_token_name_from_type(tok_type),
+        get_token_name_from_type(parser->peek_tok->type));
+    if (msg == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    if (parser->errors == NULL) {
+        parser->errors = cm_list_init();
+        if (parser->errors == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+    }
+    cm_list_add(parser->errors, msg);
+}
+
 static int
 expect_peek(parser_t *parser, token_type tok_type)
 {
@@ -160,6 +194,7 @@ expect_peek(parser_t *parser, token_type tok_type)
         parser_next_token(parser);
         return 1;
     }
+    peek_error(parser, tok_type);
     return 0;
 }
 
@@ -178,9 +213,18 @@ parse_identifier(parser_t * parser)
     ident = malloc(sizeof(*ident));
     if (ident == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    ident->token = parser->cur_tok; //TODO: should we copy the token instead?
+    ident->token = token_copy(parser->cur_tok);
+    if (ident->token == NULL) {
+        free(ident);
+        errx(EXIT_FAILURE, "malloc failed");
+    }
     ident->node.token_literal = ident_token_literal;
-    ident->value = parser->cur_tok->literal;
+    ident->value = strdup(parser->cur_tok->literal);
+    if (ident->value == NULL) {
+        token_free(ident->token);
+        free(ident);
+        errx(EXIT_FAILURE, "malloc failed");
+    }
     return ident;
 }
 
@@ -229,7 +273,7 @@ parse_program(parser_t *parser)
         if (stmt != NULL) {
             int status = add_statement(program, stmt);
             if (status != 0) {
-                free_program(program);
+                program_free(program);
                 return NULL;
             }
         }

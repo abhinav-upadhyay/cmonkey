@@ -90,7 +90,8 @@ eat_whitespace(lexer_t *l)
 token_t *
 lexer_next_token(lexer_t *l)
 {
-	token_t *t = malloc(sizeof(*t));
+	token_t *t;
+	t = malloc(sizeof(*t));
 	if (t == NULL)
 		err(EXIT_FAILURE, "malloc failed");
 

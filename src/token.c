@@ -100,4 +100,19 @@ get_token_type(char *literal)
 	return IDENT;
 }
 
+token_t *
+token_copy(token_t *src)
+{
+	token_t *copy = malloc(sizeof(*copy));
+	if (copy == NULL)
+		return NULL;
+	copy->type = src->type;
+	copy->literal = strdup(src->literal);
+	if (copy->literal == NULL) {
+		free(copy);
+		return NULL;
+	}
+	return copy;
+}
+
 

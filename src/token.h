@@ -107,6 +107,7 @@ static const char *token_names[] = {
 };
 
 #define get_token_name(tok) token_names[tok->type]
+#define get_token_name_from_type(tok_type) token_names[tok_type]
 
 typedef struct token_t {
 	token_type type;
@@ -114,5 +115,6 @@ typedef struct token_t {
 } token_t;
 
 void token_free(token_t *);
+token_t *token_copy(token_t *);
 token_type get_token_type(char *);
 #endif
