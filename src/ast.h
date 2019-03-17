@@ -10,11 +10,13 @@ typedef enum node_type_t {
 } node_type_t;
 
 typedef enum statement_type_t {
-    LET_STATEMENT
+    LET_STATEMENT,
+    RETURN_STATEMENT
 } statement_type_t;
 
 static const char *statement_type_values[] = {
     "LET_STATEMENT",
+    "RETURN_STATEMENT"
 };
 
 typedef struct node_t {
@@ -28,7 +30,7 @@ typedef struct statement_t {
 
 typedef struct expression_t {
     node_t node;
-    void (*expression_node) (void);
+    void (*expression_node) (void); // TODO: do we need this?
 } expression_t;
 
 typedef struct program_t {
@@ -46,10 +48,16 @@ typedef struct identifier_t {
 
 typedef struct letstatement_t {
     statement_t statement;
-    struct token_t *token;
+    token_t *token;
     identifier_t *name;
     expression_t *value;
 } letstatement_t;
+
+typedef struct return_statement_t {
+    statement_t statement;
+    token_t *token;
+    expression_t *return_value;
+} return_statement_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
 

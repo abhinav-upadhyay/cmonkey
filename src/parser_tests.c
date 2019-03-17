@@ -5,6 +5,13 @@
 #include "lexer.h"
 #include "test_utils.h"
 
+static void
+print_test_separator_line(void)
+{
+    for (int i = 0; i < 100; i++)
+        printf("-");
+    printf("\n");
+}
 
 static void
 test_parser_errors(void)
@@ -12,6 +19,8 @@ test_parser_errors(void)
     const char *input = "let x 5;\n"\
     "let = 10;\n"\
     "let 838383;\n";
+    print_test_separator_line();
+    printf("Testing parser errors\n");
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
@@ -39,13 +48,14 @@ test_parser_errors(void)
     parser_free(parser);
 }
 
-
-int
-main(int argc, char **argv)
+static void
+test_let_stmt()
 {
     const char *input = "let x = 5;\n"\
     "let y = 10;\n"\
     "let foobar = 838383;\n";
+    print_test_separator_line();
+    printf("Testing let statements\n");
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
@@ -81,9 +91,48 @@ main(int argc, char **argv)
         test(strcmp(name->value, tests[i]) == 0, "let_stmt.name.value not %s, got %s", tests[i], name->value);
         printf("matched identifier\n");
     }
-    test_parser_errors();
-    printf("All tests passed\n");
     program_free(program);
     parser_free(parser);
+}
+
+static void
+test_return_statement()
+{
+    const char *input = "return 5;\n"\
+    "return 10;\n"\
+    "return 9988332;";
+    print_test_separator_line();
+    printf("Testing return statement\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "parse_program failed\n");
+    printf("program parsed successfully\n");
+    test(program->nstatements == 3, "expected program to have 3 statements, found %zu\n",
+        program->nstatements);
+    printf("parsed correct number of statements\n");
+    for (int i = 0; i < program->nstatements; i++) {
+        statement_t *stmt = program->statements[i];
+        node_t stmt_node = stmt->node;
+        char *tok_literal = stmt_node.token_literal(stmt);
+        test(strcmp(tok_literal, "return") == 0, "expected token literal to be \"return\"," \
+            " found \"%s\"\n", tok_literal);
+        printf("matched token literal for return statement\n");
+        test(stmt->statement_type == RETURN_STATEMENT, "expected statement type to be %s," \
+            "found %s\n", get_statement_type_name(RETURN_STATEMENT),
+            get_statement_type_name(stmt->statement_type));
+        printf("matched statement type for return\n");
+    }
+    program_free(program);
+    parser_free(parser);
+}
+
+int
+main(int argc, char **argv)
+{
+    test_let_stmt();
+    test_parser_errors();
+    test_return_statement();
+    printf("All tests passed\n");
 
 }

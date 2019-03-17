@@ -22,10 +22,11 @@ letstatement_token_literal(void *stmt)
     return ls->token->literal;
 }
 
-void
-_statement_node(void)
+static char *
+return_statement_token_literal(void *stmt)
 {
-
+    return_statement_t *ret_stmt = (return_statement_t *) stmt;
+    return ret_stmt->token->literal;
 }
 
 void
@@ -46,17 +47,35 @@ create_letstatement(parser_t *parser)
     letstatement_t *let_stmt;
     let_stmt = malloc(sizeof(*let_stmt));
     if (let_stmt == NULL)
-        return NULL;
+        errx(EXIT_FAILURE, "malloc failed");
     let_stmt->token = token_copy(parser->cur_tok);
     if (let_stmt->token == NULL) {
         free(let_stmt);
-        return NULL;
+        errx(EXIT_FAILURE, "malloc failed");
     }
     let_stmt->statement.statement_type = LET_STATEMENT;
     let_stmt->statement.node.token_literal = letstatement_token_literal;
     let_stmt->name = NULL;
     let_stmt->value = NULL;
     return let_stmt;
+}
+
+static return_statement_t *
+create_return_statement(parser_t *parser)
+{
+    return_statement_t *ret_stmt;
+    ret_stmt = malloc(sizeof(*ret_stmt));
+    if (ret_stmt == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    ret_stmt->token = token_copy(parser->cur_tok);
+    if (ret_stmt->token == NULL) {
+        free(ret_stmt);
+        errx(EXIT_FAILURE, "malloc failed");
+    }
+    ret_stmt->return_value = NULL;
+    ret_stmt->statement.statement_type = RETURN_STATEMENT;
+    ret_stmt->statement.node.token_literal = return_statement_token_literal;
+    return ret_stmt;
 }
 
 void
@@ -90,6 +109,8 @@ create_statement(parser_t *parser, statement_type_t stmt_type)
     switch (stmt_type) {
         case LET_STATEMENT:
             return create_letstatement(parser);
+        case RETURN_STATEMENT:
+            return create_return_statement(parser);
         default:
             return NULL;
     }
@@ -101,6 +122,16 @@ free_identifier(identifier_t *ident)
     token_free(ident->token);
     free(ident->value);
     free(ident);
+}
+
+static void
+free_return_statement(return_statement_t *ret_stmt)
+{
+    if (ret_stmt->return_value)
+        free(ret_stmt->return_value); //TODO: we need expression specific free functions
+    if (ret_stmt->token)
+        token_free(ret_stmt->token);
+    free(ret_stmt);
 }
 
 static void
@@ -121,6 +152,9 @@ free_statement(void *stmt, statement_type_t stmt_type)
     {
         case LET_STATEMENT:
             free_letstatement((letstatement_t *) stmt);
+            break;
+        case RETURN_STATEMENT:
+            free_return_statement((return_statement_t *) stmt);
             break;
         default:
             free(stmt);
@@ -167,7 +201,6 @@ add_statement(program_t *program, statement_t *stmt)
     }
     program->statements[program->nstatements++] = stmt;
     return 0;
-
 }
 
 static void
@@ -253,6 +286,16 @@ parse_letstatement(parser_t *parser)
     return let_stmt;
 }
 
+static return_statement_t *
+parse_return_statement(parser_t *parser)
+{
+    return_statement_t *ret_stmt = (return_statement_t *)
+        create_statement(parser, RETURN_STATEMENT);
+    while (parser->cur_tok->type != SEMICOLON)
+        parser_next_token(parser);
+    return ret_stmt;
+}
+
 program_t *
 parse_program(parser_t *parser)
 {
@@ -285,11 +328,14 @@ parse_program(parser_t *parser)
 statement_t *
 parser_parse_statement(parser_t *parser)
 {
-    letstatement_t *let_stmt;
+    statement_t *stmt;
     switch(parser->cur_tok->type) {
         case LET:
-            let_stmt = parse_letstatement(parser);
-            return (statement_t *) let_stmt;
+            stmt = (statement_t *) parse_letstatement(parser);
+            return stmt;
+        case RETURN:
+            stmt = (statement_t *) parse_return_statement(parser);
+            return stmt;
         default:
             return NULL;
     }
