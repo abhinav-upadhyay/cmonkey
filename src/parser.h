@@ -23,6 +23,9 @@ typedef struct parser_t {
      NULL
  };
 
+ #define infix_fns_map(tok_type) infix_fns[tok_type]
+ #define prefix_fns_map(tok_type) prefix_fns[tok_type]
+
 parser_t * parser_init(lexer_t *);
 void parser_next_token(parser_t *);
 program_t *parse_program(parser_t *);
