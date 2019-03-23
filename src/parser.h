@@ -16,6 +16,7 @@ parser_t * parser_init(lexer_t *);
 void parser_next_token(parser_t *);
 program_t *parse_program(parser_t *);
 statement_t *parser_parse_statement(parser_t *);
+program_t *program_init(void);
 void program_free(program_t *);
 void parser_free(parser_t *);
 void *create_statement(parser_t *, statement_type_t);

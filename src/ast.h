@@ -11,16 +11,19 @@ typedef enum node_type_t {
 
 typedef enum statement_type_t {
     LET_STATEMENT,
-    RETURN_STATEMENT
+    RETURN_STATEMENT,
+    EXPRESSION_STATEMENT
 } statement_type_t;
 
 static const char *statement_type_values[] = {
     "LET_STATEMENT",
-    "RETURN_STATEMENT"
+    "RETURN_STATEMENT",
+    "EXPRESSION_STATEMENT"
 };
 
 typedef struct node_t {
     char * (*token_literal) (void *); // return token literal for the node
+    char * (*string) (void *);
 } node_t;
 
 typedef struct statement_t {
@@ -59,7 +62,12 @@ typedef struct return_statement_t {
     expression_t *return_value;
 } return_statement_t;
 
-#define get_statement_type_name(type) statement_type_values[type]
+typedef struct expression_statement_t {
+    statement_t statement;
+    token_t *token;
+    expression_t *expression;
+} expression_statement_t;
 
+#define get_statement_type_name(type) statement_type_values[type]
 
 #endif

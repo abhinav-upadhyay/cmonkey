@@ -127,12 +127,28 @@ test_return_statement()
     parser_free(parser);
 }
 
+static void
+test_string()
+{
+    const char *input = "let myvar = someVar;";
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    char *program_string = program->node.string(program);
+    test(strcmp(input, program_string) == 0, "Expected program string to be \"%s\"," \
+        "found \"%s\"\n", input, program_string);
+    program_free(program);
+    parse_program(parser);
+    free(program_string);
+}
+
 int
 main(int argc, char **argv)
 {
     test_let_stmt();
     test_parser_errors();
     test_return_statement();
+    test_string();
     printf("All tests passed\n");
 
 }

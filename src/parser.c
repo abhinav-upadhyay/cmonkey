@@ -6,8 +6,9 @@
 #include "parser.h"
 
 static char *
-program_token_literal(program_t *program)
+program_token_literal(void *prog_obj)
 {
+    program_t *program = (program_t *) prog_obj;
     if (program == NULL)
         return "";
     
@@ -29,16 +30,97 @@ return_statement_token_literal(void *stmt)
     return ret_stmt->token->literal;
 }
 
-void
-_expression_node(void)
-{
-    
-}
-
 static char *
 identifier_token_literal(identifier_t *id)
 {
     return id->token->literal;
+}
+
+static char *
+expression_statement_token_literal(void *stmt)
+{
+    expression_statement_t *exp_stmt = (expression_statement_t *) stmt;
+    return exp_stmt->token->literal;
+}
+
+void
+_expression_node(void)
+{
+}
+
+static char *
+letstatement_string(void *stmt)
+{
+    letstatement_t *let_stmt = (letstatement_t *) stmt;
+    char *let_stmt_string = NULL;
+    char *ident_string = let_stmt->name->node.string(let_stmt->name);
+    char *value_string = let_stmt->value? let_stmt->value->node.string(let_stmt->value): strdup("");
+    char *let_string = strdup(let_stmt->token->literal);//let_stmt->statement.node.string(let_stmt);
+    asprintf(&let_stmt_string, "%s %s = %s;", let_string, ident_string, value_string);
+    free(ident_string);
+    free(value_string);
+    free(let_string);
+    if (let_stmt_string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return let_stmt_string;
+}
+
+static char *
+return_statement_string(void *stmt)
+{
+    return_statement_t *ret_stmt = (return_statement_t *) stmt;
+    char *ret_stmt_string = NULL;
+    char *value_string = ret_stmt->return_value? ret_stmt->return_value->node.string(ret_stmt->return_value): strdup("");
+    asprintf(&ret_stmt_string, "%s %s;", ret_stmt->statement.node.string(ret_stmt), value_string);
+    if (ret_stmt_string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return ret_stmt_string;
+}
+
+static char *
+identifier_string(void *id)
+{
+    identifier_t *ident = (identifier_t *) id;
+    char *ident_string = strdup(ident->value);
+    if (ident_string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return ident_string;
+}
+
+static char *
+expression_statement_string(void *stmt)
+{
+    expression_statement_t *exp_stmt = (expression_statement_t *) stmt;
+    if (exp_stmt->expression) {
+        return (exp_stmt->expression->node.string(exp_stmt->expression));
+    }
+    return strdup("");
+}
+
+static char *
+program_string(void *prog_ptr)
+{
+    //TODO: maybe we could optimize this
+    program_t *program = (program_t *) prog_ptr;
+    char *prog_string = NULL;
+    char *temp_string = NULL;
+    for (int i = 0; i < program->nstatements; i++) {
+        statement_t *stmt = program->statements[i];
+        char *stmt_string = stmt->node.string(stmt);
+        if (prog_string != NULL)
+            asprintf(&temp_string, "%s %s", prog_string, stmt_string);
+        else
+            asprintf(&temp_string, "%s", stmt_string);
+        free(stmt_string);
+        if (temp_string == NULL) {
+            if (prog_string != NULL)
+                free(prog_string);
+            errx(EXIT_FAILURE, "malloc failed");
+        }
+        prog_string = temp_string;
+        temp_string = NULL;
+    }
+    return prog_string;
 }
 
 static letstatement_t *
@@ -55,6 +137,7 @@ create_letstatement(parser_t *parser)
     }
     let_stmt->statement.statement_type = LET_STATEMENT;
     let_stmt->statement.node.token_literal = letstatement_token_literal;
+    let_stmt->statement.node.string = letstatement_string;
     let_stmt->name = NULL;
     let_stmt->value = NULL;
     return let_stmt;
@@ -75,7 +158,27 @@ create_return_statement(parser_t *parser)
     ret_stmt->return_value = NULL;
     ret_stmt->statement.statement_type = RETURN_STATEMENT;
     ret_stmt->statement.node.token_literal = return_statement_token_literal;
+    ret_stmt->statement.node.string = return_statement_string;
     return ret_stmt;
+}
+
+static expression_statement_t *
+create_expression_statement(parser_t *parser)
+{
+    expression_statement_t *exp_stmt;
+    exp_stmt = malloc(sizeof(*exp_stmt));
+    if (exp_stmt == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    exp_stmt->token = token_copy(parser->cur_tok);
+    if (exp_stmt->token == NULL) {
+        free(exp_stmt);
+        errx(EXIT_FAILURE, "malloc failed");
+    }
+    exp_stmt->expression = NULL;
+    exp_stmt->statement.statement_type = EXPRESSION_STATEMENT;
+    exp_stmt->statement.node.token_literal = expression_statement_token_literal;
+    exp_stmt->statement.node.string = expression_statement_string;
+    return exp_stmt;
 }
 
 void
@@ -111,6 +214,8 @@ create_statement(parser_t *parser, statement_type_t stmt_type)
             return create_letstatement(parser);
         case RETURN_STATEMENT:
             return create_return_statement(parser);
+        case EXPRESSION_STATEMENT:
+            return create_expression_statement(parser);
         default:
             return NULL;
     }
@@ -145,6 +250,16 @@ free_letstatement(letstatement_t *let_stmt)
     free(let_stmt);
 }
 
+static void
+free_expression_statement(expression_statement_t *exp_stmt)
+{
+    if (exp_stmt->token)
+        token_free(exp_stmt->token);
+    if (exp_stmt->expression)
+        free(exp_stmt->expression); //TODO: we need a proper free function for expressions
+    free(exp_stmt);
+}
+
 void
 free_statement(void *stmt, statement_type_t stmt_type)
 {
@@ -156,12 +271,14 @@ free_statement(void *stmt, statement_type_t stmt_type)
         case RETURN_STATEMENT:
             free_return_statement((return_statement_t *) stmt);
             break;
+        case EXPRESSION_STATEMENT:
+            free_expression_statement((expression_statement_t *) stmt);
+            break;
         default:
             free(stmt);
             break;
     }
 }
-
 
 parser_t *
 parser_init(lexer_t *l)
@@ -194,7 +311,8 @@ add_statement(program_t *program, statement_t *stmt)
 {
     if (program->nstatements == program->array_size) {
         size_t new_size = program->array_size * 2;
-        program->statements = reallocarray(program->statements, new_size, sizeof(*program->statements));
+        program->statements = reallocarray(program->statements,
+            new_size, sizeof(*program->statements));
         if (program->statements == NULL)
             return 1;
         program->array_size = new_size;
@@ -252,6 +370,7 @@ parse_identifier(parser_t * parser)
         errx(EXIT_FAILURE, "malloc failed");
     }
     ident->node.token_literal = ident_token_literal;
+    ident->node.string = identifier_string;
     ident->value = strdup(parser->cur_tok->literal);
     if (ident->value == NULL) {
         token_free(ident->token);
@@ -297,12 +416,14 @@ parse_return_statement(parser_t *parser)
 }
 
 program_t *
-parse_program(parser_t *parser)
+program_init(void)
 {
     program_t *program;
     program = malloc(sizeof(*program));
     if (program == NULL)
         return NULL;
+    program->node.token_literal = program_token_literal;
+    program->node.string = program_string;
     program->array_size = 64;
     program->statements = calloc(64, sizeof(*program->statements));
     if (program->statements == NULL) {
@@ -310,7 +431,16 @@ parse_program(parser_t *parser)
         return NULL;
     }
     program->nstatements = 0;
+    return program;
+}
 
+program_t *
+parse_program(parser_t *parser)
+{
+    
+    program_t *program = program_init();
+    if (program == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
     while (parser->cur_tok->type != END_OF_FILE) {
         statement_t *stmt = parser_parse_statement(parser);
         if (stmt != NULL) {
