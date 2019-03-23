@@ -5,12 +5,23 @@
 #include "lexer.h"
 #include "token.h"
 
+typedef expression_t * (*prefix_parse_fn)(void);
+typedef expression_t * (*infix_parse_fn)(expression_t *);
+
 typedef struct parser_t {
     lexer_t *lexer;
     token_t *cur_tok;
     token_t *peek_tok;
     cm_list *errors;
  } parser_t;
+
+ static prefix_parse_fn prefix_fns [] = {
+     NULL
+ };
+
+ static infix_parse_fn infix_fns [] = {
+     NULL
+ };
 
 parser_t * parser_init(lexer_t *);
 void parser_next_token(parser_t *);
