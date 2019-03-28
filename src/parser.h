@@ -5,9 +5,6 @@
 #include "lexer.h"
 #include "token.h"
 
-typedef expression_t * (*prefix_parse_fn)(void);
-typedef expression_t * (*infix_parse_fn)(expression_t *);
-
 typedef struct parser_t {
     lexer_t *lexer;
     token_t *cur_tok;
@@ -15,16 +12,21 @@ typedef struct parser_t {
     cm_list *errors;
  } parser_t;
 
- static prefix_parse_fn prefix_fns [] = {
-     NULL
- };
+ typedef enum operator_precedence_t {
+     LOWEST,
+     EQUALS,
+     LESSGREATER,
+     SUM,
+     PRODUCT,
+     PREFIX,
+     CALL
+ } operator_precedence_t;
 
- static infix_parse_fn infix_fns [] = {
-     NULL
- };
+typedef expression_t * (*prefix_parse_fn)(parser_t *);
+typedef expression_t * (*infix_parse_fn)(parser_t *, expression_t *);
 
- #define infix_fns_map(tok_type) infix_fns[tok_type]
- #define prefix_fns_map(tok_type) prefix_fns[tok_type]
+//  #define infix_fns_map(tok_type) infix_fns[tok_type]
+//  #define prefix_fns_map(tok_type) prefix_fns[tok_type]
 
 parser_t * parser_init(lexer_t *);
 void parser_next_token(parser_t *);

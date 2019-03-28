@@ -84,13 +84,55 @@ test_let_stmt()
         printf("matched let statement type\n");
         letstatement_t *let_stmt = (letstatement_t *) stmt;
         identifier_t *name = let_stmt->name;
-        char *name_literal = name->node.token_literal(&name->node);
+        char *name_literal = name->expression.node.token_literal(&name->expression.node);
         test(strcmp(name_literal, tests[i]) == 0, \
             "let_stmt.name.token_literal() not %s, got %s", tests[i], name_literal);
         printf("matched token literal\n");
         test(strcmp(name->value, tests[i]) == 0, "let_stmt.name.value not %s, got %s", tests[i], name->value);
         printf("matched identifier\n");
     }
+    program_free(program);
+    parser_free(parser);
+}
+
+static void
+test_identifier_expression()
+{
+    const char *input = "foobar;\n";
+    print_test_separator_line();
+    printf("Testing identifier expression\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "parse_program failed\n");
+    printf("program parsed successfully\n");
+
+    test(program->nstatements == 1, "expected program to have 1statements, found %zu\n",
+        program->nstatements);
+    printf("parsed correct number of statements\n");
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "expected node of type expression statement, found %s",
+        get_statement_type_name(program->statements[0]->statement_type));
+    printf("Found only 1 statement\n");
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == IDENTIFIER_EXPRESSION,
+        "expected expression of type expression, found %s",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    printf("Found an identifier expression\n");
+
+    identifier_t *ident = (identifier_t *) exp_stmt->expression;
+    test(strcmp(ident->value, "foobar") == 0,
+        "expected the identifier value to be foobar, found %s", ident->value);
+    printf("Matched the value of the identifier\n");
+
+    char *ident_token_literal = ident->expression.node.token_literal(ident);
+    test(strcmp(ident_token_literal, "foobar") == 0,
+        "expected identifier token literal to be foobar, found %s",
+        ident_token_literal);
+    printf("Matched the value of the token literal for the identifier\n");
+    printf("Identifier parsing test passed\n");
     program_free(program);
     parser_free(parser);
 }
@@ -148,7 +190,8 @@ main(int argc, char **argv)
     test_let_stmt();
     test_parser_errors();
     test_return_statement();
-    test_string();
+    test_identifier_expression();
+    // test_string();
     printf("All tests passed\n");
 
 }

@@ -36,22 +36,8 @@
 void
 token_free(token_t *tok)
 {
-	switch (tok->type) {
-	case LET:	
-	case FUNCTION:
-	case IF:
-	case ELSE:
-	case RETURN:
-	case TRUE:
-	case FALSE:
-	case INT:
-	case IDENT:
+	if (tok->type != END_OF_FILE)
 		free(tok->literal);
-		break;
-	default:
-		break;
-	}
-
 	free(tok);
 }
 

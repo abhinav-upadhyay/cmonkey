@@ -5,6 +5,69 @@
 #include "lexer.h"
 #include "parser.h"
 
+static expression_t * parse_identifier(parser_t *);
+
+
+ static prefix_parse_fn prefix_fns [] = {
+     NULL, //ILLEGAL
+     NULL, //END OF FILE
+     parse_identifier, //IDENT
+     NULL, //INT
+     NULL, //ASSIGN
+     NULL, //PLUS
+     NULL, //MINUS
+     NULL, //BANG
+     NULL, //SLASH
+     NULL, //ASTERISK
+     NULL, //LT
+     NULL, //GT
+     NULL, //EQ
+     NULL, //NOT_EQ
+     NULL, //COMMA
+     NULL, //SEMICOLON
+     NULL, //LPAREN
+     NULL, //RPAREN
+     NULL, //LBRACE
+     NULL, //RBRACE
+     NULL, //FUNCTION
+     NULL, //LET
+     NULL, //IF
+     NULL, //ELSE
+     NULL, //RETURN
+     NULL, //TRUE
+     NULL, //FALSE
+ };
+
+ static infix_parse_fn infix_fns [] = {
+     NULL, //ILLEGAL
+     NULL, //END OF FILE
+     NULL, //IDENT
+     NULL, //INT
+     NULL, //ASSIGN
+     NULL, //PLUS
+     NULL, //MINUS
+     NULL, //BANG
+     NULL, //SLASH
+     NULL, //ASTERISK
+     NULL, //LT
+     NULL, //GT
+     NULL, //EQ
+     NULL, //NOT_EQ
+     NULL, //COMMA
+     NULL, //SEMICOLON
+     NULL, //LPAREN
+     NULL, //RPAREN
+     NULL, //LBRACE
+     NULL, //RBRACE
+     NULL, //FUNCTION
+     NULL, //LET
+     NULL, //IF
+     NULL, //ELSE
+     NULL, //RETURN
+     NULL, //TRUE
+     NULL, //FALSE
+ };
+
 static char *
 program_token_literal(void *prog_obj)
 {
@@ -53,7 +116,7 @@ letstatement_string(void *stmt)
 {
     letstatement_t *let_stmt = (letstatement_t *) stmt;
     char *let_stmt_string = NULL;
-    char *ident_string = let_stmt->name->node.string(let_stmt->name);
+    char *ident_string = let_stmt->name->expression.node.string(let_stmt->name);
     char *value_string = let_stmt->value? let_stmt->value->node.string(let_stmt->value): strdup("");
     char *let_string = strdup(let_stmt->token->literal);//let_stmt->statement.node.string(let_stmt);
     asprintf(&let_stmt_string, "%s %s = %s;", let_string, ident_string, value_string);
@@ -251,12 +314,25 @@ free_letstatement(letstatement_t *let_stmt)
 }
 
 static void
+free_expression(expression_t *exp)
+{
+    switch (exp->expression_type)
+    {
+        case IDENTIFIER_EXPRESSION:
+            free_identifier((identifier_t *) exp);
+            break;
+        default:
+            break;
+    }
+}
+
+static void
 free_expression_statement(expression_statement_t *exp_stmt)
 {
     if (exp_stmt->token)
         token_free(exp_stmt->token);
     if (exp_stmt->expression)
-        free(exp_stmt->expression); //TODO: we need a proper free function for expressions
+        free_expression(exp_stmt->expression);
     free(exp_stmt);
 }
 
@@ -357,7 +433,7 @@ ident_token_literal(void *node)
 }
 
 //TODO: can we create a create_expression API like we have for statements?
-static identifier_t *
+static expression_t *
 parse_identifier(parser_t * parser)
 {
     identifier_t *ident;
@@ -369,15 +445,16 @@ parse_identifier(parser_t * parser)
         free(ident);
         errx(EXIT_FAILURE, "malloc failed");
     }
-    ident->node.token_literal = ident_token_literal;
-    ident->node.string = identifier_string;
+    ident->expression.node.token_literal = ident_token_literal;
+    ident->expression.expression_type = IDENTIFIER_EXPRESSION;
+    ident->expression.node.string = identifier_string;
     ident->value = strdup(parser->cur_tok->literal);
     if (ident->value == NULL) {
         token_free(ident->token);
         free(ident);
         errx(EXIT_FAILURE, "malloc failed");
     }
-    return ident;
+    return (expression_t *) ident;
 }
 
 static letstatement_t *
@@ -392,7 +469,7 @@ parse_letstatement(parser_t *parser)
         return NULL;
     }
 
-    identifier_t *ident = parse_identifier(parser);
+    identifier_t *ident = (identifier_t *) parse_identifier(parser);
     let_stmt->name = ident;
     if (!expect_peek(parser, ASSIGN)) {
         free_statement(let_stmt, LET_STATEMENT);
@@ -455,6 +532,27 @@ parse_program(parser_t *parser)
     return program;
 }
 
+static expression_t *
+parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
+{
+    prefix_parse_fn prefix_fn = prefix_fns[parser->cur_tok->type];
+    if (prefix_fn == NULL)
+        return NULL;
+    expression_t *left_exp = prefix_fn(parser);
+    return left_exp;
+}
+
+static expression_statement_t *
+parse_expression_statement(parser_t *parser)
+{
+    expression_statement_t *exp_stmt = create_expression_statement(parser);
+    exp_stmt->expression = parser_parse_expression(parser, LOWEST);
+    if (parser->peek_tok->type == SEMICOLON)
+        parser_next_token(parser);
+    return exp_stmt;
+}
+
+
 statement_t *
 parser_parse_statement(parser_t *parser)
 {
@@ -467,7 +565,7 @@ parser_parse_statement(parser_t *parser)
             stmt = (statement_t *) parse_return_statement(parser);
             return stmt;
         default:
-            return NULL;
+            return (statement_t *) parse_expression_statement(parser);
     }
 }
 

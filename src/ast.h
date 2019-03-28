@@ -21,6 +21,14 @@ static const char *statement_type_values[] = {
     "EXPRESSION_STATEMENT"
 };
 
+typedef enum expression_type_t {
+    IDENTIFIER_EXPRESSION
+} expression_type_t;
+
+static const char *expression_type_values[] = {
+    "IDENTIFIER_EXPRESSION"
+};
+
 typedef struct node_t {
     char * (*token_literal) (void *); // return token literal for the node
     char * (*string) (void *);
@@ -33,6 +41,7 @@ typedef struct statement_t {
 
 typedef struct expression_t {
     node_t node;
+    expression_type_t expression_type;
     void (*expression_node) (void); // TODO: do we need this?
 } expression_t;
 
@@ -44,7 +53,7 @@ typedef struct program_t {
 } program_t;
 
 typedef struct identifier_t {
-    node_t node;
+    expression_t expression;
     token_t *token;
     char *value;
 } identifier_t;
@@ -69,5 +78,6 @@ typedef struct expression_statement_t {
 } expression_statement_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
+#define get_expression_type_name(type) expression_type_values[type]
 
 #endif

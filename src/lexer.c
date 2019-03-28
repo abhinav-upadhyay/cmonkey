@@ -100,85 +100,85 @@ lexer_next_token(lexer_t *l)
 	switch (l->ch) {
 	case '=':	
 		if (l->input[l->read_offset] == '=') {
-			t->literal = "==";
+			t->literal = strdup("==");
 			t->type = EQ;
 			read_char(l);
 			read_char(l);
 			break;
 		}
-		t->literal = "=";
+		t->literal = strdup("=");
 		t->type = ASSIGN;
 		read_char(l);
 		break;
 	case '+':
-		t->literal = "+";
+		t->literal = strdup("+");
 		t->type = PLUS;
 		read_char(l);
 		break;
 	case ',':
-		t->literal = ",";
+		t->literal = strdup(",");
 		t->type = COMMA;
 		read_char(l);
 		break;
 	case ';':
-		t->literal = ";";
+		t->literal = strdup(";");
 		t->type = SEMICOLON;
 		read_char(l);
 		break;
 	case '(':
-		t->literal = "(";
+		t->literal = strdup("(");
 		t->type = LPAREN;
 		read_char(l);
 		break;
 	case ')':
-		t->literal = ")";
+		t->literal = strdup(")");
 		t->type = RPAREN;
 		read_char(l);
 		break;
 	case '{':
-		t->literal = "{";
+		t->literal = strdup("{");
 		t->type = LBRACE;
 		read_char(l);
 		break;
 	case '}':
-		t->literal = "}";
+		t->literal = strdup("}");
 		t->type = RBRACE;
 		read_char(l);
 		break;
 	case '!':
 		if (l->input[l->read_offset] == '=') {
-			t->literal = "!=";
+			t->literal = strdup("!=");
 			t->type = NOT_EQ;
 			read_char(l);
 			read_char(l);
 			break;
 		}
-		t->literal = "!";
+		t->literal = strdup("!");
 		t->type = BANG;
 		read_char(l);
 		break;
 	case '-':
-		t->literal = "-";
+		t->literal = strdup("-");
 		t->type = MINUS;
 		read_char(l);
 		break;
 	case '/':
-		t->literal = "/";
+		t->literal = strdup("/");
 		t->type = SLASH;
 		read_char(l);
 		break;
 	case '*':
-		t->literal = "*";
+		t->literal = strdup("*");
 		t->type = ASTERISK;
 		read_char(l);
 		break;
 	case '<':
-		t->literal = "<";
+		t->literal = strdup("<");
 		t->type = LT;
 		read_char(l);
 		break;
 	case '>':
-		t->literal = ">";
+		t->literal = strdup(">");
 		t->type = GT;
 		read_char(l);
 		break;
