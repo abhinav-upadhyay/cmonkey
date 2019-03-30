@@ -1,4 +1,5 @@
 #include <err.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
@@ -416,6 +417,17 @@ add_statement(program_t *program, statement_t *stmt)
 }
 
 static void
+add_parse_error(parser_t *parser, char *errmsg)
+{
+    if (parser->errors == NULL) {
+        parser->errors = cm_list_init();
+        if (parser->errors == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+    }
+    cm_list_add(parser->errors, errmsg);
+}
+
+static void
 peek_error(parser_t *parser, token_type tok_type)
 {
     char *msg = NULL;
@@ -424,12 +436,7 @@ peek_error(parser_t *parser, token_type tok_type)
         get_token_name_from_type(parser->peek_tok->type));
     if (msg == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    if (parser->errors == NULL) {
-        parser->errors = cm_list_init();
-        if (parser->errors == NULL)
-            errx(EXIT_FAILURE, "malloc failed");
-    }
-    cm_list_add(parser->errors, msg);
+    add_parse_error(parser, msg);
 }
 
 static int
@@ -606,7 +613,17 @@ parse_integer_expression(parser_t *parser)
     int_exp->expression.expression_type = INTEGER_EXPRESSION;
     int_exp->expression.expression_node = NULL;
     int_exp->token = token_copy(parser->cur_tok);
-    int_exp->value = atol(parser->cur_tok->literal);
+    errno = 0;
+    char *ep;
+    int_exp->value = strtol(parser->cur_tok->literal, &ep, 10);
+    if (ep == parser->cur_tok->literal || *ep != 0 || errno != 0) {
+        char *errmsg = NULL;
+        asprintf(&errmsg, "could not parse %s as integer", parser->cur_tok->literal);
+        if (errmsg == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+        add_parse_error(parser, errmsg);
+    }
+
     return (expression_t *) int_exp;
 }
 
