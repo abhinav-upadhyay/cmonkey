@@ -5,14 +5,15 @@
 #include "lexer.h"
 #include "parser.h"
 
-static expression_t * parse_identifier(parser_t *);
+static expression_t * parse_identifier_expression(parser_t *);
+static expression_t * parse_integer_expression(parser_t *);
 
 
  static prefix_parse_fn prefix_fns [] = {
      NULL, //ILLEGAL
      NULL, //END OF FILE
-     parse_identifier, //IDENT
-     NULL, //INT
+     parse_identifier_expression, //IDENT
+     parse_integer_expression, //INT
      NULL, //ASSIGN
      NULL, //PLUS
      NULL, //MINUS
@@ -148,6 +149,13 @@ identifier_string(void *id)
     if (ident_string == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     return ident_string;
+}
+
+static char *
+integer_string(void *node)
+{
+    integer_t *int_exp = (integer_t *) node;
+    return long_to_string(int_exp->value);
 }
 
 static char *
@@ -293,6 +301,13 @@ free_identifier(identifier_t *ident)
 }
 
 static void
+free_integer_expression(integer_t *int_exp)
+{
+    token_free(int_exp->token);
+    free(int_exp);
+}
+
+static void
 free_return_statement(return_statement_t *ret_stmt)
 {
     if (ret_stmt->return_value)
@@ -320,6 +335,9 @@ free_expression(expression_t *exp)
     {
         case IDENTIFIER_EXPRESSION:
             free_identifier((identifier_t *) exp);
+            break;
+        case INTEGER_EXPRESSION:
+            free_integer_expression((integer_t *) exp);
             break;
         default:
             break;
@@ -434,7 +452,7 @@ ident_token_literal(void *node)
 
 //TODO: can we create a create_expression API like we have for statements?
 static expression_t *
-parse_identifier(parser_t * parser)
+parse_identifier_expression(parser_t * parser)
 {
     identifier_t *ident;
     ident = malloc(sizeof(*ident));
@@ -469,7 +487,7 @@ parse_letstatement(parser_t *parser)
         return NULL;
     }
 
-    identifier_t *ident = (identifier_t *) parse_identifier(parser);
+    identifier_t *ident = (identifier_t *) parse_identifier_expression(parser);
     let_stmt->name = ident;
     if (!expect_peek(parser, ASSIGN)) {
         free_statement(let_stmt, LET_STATEMENT);
@@ -567,5 +585,28 @@ parser_parse_statement(parser_t *parser)
         default:
             return (statement_t *) parse_expression_statement(parser);
     }
+}
+
+static char *
+int_exp_token_literal(void *node)
+{
+    integer_t *int_exp = (integer_t *) node;
+    return int_exp->token->literal;
+}
+
+expression_t *
+parse_integer_expression(parser_t *parser)
+{
+    integer_t *int_exp;
+    int_exp = malloc(sizeof(*int_exp));
+    if (int_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    int_exp->expression.node.token_literal = int_exp_token_literal;
+    int_exp->expression.node.string = integer_string;
+    int_exp->expression.expression_type = INTEGER_EXPRESSION;
+    int_exp->expression.expression_node = NULL;
+    int_exp->token = token_copy(parser->cur_tok);
+    int_exp->value = atol(parser->cur_tok->literal);
+    return (expression_t *) int_exp;
 }
 

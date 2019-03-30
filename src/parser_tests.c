@@ -138,6 +138,49 @@ test_identifier_expression()
 }
 
 static void
+test_integer_literal_expression()
+{
+    const char *input = "5;\n";
+    print_test_separator_line();
+    printf("Testing integer literal expression\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "parse_program failed\n");
+    printf("program parsed successfully\n");
+
+    test(program->nstatements == 1, "expected program to have 1statements, found %zu\n",
+        program->nstatements);
+    printf("parsed correct number of statements\n");
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "expected node of type expression statement, found %s",
+        get_statement_type_name(program->statements[0]->statement_type));
+    printf("Found only 1 statement\n");
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == INTEGER_EXPRESSION,
+        "expected expression of type expression, found %s",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    printf("Found an integer expression\n");
+
+    integer_t *int_exp = (integer_t *) exp_stmt->expression;
+    test(int_exp->value == 5,
+        "expected the identifier value to be 5, found %ld", int_exp->value);
+    printf("Matched the value of the identifier\n");
+
+    char *_token_literal = int_exp->expression.node.token_literal(int_exp);
+    test(strcmp(_token_literal, "5") == 0,
+        "expected identifier token literal to be 5, found %s",
+        _token_literal);
+    printf("Matched the value of the token literal for the integer expression\n");
+    printf("integer expression parsing test passed\n");
+    program_free(program);
+    parser_free(parser);
+
+}
+
+static void
 test_return_statement()
 {
     const char *input = "return 5;\n"\
@@ -191,6 +234,7 @@ main(int argc, char **argv)
     test_parser_errors();
     test_return_statement();
     test_identifier_expression();
+    test_integer_literal_expression();
     // test_string();
     printf("All tests passed\n");
 

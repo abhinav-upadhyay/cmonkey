@@ -16,4 +16,5 @@ typedef struct cm_list {
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
+char *long_to_string(long);
 #endif
