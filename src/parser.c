@@ -1,14 +1,16 @@
 #include <err.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"
 
+static void free_expression(expression_t *);
 static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
-
+static expression_t * parse_prefix_expression(parser_t *);
 
  static prefix_parse_fn prefix_fns [] = {
      NULL, //ILLEGAL
@@ -17,8 +19,8 @@ static expression_t * parse_integer_expression(parser_t *);
      parse_integer_expression, //INT
      NULL, //ASSIGN
      NULL, //PLUS
-     NULL, //MINUS
-     NULL, //BANG
+     parse_prefix_expression, //MINUS
+     parse_prefix_expression, //BANG
      NULL, //SLASH
      NULL, //ASTERISK
      NULL, //LT
@@ -108,6 +110,13 @@ expression_statement_token_literal(void *stmt)
     return exp_stmt->token->literal;
 }
 
+static char *
+prefix_expression_token_literal(void *exp)
+{
+    prefix_expression_t *prefix_exp = (prefix_expression_t *) exp;
+    return prefix_exp->token->literal;
+}
+
 void
 _expression_node(void)
 {
@@ -157,6 +166,18 @@ integer_string(void *node)
 {
     integer_t *int_exp = (integer_t *) node;
     return long_to_string(int_exp->value);
+}
+
+static char *
+prefix_expression_string(void *node)
+{
+    prefix_expression_t *prefix_exp = (prefix_expression_t *) node;
+    char *str = NULL;
+    char *operand_string = prefix_exp->right->node.string(prefix_exp->right);
+    asprintf(&str, "(%s%s)", prefix_exp->operator, operand_string);
+    if (str == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return str;
 }
 
 static char *
@@ -309,6 +330,15 @@ free_integer_expression(integer_t *int_exp)
 }
 
 static void
+free_prefix_expression(prefix_expression_t *prefix_exp)
+{
+    token_free(prefix_exp->token);
+    free(prefix_exp->operator);
+    free_expression(prefix_exp->right);
+    free(prefix_exp);
+}
+
+static void
 free_return_statement(return_statement_t *ret_stmt)
 {
     if (ret_stmt->return_value)
@@ -339,6 +369,9 @@ free_expression(expression_t *exp)
             break;
         case INTEGER_EXPRESSION:
             free_integer_expression((integer_t *) exp);
+            break;
+        case PREFIX_EXPRESSION:
+            free_prefix_expression((prefix_expression_t *) exp);
             break;
         default:
             break;
@@ -557,12 +590,24 @@ parse_program(parser_t *parser)
     return program;
 }
 
+static void
+handle_no_prefix_fn(parser_t *parser)
+{
+    char *msg = NULL;
+    asprintf(&msg, "no prefix parse function for %s", get_token_name(parser->cur_tok));
+    if (msg == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    add_parse_error(parser, msg);
+}
+
 static expression_t *
 parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
 {
     prefix_parse_fn prefix_fn = prefix_fns[parser->cur_tok->type];
-    if (prefix_fn == NULL)
+    if (prefix_fn == NULL) {
+        handle_no_prefix_fn(parser);
         return NULL;
+    }
     expression_t *left_exp = prefix_fn(parser);
     return left_exp;
 }
@@ -625,5 +670,25 @@ parse_integer_expression(parser_t *parser)
     }
 
     return (expression_t *) int_exp;
+}
+
+expression_t *
+parse_prefix_expression(parser_t *parser)
+{
+    prefix_expression_t *prefix_exp;
+    prefix_exp = malloc(sizeof(*prefix_exp));
+    if (prefix_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    prefix_exp->expression.expression_type = PREFIX_EXPRESSION;
+    prefix_exp->expression.expression_node = NULL;
+    prefix_exp->expression.node.string = prefix_expression_string;
+    prefix_exp->expression.node.token_literal = prefix_expression_token_literal;
+    prefix_exp->token = token_copy(parser->cur_tok);
+    prefix_exp->operator = strdup(parser->cur_tok->literal);
+    if (prefix_exp->operator == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    parser_next_token(parser);
+    prefix_exp->right = parser_parse_expression(parser, PREFIX);
+    return (expression_t *) prefix_exp;
 }
 

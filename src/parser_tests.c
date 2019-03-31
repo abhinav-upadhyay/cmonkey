@@ -1,7 +1,8 @@
 #include <assert.h>
-#include "parser.h"
+#include <stdio.h>
 #include <string.h>
 #include "ast.h"
+#include "parser.h"
 #include "lexer.h"
 #include "test_utils.h"
 
@@ -12,6 +13,45 @@ print_test_separator_line(void)
         printf("-");
     printf("\n");
 }
+
+static void
+check_parser_errors(parser_t *parser)
+{
+    if (parser->errors == NULL)
+        return;
+    cm_list_node *errors_head = parser->errors->head;
+    while (errors_head) {
+        printf("parser error: %s\n", errors_head->data);
+        errors_head = errors_head->next;
+    }
+    exit(1);
+}
+
+static void
+test_integer_literal_value(expression_t *exp, long expected_value)
+{
+    printf("Testing integer literal expression\n");
+    test(exp->expression_type == INTEGER_EXPRESSION,
+        "Expected expression to be of type %s, found %s\n",
+        get_expression_type_name(INTEGER_EXPRESSION),
+        get_expression_type_name(exp->expression_type));
+    printf("The expression is of type INTEGER_EXPRESSION\n");
+    integer_t *int_exp = (integer_t *) exp;
+    test(int_exp->value == expected_value,
+        "Expected value of integer expression to be %ld, found %ld\n",
+        expected_value, int_exp->value);
+    printf("Matched the value of the integer expression\n");
+    char *literal = int_exp->expression.node.string(int_exp);
+    char *expected_literal = long_to_string(expected_value);
+    test(strcmp(literal, expected_literal) == 0,
+        "Expected the token literal for the integer expression to be %s, found %s\n",
+        literal, expected_literal);
+    free(expected_literal);
+    free(literal);
+    printf("Matched the token literal for the integer expression\n");
+    printf("All tests passed for integerl literal\n");
+}
+
 
 static void
 test_parser_errors(void)
@@ -25,8 +65,8 @@ test_parser_errors(void)
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
     test(program != NULL, "parse_program returned NULL\n");
-    test(parser->errors != NULL, "expected to find 3 parsing errors, found 0\n");
-    test(parser->errors->length == 3, "expected to find 3 errors, found %zu errors\n", parser->errors->length);
+    test(parser->errors != NULL, "expected to find 4 parsing errors, found 0\n");
+    test(parser->errors->length == 4, "expected to find 4 errors, found %zu errors\n", parser->errors->length);
     cm_list_node *errors_head = parser->errors->head;
     token_type expected_tokens[] = {ASSIGN, IDENT, IDENT};
     token_type actual_tokens[] = {INT, ASSIGN, INT};
@@ -59,6 +99,7 @@ test_let_stmt()
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
+    check_parser_errors(parser);
     test(program != NULL, "parse_program returned NULL\n");
     printf("program parsed successfully\n");
     test(program->nstatements == 3, \
@@ -104,6 +145,7 @@ test_identifier_expression()
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
+    check_parser_errors(parser);
     test(program != NULL, "parse_program failed\n");
     printf("program parsed successfully\n");
 
@@ -138,6 +180,55 @@ test_identifier_expression()
 }
 
 static void
+test_parse_prefix_expression()
+{
+    typedef struct test_input {
+        const char *input;
+        const char *operator;
+        long value;
+    } test_input;
+
+    test_input tests[] = {
+        {"!5", "!", 5},
+        {"-15", "-", 15}
+    };
+
+    size_t ntests = sizeof(tests)/sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        check_parser_errors(parser);
+        test(program != NULL, "failed to parse the program\n");
+        printf("Program parsed successfully\n");
+        test(program->nstatements == 1,
+            "Expected program to have 1 statement, found %zu\n",
+            program->nstatements);
+        printf("Found correct number of statements in the program\n");
+        test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+            "Expected to find a statement of type EXPRESSION_STATEMENT, found %s\n",
+            get_statement_type_name(program->statements[0]->statement_type));
+        printf("Successfully parsed expression statement\n");
+        expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+        test(exp_stmt->expression->expression_type == PREFIX_EXPRESSION,
+            "Expected to find PREFIX_EXPRESSION, found %s\n",
+            get_expression_type_name(exp_stmt->expression->expression_type));
+        printf("Found PREFIX_EXPRESSION\n");
+        prefix_expression_t *prefix_exp = (prefix_expression_t *) exp_stmt->expression;
+        test(strcmp(prefix_exp->operator, test.operator) == 0,
+            "Expected operator to be %s, found %s\n", test.operator, prefix_exp->operator);
+        printf("Passed prefix operator test\n");
+        test_integer_literal_value(prefix_exp->right, test.value);
+        printf("Found correct operand value for the prefix test\n");
+        program_free(program);
+        parser_free(parser);
+    }
+    printf("Prefix expression parsing tests passed\n");
+}
+
+
+static void
 test_integer_literal_expression()
 {
     const char *input = "5;\n";
@@ -146,6 +237,7 @@ test_integer_literal_expression()
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
+    check_parser_errors(parser);
     test(program != NULL, "parse_program failed\n");
     printf("program parsed successfully\n");
 
@@ -191,6 +283,7 @@ test_return_statement()
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
+    check_parser_errors(parser);
     test(program != NULL, "parse_program failed\n");
     printf("program parsed successfully\n");
     test(program->nstatements == 3, "expected program to have 3 statements, found %zu\n",
@@ -219,6 +312,7 @@ test_string()
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
+    check_parser_errors(parser);
     char *program_string = program->node.string(program);
     test(strcmp(input, program_string) == 0, "Expected program string to be \"%s\"," \
         "found \"%s\"\n", input, program_string);
@@ -231,10 +325,11 @@ int
 main(int argc, char **argv)
 {
     test_let_stmt();
-    test_parser_errors();
+    // test_parser_errors();
     test_return_statement();
     test_identifier_expression();
     test_integer_literal_expression();
+    test_parse_prefix_expression();
     // test_string();
     printf("All tests passed\n");
 
