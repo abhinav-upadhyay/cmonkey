@@ -55,7 +55,8 @@ main(int argc, char **argv)
 			 "}\n"\
 			 "\n"\
 			 "10 == 10;\n"\
-			 "10 != 9;\n";
+			 "10 != 9;\n"\
+			 "!5;\n";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -131,6 +132,9 @@ main(int argc, char **argv)
 		{ NOT_EQ, "!=" },
 		{ INT, "9" },
 		{ SEMICOLON, ";" },
+		{BANG, "!"},
+		{INT, "5"},
+		{SEMICOLON, ";"},
 		{ END_OF_FILE, "" }
 
 	};
