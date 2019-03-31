@@ -187,7 +187,7 @@ lexer_next_token(lexer_t *l)
 		t->type = END_OF_FILE;
 		break;
 	default:
-		if (is_character(*(l->input))) {
+		if (is_character(l->ch)) {
 			t->literal = read_identifier(l);
 			t->type = get_token_type(t->literal);
 		} else {
