@@ -13,7 +13,7 @@ typedef struct parser_t {
  } parser_t;
 
  typedef enum operator_precedence_t {
-     LOWEST,
+     LOWEST=1,
      EQUALS,
      LESSGREATER,
      SUM,

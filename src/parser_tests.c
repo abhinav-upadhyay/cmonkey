@@ -30,7 +30,6 @@ check_parser_errors(parser_t *parser)
 static void
 test_integer_literal_value(expression_t *exp, long expected_value)
 {
-    printf("Testing integer literal expression\n");
     test(exp->expression_type == INTEGER_EXPRESSION,
         "Expected expression to be of type %s, found %s\n",
         get_expression_type_name(INTEGER_EXPRESSION),
@@ -49,7 +48,6 @@ test_integer_literal_value(expression_t *exp, long expected_value)
     free(expected_literal);
     free(literal);
     printf("Matched the token literal for the integer expression\n");
-    printf("All tests passed for integerl literal\n");
 }
 
 
@@ -180,6 +178,60 @@ test_identifier_expression()
 }
 
 static void
+test_parse_infix_expression()
+{
+    typedef struct test_input {
+        const char *input;
+        const char *operator;
+        long left;
+        long right;
+    } test_input;
+
+    test_input tests[] = {
+        {"5 + 5;", "+", 5, 5},
+        {"5 - 5;", "-", 5, 5},
+        {"5 * 5;", "*", 5, 5},
+        {"5 / 5;", "/", 5, 5},
+        {"5 > 5;", ">", 5, 5},
+        {"5 < 5;", "<", 5, 5},
+        {"5 == 5;", "==", 5, 5},
+        {"5 != 5;", "!=", 5, 5}
+    };
+    print_test_separator_line();
+    printf("Testing infix expressions\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing expression %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        check_parser_errors(parser);
+        test(program->nstatements == 1,
+            "Expected to find 1 statement, found %zu\n",
+            program->nstatements);
+        printf("Found correct number of statements\n");
+        test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+            "Expected to find EXPRESSION_STATEMENT, found %s\n",
+            get_statement_type_name(program->statements[0]->statement_type));
+        printf("Found correct statement type\n");
+        expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+        test(exp_stmt->expression->expression_type == INFIX_EXPRESSION,
+            "Expected to find expression of type INFIX_EXPRESSION, found %s\n",
+            get_expression_type_name(exp_stmt->expression->expression_type));
+        printf("Found INFIX_EXPRESSION\n");
+        infix_expression_t *infix_exp = (infix_expression_t *) exp_stmt->expression;
+        test_integer_literal_value(infix_exp->left, test.left);
+        test_integer_literal_value(infix_exp->right, test.right);
+        test(strcmp(infix_exp->operator, test.operator) == 0,
+            "Expected infix expression operator to be %s, found %s\n",
+            test.operator, infix_exp->operator);
+        program_free(program);
+        parser_free(parser);
+    }
+}
+
+static void
 test_parse_prefix_expression()
 {
     typedef struct test_input {
@@ -192,7 +244,7 @@ test_parse_prefix_expression()
         {"!5", "!", 5},
         {"-15", "-", 15}
     };
-
+    print_test_separator_line();
     size_t ntests = sizeof(tests)/sizeof(tests[0]);
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
@@ -227,13 +279,10 @@ test_parse_prefix_expression()
     printf("Prefix expression parsing tests passed\n");
 }
 
-
 static void
 test_integer_literal_expression()
 {
     const char *input = "5;\n";
-    print_test_separator_line();
-    printf("Testing integer literal expression\n");
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
@@ -330,6 +379,7 @@ main(int argc, char **argv)
     test_identifier_expression();
     test_integer_literal_expression();
     test_parse_prefix_expression();
+    test_parse_infix_expression();
     // test_string();
     printf("All tests passed\n");
 

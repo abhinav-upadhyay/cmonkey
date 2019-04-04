@@ -11,6 +11,7 @@ static void free_expression(expression_t *);
 static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
+static expression_t * parse_infix_expression(parser_t *, expression_t *);
 
  static prefix_parse_fn prefix_fns [] = {
      NULL, //ILLEGAL
@@ -48,15 +49,15 @@ static expression_t * parse_prefix_expression(parser_t *);
      NULL, //IDENT
      NULL, //INT
      NULL, //ASSIGN
-     NULL, //PLUS
-     NULL, //MINUS
+     parse_infix_expression, //PLUS
+     parse_infix_expression, //MINUS
      NULL, //BANG
-     NULL, //SLASH
-     NULL, //ASTERISK
-     NULL, //LT
-     NULL, //GT
-     NULL, //EQ
-     NULL, //NOT_EQ
+     parse_infix_expression, //SLASH
+     parse_infix_expression, //ASTERISK
+     parse_infix_expression, //LT
+     parse_infix_expression, //GT
+     parse_infix_expression, //EQ
+     parse_infix_expression, //NOT_EQ
      NULL, //COMMA
      NULL, //SEMICOLON
      NULL, //LPAREN
@@ -71,6 +72,39 @@ static expression_t * parse_prefix_expression(parser_t *);
      NULL, //TRUE
      NULL, //FALSE
  };
+
+ static operator_precedence_t
+ precedence(token_type tok_type)
+ {
+     switch (tok_type) {
+        case EQ:
+        case NOT_EQ:
+           return EQUALS;
+        case LT:
+        case GT:
+            return LESSGREATER;
+        case PLUS:
+        case MINUS:
+            return SUM;
+        case SLASH:
+        case ASTERISK:
+            return PRODUCT;
+        default:
+            return LOWEST;
+     }
+ }
+
+ static operator_precedence_t
+ peek_precedence(parser_t *parser)
+ {
+     return precedence(parser->peek_tok->type);
+ }
+
+ static operator_precedence_t
+ cur_precedence(parser_t *parser)
+ {
+     return precedence(parser->cur_tok->type);
+ }
 
 static char *
 program_token_literal(void *prog_obj)
@@ -115,6 +149,13 @@ prefix_expression_token_literal(void *exp)
 {
     prefix_expression_t *prefix_exp = (prefix_expression_t *) exp;
     return prefix_exp->token->literal;
+}
+
+static char *
+infix_expression_token_literal(void *exp)
+{
+    infix_expression_t *infix_exp = (infix_expression_t *) exp;
+    return infix_exp->token->literal;
 }
 
 void
@@ -175,6 +216,22 @@ prefix_expression_string(void *node)
     char *str = NULL;
     char *operand_string = prefix_exp->right->node.string(prefix_exp->right);
     asprintf(&str, "(%s%s)", prefix_exp->operator, operand_string);
+    free(operand_string);
+    if (str == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return str;
+}
+
+static char *
+infix_expression_string(void *node)
+{
+    infix_expression_t *infix_exp = (infix_expression_t *) node;
+    char *str = NULL;
+    char *left_string = infix_exp->left->node.string(infix_exp->left);
+    char *right_string = infix_exp->right->node.string(infix_exp->right);
+    asprintf(&str, "(%s %s %s)", left_string, infix_exp->operator, right_string);
+    free(left_string);
+    free(right_string);
     if (str == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     return str;
@@ -339,6 +396,16 @@ free_prefix_expression(prefix_expression_t *prefix_exp)
 }
 
 static void
+free_infix_expression(infix_expression_t *infix_exp)
+{
+    token_free(infix_exp->token);
+    free(infix_exp->operator);
+    free_expression(infix_exp->left);
+    free_expression(infix_exp->right);
+    free(infix_exp);
+}
+
+static void
 free_return_statement(return_statement_t *ret_stmt)
 {
     if (ret_stmt->return_value)
@@ -372,6 +439,9 @@ free_expression(expression_t *exp)
             break;
         case PREFIX_EXPRESSION:
             free_prefix_expression((prefix_expression_t *) exp);
+            break;
+        case INFIX_EXPRESSION:
+            free_infix_expression((infix_expression_t *) exp);
             break;
         default:
             break;
@@ -594,7 +664,7 @@ static void
 handle_no_prefix_fn(parser_t *parser)
 {
     char *msg = NULL;
-    asprintf(&msg, "no prefix parse function for %s", get_token_name(parser->cur_tok));
+    asprintf(&msg, "no prefix parse function for the token \"%s\"", parser->cur_tok->literal);
     if (msg == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     add_parse_error(parser, msg);
@@ -609,6 +679,22 @@ parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
         return NULL;
     }
     expression_t *left_exp = prefix_fn(parser);
+
+    for (;;) {
+        if (parser->peek_tok->type == SEMICOLON)
+            break;
+        if (precedence > peek_precedence(parser))
+            break;
+
+        infix_parse_fn infix_fn = infix_fns[parser->peek_tok->type];
+        if (infix_fn == NULL)
+            return left_exp;
+
+        parser_next_token(parser);
+        expression_t *right = infix_fn(parser, left_exp);
+        left_exp = right;
+    }
+
     return left_exp;
 }
 
@@ -690,5 +776,25 @@ parse_prefix_expression(parser_t *parser)
     parser_next_token(parser);
     prefix_exp->right = parser_parse_expression(parser, PREFIX);
     return (expression_t *) prefix_exp;
+}
+
+static expression_t *
+parse_infix_expression(parser_t *parser, expression_t *left)
+{
+    infix_expression_t *infix_exp;
+    infix_exp = malloc(sizeof(*infix_exp));
+    if (infix_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    infix_exp->expression.expression_node = NULL;
+    infix_exp->expression.expression_type = INFIX_EXPRESSION;
+    infix_exp->expression.node.string = infix_expression_string;
+    infix_exp->expression.node.token_literal = infix_expression_token_literal;
+    infix_exp->left = left;
+    infix_exp->operator = strdup(parser->cur_tok->literal);
+    infix_exp->token = token_copy(parser->cur_tok);
+    operator_precedence_t precedence = cur_precedence(parser);
+    parser_next_token(parser);
+    infix_exp->right = parser_parse_expression(parser, precedence);
+    return (expression_t *) infix_exp;
 }
 

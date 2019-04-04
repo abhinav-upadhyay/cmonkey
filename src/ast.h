@@ -24,13 +24,15 @@ static const char *statement_type_values[] = {
 typedef enum expression_type_t {
     IDENTIFIER_EXPRESSION,
     INTEGER_EXPRESSION,
-    PREFIX_EXPRESSION
+    PREFIX_EXPRESSION,
+    INFIX_EXPRESSION
 } expression_type_t;
 
 static const char *expression_type_values[] = {
     "IDENTIFIER_EXPRESSION",
     "INTEGER_EXPRESSION",
-    "PREFIX_EXPRESSION"
+    "PREFIX_EXPRESSION",
+    "INFIX_EXPRESSION"
 };
 
 typedef struct node_t {
@@ -74,6 +76,14 @@ typedef struct prefix_expression_t {
     expression_t *right;
     char *operator;
 } prefix_expression_t;
+
+typedef struct infix_expression_t {
+    expression_t expression;
+    token_t *token;
+    expression_t *left;
+    expression_t *right;
+    char *operator;
+} infix_expression_t;
 
 typedef struct letstatement_t {
     statement_t statement;
