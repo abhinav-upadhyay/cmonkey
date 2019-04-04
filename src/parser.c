@@ -257,9 +257,10 @@ program_string(void *prog_ptr)
     for (int i = 0; i < program->nstatements; i++) {
         statement_t *stmt = program->statements[i];
         char *stmt_string = stmt->node.string(stmt);
-        if (prog_string != NULL)
+        if (prog_string != NULL) {
             asprintf(&temp_string, "%s %s", prog_string, stmt_string);
-        else
+            free(prog_string);
+        } else
             asprintf(&temp_string, "%s", stmt_string);
         free(stmt_string);
         if (temp_string == NULL) {
@@ -683,7 +684,7 @@ parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
     for (;;) {
         if (parser->peek_tok->type == SEMICOLON)
             break;
-        if (precedence > peek_precedence(parser))
+        if (precedence >= peek_precedence(parser))
             break;
 
         infix_parse_fn infix_fn = infix_fns[parser->peek_tok->type];

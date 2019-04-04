@@ -232,6 +232,49 @@ test_parse_infix_expression()
 }
 
 static void
+test_operator_precedence_parsing()
+{
+    print_test_separator_line();
+    printf("Testing operator precedence parsing\n");
+    typedef struct {
+        const char *input;
+        const char *string;
+    } test_input;
+
+    test_input tests[] = {
+        {"-a * b", "((-a) * b)"},
+        {"!-a", "(!(-a))"},
+        {"a + b + c", "((a + b) + c)"},
+        {"a + b - c", "((a + b) - c)"},
+        {"a * b * c", "((a * b) * c)"},
+        {"a * b / c", "((a * b) / c)"},
+        {"a + b / c", "(a + (b / c))"},
+        {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+        {"3 + 4; -5 * 5", "(3 + 4) ((-5) * 5)"},
+        {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+        {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+        {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"}
+    };
+
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing expression: %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        check_parser_errors(parser);
+        char *actual_string = program->node.string(program);
+        test(strcmp(test.string, actual_string) == 0,
+            "Expected program string: \"%s\", found: \"%s\"\n",
+            test.string, actual_string);
+        free(actual_string);
+        program_free(program);
+        parser_free(parser);
+    }
+}
+
+static void
 test_parse_prefix_expression()
 {
     typedef struct test_input {
@@ -380,6 +423,7 @@ main(int argc, char **argv)
     test_integer_literal_expression();
     test_parse_prefix_expression();
     test_parse_infix_expression();
+    test_operator_precedence_parsing();
     // test_string();
     printf("All tests passed\n");
 
