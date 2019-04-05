@@ -6,6 +6,7 @@
 #include "ast.h"
 #include "lexer.h"
 #include "parser.h"
+#include "parser_tracing.h"
 
 static void free_expression(expression_t *);
 static expression_t * parse_identifier_expression(parser_t *);
@@ -672,8 +673,11 @@ handle_no_prefix_fn(parser_t *parser)
 }
 
 static expression_t *
-parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
+parse_expression(parser_t * parser, operator_precedence_t precedence)
 {
+    #ifdef TRACE
+        trace("parse_expression");
+    #endif
     prefix_parse_fn prefix_fn = prefix_fns[parser->cur_tok->type];
     if (prefix_fn == NULL) {
         handle_no_prefix_fn(parser);
@@ -696,16 +700,25 @@ parser_parse_expression(parser_t * parser, operator_precedence_t precedence)
         left_exp = right;
     }
 
+    #ifdef TRACE
+        untrace("parse_expression");
+    #endif
     return left_exp;
 }
 
 static expression_statement_t *
 parse_expression_statement(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_expression_statement");
+    #endif
     expression_statement_t *exp_stmt = create_expression_statement(parser);
-    exp_stmt->expression = parser_parse_expression(parser, LOWEST);
+    exp_stmt->expression = parse_expression(parser, LOWEST);
     if (parser->peek_tok->type == SEMICOLON)
         parser_next_token(parser);
+    #ifdef TRACE
+        untrace("parse_expression_statement");
+    #endif
     return exp_stmt;
 }
 
@@ -736,6 +749,9 @@ int_exp_token_literal(void *node)
 expression_t *
 parse_integer_expression(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_integer_expression");
+    #endif
     integer_t *int_exp;
     int_exp = malloc(sizeof(*int_exp));
     if (int_exp == NULL)
@@ -756,12 +772,19 @@ parse_integer_expression(parser_t *parser)
         add_parse_error(parser, errmsg);
     }
 
+    #ifdef TRACE
+        untrace("parse_integer_expression");
+    #endif
+
     return (expression_t *) int_exp;
 }
 
 expression_t *
 parse_prefix_expression(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_prefix_expression");
+    #endif
     prefix_expression_t *prefix_exp;
     prefix_exp = malloc(sizeof(*prefix_exp));
     if (prefix_exp == NULL)
@@ -775,13 +798,20 @@ parse_prefix_expression(parser_t *parser)
     if (prefix_exp->operator == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     parser_next_token(parser);
-    prefix_exp->right = parser_parse_expression(parser, PREFIX);
+    prefix_exp->right = parse_expression(parser, PREFIX);
+
+    #ifdef TRACE
+        untrace("parse_prefix_expression");
+    #endif
     return (expression_t *) prefix_exp;
 }
 
 static expression_t *
 parse_infix_expression(parser_t *parser, expression_t *left)
 {
+    #ifdef TRACE
+        trace("parse_infix_expression");
+    #endif
     infix_expression_t *infix_exp;
     infix_exp = malloc(sizeof(*infix_exp));
     if (infix_exp == NULL)
@@ -795,7 +825,11 @@ parse_infix_expression(parser_t *parser, expression_t *left)
     infix_exp->token = token_copy(parser->cur_tok);
     operator_precedence_t precedence = cur_precedence(parser);
     parser_next_token(parser);
-    infix_exp->right = parser_parse_expression(parser, precedence);
+    infix_exp->right = parse_expression(parser, precedence);
+
+    #ifdef TRACE
+        untrace("parse_infix_expression");
+    #endif
     return (expression_t *) infix_exp;
 }
 
