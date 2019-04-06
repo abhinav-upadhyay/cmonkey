@@ -337,12 +337,12 @@ test_parse_prefix_expression()
     typedef struct test_input {
         const char *input;
         const char *operator;
-        long value;
+        const char *value;
     } test_input;
 
     test_input tests[] = {
-        {"!5", "!", 5},
-        {"-15", "-", 15}
+        {"!5", "!", "5"},
+        {"-15", "-", "15"}
     };
     print_test_separator_line();
     size_t ntests = sizeof(tests)/sizeof(tests[0]);
@@ -371,7 +371,7 @@ test_parse_prefix_expression()
         test(strcmp(prefix_exp->operator, test.operator) == 0,
             "Expected operator to be %s, found %s\n", test.operator, prefix_exp->operator);
         printf("Passed prefix operator test\n");
-        test_integer_literal_value(prefix_exp->right, test.value);
+        test_literal_expression(prefix_exp->right, test.value);
         printf("Found correct operand value for the prefix test\n");
         program_free(program);
         parser_free(parser);
@@ -404,17 +404,7 @@ test_integer_literal_expression()
         "expected expression of type expression, found %s",
         get_expression_type_name(exp_stmt->expression->expression_type));
     printf("Found an integer expression\n");
-
-    integer_t *int_exp = (integer_t *) exp_stmt->expression;
-    test(int_exp->value == 5,
-        "expected the identifier value to be 5, found %ld", int_exp->value);
-    printf("Matched the value of the identifier\n");
-
-    char *_token_literal = int_exp->expression.node.token_literal(int_exp);
-    test(strcmp(_token_literal, "5") == 0,
-        "expected identifier token literal to be 5, found %s",
-        _token_literal);
-    printf("Matched the value of the token literal for the integer expression\n");
+    test_integer_literal_value(exp_stmt->expression, 5);
     printf("integer expression parsing test passed\n");
     program_free(program);
     parser_free(parser);
