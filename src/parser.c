@@ -74,10 +74,32 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
      NULL, //FALSE
  };
 
- static operator_precedence_t
- precedence(token_type tok_type)
- {
-     switch (tok_type) {
+
+static void
+add_parse_error(parser_t *parser, char *errmsg)
+{
+    if (parser->errors == NULL) {
+        parser->errors = cm_list_init();
+        if (parser->errors == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+    }
+    cm_list_add(parser->errors, errmsg);
+}
+
+static void
+handle_no_prefix_fn(parser_t *parser)
+{
+    char *msg = NULL;
+    asprintf(&msg, "no prefix parse function for the token \"%s\"", parser->cur_tok->literal);
+    if (msg == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    add_parse_error(parser, msg);
+}
+
+static operator_precedence_t
+precedence(token_type tok_type)
+{
+    switch (tok_type) {
         case EQ:
         case NOT_EQ:
            return EQUALS;
@@ -92,8 +114,8 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
             return PRODUCT;
         default:
             return LOWEST;
-     }
- }
+    }
+}
 
  static operator_precedence_t
  peek_precedence(parser_t *parser)
@@ -425,6 +447,8 @@ free_letstatement(letstatement_t *let_stmt)
         free_identifier(let_stmt->name);
     if (let_stmt->token)
         token_free(let_stmt->token);
+    if (let_stmt->value)
+        free_expression(let_stmt->value);
     free(let_stmt);
 }
 
@@ -522,17 +546,6 @@ add_statement(program_t *program, statement_t *stmt)
 }
 
 static void
-add_parse_error(parser_t *parser, char *errmsg)
-{
-    if (parser->errors == NULL) {
-        parser->errors = cm_list_init();
-        if (parser->errors == NULL)
-            errx(EXIT_FAILURE, "malloc failed");
-    }
-    cm_list_add(parser->errors, errmsg);
-}
-
-static void
 peek_error(parser_t *parser, token_type tok_type)
 {
     char *msg = NULL;
@@ -587,6 +600,40 @@ parse_identifier_expression(parser_t * parser)
     return (expression_t *) ident;
 }
 
+static expression_t *
+parse_expression(parser_t * parser, operator_precedence_t precedence)
+{
+    #ifdef TRACE
+        trace("parse_expression");
+    #endif
+    prefix_parse_fn prefix_fn = prefix_fns[parser->cur_tok->type];
+    if (prefix_fn == NULL) {
+        handle_no_prefix_fn(parser);
+        return NULL;
+    }
+    expression_t *left_exp = prefix_fn(parser);
+
+    for (;;) {
+        if (parser->peek_tok->type == SEMICOLON)
+            break;
+        if (precedence >= peek_precedence(parser))
+            break;
+
+        infix_parse_fn infix_fn = infix_fns[parser->peek_tok->type];
+        if (infix_fn == NULL)
+            return left_exp;
+
+        parser_next_token(parser);
+        expression_t *right = infix_fn(parser, left_exp);
+        left_exp = right;
+    }
+
+    #ifdef TRACE
+        untrace("parse_expression");
+    #endif
+    return left_exp;
+}
+
 static letstatement_t *
 parse_letstatement(parser_t *parser)
 {
@@ -605,8 +652,9 @@ parse_letstatement(parser_t *parser)
         free_statement(let_stmt, LET_STATEMENT);
         return NULL;
     }
-
-    while (parser->cur_tok->type != SEMICOLON)
+    parser_next_token(parser);
+    let_stmt->value = parse_expression(parser, LOWEST);
+    if (parser->peek_tok->type == SEMICOLON)
         parser_next_token(parser);
 
     return let_stmt;
@@ -660,50 +708,6 @@ parse_program(parser_t *parser)
         parser_next_token(parser);
     }
     return program;
-}
-
-static void
-handle_no_prefix_fn(parser_t *parser)
-{
-    char *msg = NULL;
-    asprintf(&msg, "no prefix parse function for the token \"%s\"", parser->cur_tok->literal);
-    if (msg == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
-    add_parse_error(parser, msg);
-}
-
-static expression_t *
-parse_expression(parser_t * parser, operator_precedence_t precedence)
-{
-    #ifdef TRACE
-        trace("parse_expression");
-    #endif
-    prefix_parse_fn prefix_fn = prefix_fns[parser->cur_tok->type];
-    if (prefix_fn == NULL) {
-        handle_no_prefix_fn(parser);
-        return NULL;
-    }
-    expression_t *left_exp = prefix_fn(parser);
-
-    for (;;) {
-        if (parser->peek_tok->type == SEMICOLON)
-            break;
-        if (precedence >= peek_precedence(parser))
-            break;
-
-        infix_parse_fn infix_fn = infix_fns[parser->peek_tok->type];
-        if (infix_fn == NULL)
-            return left_exp;
-
-        parser_next_token(parser);
-        expression_t *right = infix_fn(parser, left_exp);
-        left_exp = right;
-    }
-
-    #ifdef TRACE
-        untrace("parse_expression");
-    #endif
-    return left_exp;
 }
 
 static expression_statement_t *

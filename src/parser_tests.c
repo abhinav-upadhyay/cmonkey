@@ -76,9 +76,11 @@ test_identifier(expression_t *exp, const char *expected_value)
 static void
 test_literal_expression(expression_t *exp, const char *value)
 {
+    long expected_integer_value;
     switch (exp->expression_type) {
         case INTEGER_EXPRESSION:
-            test_integer_literal_value(exp,atol(value));
+            expected_integer_value = atol(value);
+            test_integer_literal_value(exp, expected_integer_value);
             return;
         case IDENTIFIER_EXPRESSION:
             test_identifier(exp, value);
@@ -148,52 +150,75 @@ test_parser_errors(void)
     parser_free(parser);
 }
 
+
+static void
+_test_let_stmt(statement_t *stmt, const char *expected_identifier)
+{
+    char *tok_literal = stmt->node.token_literal(stmt);
+    test(strcmp(tok_literal, "let") == 0,
+        "Invalid token literal \"%s\" for LET STATEMENT\n",
+        tok_literal);
+    letstatement_t *let_stmt = (letstatement_t *) stmt;
+
+    test(strcmp(let_stmt->name->value, expected_identifier) == 0,
+        "Expected identifier value for let statement: \"%s\", found \"%s\"",
+        expected_identifier, let_stmt->name->value);
+    
+    tok_literal = let_stmt->name->expression.node.token_literal(let_stmt->name);
+    test(strcmp(tok_literal, expected_identifier) == 0,
+        "Expected let statement identifier token literal: %s, found: %s",
+        expected_identifier, tok_literal);
+}
+
 static void
 test_let_stmt()
 {
-    const char *input = "let x = 5;\n"\
-    "let y = 10;\n"\
-    "let foobar = 838383;\n";
-    print_test_separator_line();
-    printf("Testing let statements\n");
-    lexer_t *lexer = lexer_init(input);
-    parser_t *parser = parser_init(lexer);
-    program_t *program = parse_program(parser);
-    check_parser_errors(parser);
-    test(program != NULL, "parse_program returned NULL\n");
-    printf("program parsed successfully\n");
-    test(program->nstatements == 3, \
-        "program does not have 3 statements, found %zu ements", \
-        program->nstatements);
-    printf("matched the number of statements\n");
-    const char *tests[] = {
-        "x",
-        "y",
-        "foobar"
+    lexer_t *lexer;
+    parser_t *parser;
+    program_t *program;
+    statement_t *stmt;
+
+    typedef struct {
+        const char *input;
+        const char *expected_identifier;
+        const char *expected_value;
+    } test_input;
+
+    test_input tests[] = {
+        {"let x = 5;\n", "x", "5"},
+        {"let y = 10;\n", "y", "10"},
+        {"let foobar = 838383;\n", "foobar", "838383"}
     };
-    for (int i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
-        statement_t *stmt = program->statements[i];
-        node_t stmt_node = stmt->node;
-        char *stmt_token_literal = stmt_node.token_literal(stmt);
-        test(strcmp(stmt_token_literal, "let") == 0, \
-            "expected token literal to be \"let\", found %s", \
-            stmt_token_literal);
-        printf("matched let statement literal\n");
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    printf("Testing let statements\n");
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing let statement: %s\n", test.input);
+        lexer = lexer_init(test.input);
+        parser = parser_init(lexer);
+        program = parse_program(parser);
+        check_parser_errors(parser);
+        test(program != NULL, "parse_program returned NULL\n");
+        printf("program parsed successfully\n");
+        test(program->nstatements == 1, \
+            "program does not have 1 statements, found %zu ements", \
+            program->nstatements);
+        printf("matched the number of statements\n");
+
+        stmt = program->statements[0];
         test(stmt->statement_type == LET_STATEMENT, \
             "Expected statement type to be LET_STATEMENT, found %s", \
             get_statement_type_name(stmt->statement_type));
         printf("matched let statement type\n");
-        letstatement_t *let_stmt = (letstatement_t *) stmt;
-        identifier_t *name = let_stmt->name;
-        char *name_literal = name->expression.node.token_literal(&name->expression.node);
-        test(strcmp(name_literal, tests[i]) == 0, \
-            "let_stmt.name.token_literal() not %s, got %s", tests[i], name_literal);
-        printf("matched token literal\n");
-        test(strcmp(name->value, tests[i]) == 0, "let_stmt.name.value not %s, got %s", tests[i], name->value);
+        _test_let_stmt(stmt, test.expected_identifier);
         printf("matched identifier\n");
+        letstatement_t *let_stmt = (letstatement_t *) stmt;
+        test_literal_expression(let_stmt->value, test.expected_value);
+        printf("Tested let statement value\n");
+        program_free(program);
+        parser_free(parser);
     }
-    program_free(program);
-    parser_free(parser);
 }
 
 static void

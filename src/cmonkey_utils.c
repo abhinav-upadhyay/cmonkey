@@ -56,17 +56,29 @@ cm_list_free(cm_list *list, void (*free_data) (void *))
     free(list);
 }
 
+
+static
+size_t calculate_string_size(long l)
+{
+    size_t size = 0;
+    while (l >= 10) {
+        l /= 10;
+        size++;
+    }
+    return size;
+}
+
 char *
 long_to_string(long l)
 {
     long rem;
-    size_t str_size = l / 10 + 1;
+    size_t str_size = calculate_string_size(l) + 1;
     char *str = malloc(str_size + 1);
     size_t index = str_size;
     str[index--] = 0;
-    while (l > 10) {
+    while (l >= 10) {
         rem = l % 10;
-        l = l / 10;
+        l /= 10;
         str[index--] = 48 + rem;
     }
     if (l > 0)
