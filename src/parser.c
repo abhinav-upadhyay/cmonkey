@@ -432,10 +432,10 @@ free_infix_expression(infix_expression_t *infix_exp)
 static void
 free_return_statement(return_statement_t *ret_stmt)
 {
-    if (ret_stmt->return_value)
-        free(ret_stmt->return_value); //TODO: we need expression specific free functions
     if (ret_stmt->token)
         token_free(ret_stmt->token);
+    if (ret_stmt->return_value)
+        free_expression(ret_stmt->return_value);
     free(ret_stmt);
 }
 
@@ -665,7 +665,9 @@ parse_return_statement(parser_t *parser)
 {
     return_statement_t *ret_stmt = (return_statement_t *)
         create_statement(parser, RETURN_STATEMENT);
-    while (parser->cur_tok->type != SEMICOLON)
+    parser_next_token(parser);
+    ret_stmt->return_value = parse_expression(parser, LOWEST);
+    if (parser->peek_tok->type == SEMICOLON)
         parser_next_token(parser);
     return ret_stmt;
 }

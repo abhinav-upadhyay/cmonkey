@@ -70,7 +70,6 @@ test_identifier(expression_t *exp, const char *expected_value)
         "Expected identifier token literal to be %s, found %s\n",
         expected_value, tok_literal);
     printf("Matched identifier token literal\n");
-    free(tok_literal);
 }
 
 static void
@@ -439,22 +438,35 @@ test_integer_literal_expression()
 static void
 test_return_statement()
 {
-    const char *input = "return 5;\n"\
-    "return 10;\n"\
-    "return 9988332;";
+    typedef struct {
+        const char *input;
+        const char *expected_value;
+    } test_input;
+
+    test_input tests[] = {
+        {"return 5;", "5"},
+        // {"return true;", "true"},
+        {"return foobar;", "foobar"}
+    };
+
     print_test_separator_line();
-    printf("Testing return statement\n");
-    lexer_t *lexer = lexer_init(input);
-    parser_t *parser = parser_init(lexer);
-    program_t *program = parse_program(parser);
-    check_parser_errors(parser);
-    test(program != NULL, "parse_program failed\n");
-    printf("program parsed successfully\n");
-    test(program->nstatements == 3, "expected program to have 3 statements, found %zu\n",
-        program->nstatements);
-    printf("parsed correct number of statements\n");
-    for (int i = 0; i < program->nstatements; i++) {
-        statement_t *stmt = program->statements[i];
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing return statement: %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        check_parser_errors(parser);
+        test(program != NULL, "parse_program failed\n");
+
+        printf("program parsed successfully\n");
+        test(program->nstatements == 1, "expected program to have 1 statements, found %zu\n",
+            program->nstatements);
+        printf("parsed correct number of statements\n");
+
+        statement_t *stmt = program->statements[0];
         node_t stmt_node = stmt->node;
         char *tok_literal = stmt_node.token_literal(stmt);
         test(strcmp(tok_literal, "return") == 0, "expected token literal to be \"return\"," \
@@ -464,9 +476,12 @@ test_return_statement()
             "found %s\n", get_statement_type_name(RETURN_STATEMENT),
             get_statement_type_name(stmt->statement_type));
         printf("matched statement type for return\n");
+
+        return_statement_t *ret_stmt = (return_statement_t *) stmt;
+        test_literal_expression(ret_stmt->return_value, test.expected_value);
+        program_free(program);
+        parser_free(parser);
     }
-    program_free(program);
-    parser_free(parser);
 }
 
 static void
@@ -481,7 +496,7 @@ test_string()
     test(strcmp(input, program_string) == 0, "Expected program string to be \"%s\"," \
         "found \"%s\"\n", input, program_string);
     program_free(program);
-    parse_program(parser);
+    parser_free(parser);
     free(program_string);
 }
 
@@ -496,7 +511,7 @@ main(int argc, char **argv)
     test_parse_prefix_expression();
     test_parse_infix_expression();
     test_operator_precedence_parsing();
-    // test_string();
+    test_string();
     printf("All tests passed\n");
 
 }
