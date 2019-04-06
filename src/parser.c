@@ -12,6 +12,8 @@ static void free_expression(expression_t *);
 static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
+static expression_t * parse_boolean_expression(parser_t *);
+
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 
  static prefix_parse_fn prefix_fns [] = {
@@ -40,8 +42,8 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
      NULL, //IF
      NULL, //ELSE
      NULL, //RETURN
-     NULL, //TRUE
-     NULL, //FALSE
+     parse_boolean_expression, //TRUE
+     parse_boolean_expression, //FALSE
  };
 
  static infix_parse_fn infix_fns [] = {
@@ -181,6 +183,13 @@ infix_expression_token_literal(void *exp)
     return infix_exp->token->literal;
 }
 
+static char *
+boolean_expression_token_literal(void *exp)
+{
+    boolean_expression_t *bool_exp = (boolean_expression_t *) exp;
+    return bool_exp->token->literal;
+}
+
 void
 _expression_node(void)
 {
@@ -268,6 +277,17 @@ expression_statement_string(void *stmt)
         return (exp_stmt->expression->node.string(exp_stmt->expression));
     }
     return strdup("");
+}
+
+static char *
+boolean_expression_string(void *exp)
+{
+    //TODO: error check for strdup needed
+    boolean_expression_t *bool_exp = (boolean_expression_t *) exp;
+    if (bool_exp->value)
+        return strdup("true");
+    else
+        return strdup("false");
 }
 
 static char *
@@ -430,6 +450,13 @@ free_infix_expression(infix_expression_t *infix_exp)
 }
 
 static void
+free_boolean_expression(boolean_expression_t *bool_exp)
+{
+    token_free(bool_exp->token);
+    free(bool_exp);
+}
+
+static void
 free_return_statement(return_statement_t *ret_stmt)
 {
     if (ret_stmt->token)
@@ -468,6 +495,9 @@ free_expression(expression_t *exp)
             break;
         case INFIX_EXPRESSION:
             free_infix_expression((infix_expression_t *) exp);
+            break;
+        case BOOLEAN_EXPRESSION:
+            free_boolean_expression((boolean_expression_t *) exp);
             break;
         default:
             break;
@@ -837,5 +867,24 @@ parse_infix_expression(parser_t *parser, expression_t *left)
         untrace("parse_infix_expression");
     #endif
     return (expression_t *) infix_exp;
+}
+
+static expression_t *
+parse_boolean_expression(parser_t *parser)
+{
+    boolean_expression_t *bool_exp;
+    bool_exp = malloc(sizeof(*bool_exp));
+    if (bool_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    bool_exp->token = token_copy(parser->cur_tok);
+    bool_exp->expression.expression_node = NULL;
+    bool_exp->expression.expression_type = BOOLEAN_EXPRESSION;
+    bool_exp->expression.node.token_literal = boolean_expression_token_literal;
+    bool_exp->expression.node.string = boolean_expression_string;
+    if (parser->cur_tok->type == TRUE)
+        bool_exp->value = true;
+    else
+        bool_exp->value = false;
+    return (expression_t *) bool_exp;
 }
 

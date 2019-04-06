@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <err.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "ast.h"
@@ -26,6 +27,15 @@ check_parser_errors(parser_t *parser)
         errors_head = errors_head->next;
     }
     exit(1);
+}
+
+static _Bool
+string_to_bool(const char *str)
+{
+    if (strncmp("true", str, 4) == 0)
+        return true;
+    else
+        return false;
 }
 
 static void
@@ -515,6 +525,54 @@ test_string()
     free(program_string);
 }
 
+static void
+test_boolean_expression()
+{
+    typedef struct {
+        const char *input;
+        const char *expected_value;
+    } test_input;
+
+    test_input tests[] = {
+        {"true;", "true"},
+        {"false;", "false"}
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Parsing boolean expression: %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        check_parser_errors(parser);
+
+        test(program != NULL, "Failed to parse boolean expression\n");
+        test(program->nstatements == 1,
+            "Expected 1 statement in program, found %zu\n", program->nstatements);
+        printf("Program parsed successfully\n");
+
+        test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+            "Expected EXPRESSION_STATEMENT, found %s\n",
+            get_statement_type_name(program->statements[0]->statement_type));
+        printf("Found EXPRESSION_STATEMENT\n");
+
+        expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+        test(exp_stmt->expression->expression_type == BOOLEAN_EXPRESSION,
+            "Expected BOOLEAN_EXPRESSION, found %s\n",
+            get_expression_type_name(exp_stmt->expression->expression_type));
+        printf("Found BOOLEAN_EXPRESSION\n");
+
+        boolean_expression_t *bool_exp = (boolean_expression_t *) exp_stmt->expression;
+        test(bool_exp->value == string_to_bool(test.expected_value),
+            "Failed to match boolean expression value, expected %s\n", test.expected_value);
+
+        program_free(program);
+        parser_free(parser);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -527,6 +585,7 @@ main(int argc, char **argv)
     test_parse_infix_expression();
     test_operator_precedence_parsing();
     test_string();
+    test_boolean_expression();
     printf("All tests passed\n");
 
 }

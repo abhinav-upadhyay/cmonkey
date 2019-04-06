@@ -1,6 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include "token.h"
 
@@ -25,14 +26,16 @@ typedef enum expression_type_t {
     IDENTIFIER_EXPRESSION,
     INTEGER_EXPRESSION,
     PREFIX_EXPRESSION,
-    INFIX_EXPRESSION
+    INFIX_EXPRESSION,
+    BOOLEAN_EXPRESSION
 } expression_type_t;
 
 static const char *expression_type_values[] = {
     "IDENTIFIER_EXPRESSION",
     "INTEGER_EXPRESSION",
     "PREFIX_EXPRESSION",
-    "INFIX_EXPRESSION"
+    "INFIX_EXPRESSION",
+    "BOOLEAN_EXPRESSION"
 };
 
 typedef struct node_t {
@@ -103,6 +106,12 @@ typedef struct expression_statement_t {
     token_t *token;
     expression_t *expression;
 } expression_statement_t;
+
+typedef struct boolean_expression_t {
+    expression_t expression;
+    token_t *token;
+    _Bool value;
+} boolean_expression_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
 #define get_expression_type_name(type) expression_type_values[type]
