@@ -366,35 +366,44 @@ test_parse_prefix_expression()
 
     test_input tests[] = {
         {"!5", "!", "5"},
-        {"-15", "-", "15"}
+        {"-15", "-", "15"},
+        {"!foobar", "!", "foobar"},
+        {"-foobar", "-", "foobar"}
     };
+
     print_test_separator_line();
     size_t ntests = sizeof(tests)/sizeof(tests[0]);
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
+        printf("Testing prefix expression: %s\n", test.input);
         lexer_t *lexer = lexer_init(test.input);
         parser_t *parser = parser_init(lexer);
         program_t *program = parse_program(parser);
         check_parser_errors(parser);
         test(program != NULL, "failed to parse the program\n");
         printf("Program parsed successfully\n");
+
         test(program->nstatements == 1,
             "Expected program to have 1 statement, found %zu\n",
             program->nstatements);
         printf("Found correct number of statements in the program\n");
+
         test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
             "Expected to find a statement of type EXPRESSION_STATEMENT, found %s\n",
             get_statement_type_name(program->statements[0]->statement_type));
         printf("Successfully parsed expression statement\n");
+
         expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
         test(exp_stmt->expression->expression_type == PREFIX_EXPRESSION,
             "Expected to find PREFIX_EXPRESSION, found %s\n",
             get_expression_type_name(exp_stmt->expression->expression_type));
         printf("Found PREFIX_EXPRESSION\n");
+
         prefix_expression_t *prefix_exp = (prefix_expression_t *) exp_stmt->expression;
         test(strcmp(prefix_exp->operator, test.operator) == 0,
             "Expected operator to be %s, found %s\n", test.operator, prefix_exp->operator);
         printf("Passed prefix operator test\n");
+
         test_literal_expression(prefix_exp->right, test.value);
         printf("Found correct operand value for the prefix test\n");
         program_free(program);
