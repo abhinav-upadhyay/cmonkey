@@ -281,7 +281,15 @@ test_parse_infix_expression()
         {"5 > 5;", ">", "5", "5"},
         {"5 < 5;", "<", "5", "5"},
         {"5 == 5;", "==", "5", "5"},
-        {"5 != 5;", "!=", "5", "5"}
+        {"5 != 5;", "!=", "5", "5"},
+        {"foobar + barfoo;", "+", "foobar", "barfoo"},
+        {"foobar - barfoo;", "-", "foobar", "barfoo"},
+        {"foobar / barfoo;", "/", "foobar", "barfoo"},
+        {"foobar * barfoo;", "*", "foobar", "barfoo"},
+        {"foobar > barfoo;", ">", "foobar", "barfoo"},
+        {"foobar < barfoo;", "<", "foobar", "barfoo"},
+        {"foobar == barfoo;", "==", "foobar", "barfoo"},
+        {"foobar != barfoo;", "!=", "foobar", "barfoo"}
     };
     print_test_separator_line();
     printf("Testing infix expressions\n");
@@ -297,15 +305,13 @@ test_parse_infix_expression()
             "Expected to find 1 statement, found %zu\n",
             program->nstatements);
         printf("Found correct number of statements\n");
+
         test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
             "Expected to find EXPRESSION_STATEMENT, found %s\n",
             get_statement_type_name(program->statements[0]->statement_type));
         printf("Found correct statement type\n");
+
         expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
-        test(exp_stmt->expression->expression_type == INFIX_EXPRESSION,
-            "Expected to find expression of type INFIX_EXPRESSION, found %s\n",
-            get_expression_type_name(exp_stmt->expression->expression_type));
-        printf("Found INFIX_EXPRESSION\n");
         test_infix_expression(exp_stmt->expression, test.operator, test.left, test.right);
         program_free(program);
         parser_free(parser);
