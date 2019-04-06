@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <err.h>
 #include <stdio.h>
 #include <string.h>
 #include "ast.h"
@@ -48,6 +49,67 @@ test_integer_literal_value(expression_t *exp, long expected_value)
     free(expected_literal);
     free(literal);
     printf("Matched the token literal for the integer expression\n");
+}
+
+static void
+test_identifier(expression_t *exp, const char *expected_value)
+{
+    test(exp->expression_type == IDENTIFIER_EXPRESSION,
+        "expected expression of type IDENTIFIER_EXPRESSION, found %s\n",
+        get_expression_type_name(exp->expression_type));
+    printf("The expression is an identifier\n");
+
+    identifier_t *ident_exp = (identifier_t *) exp;
+    test(strcmp(ident_exp->value, expected_value) == 0,
+        "Expected identifier value to be %s, found %s\n",
+        expected_value, ident_exp->value);
+    printf("Matched identifier value\n");
+
+    char *tok_literal = ident_exp->expression.node.token_literal(ident_exp);
+    test(strcmp(tok_literal, expected_value) == 0,
+        "Expected identifier token literal to be %s, found %s\n",
+        expected_value, tok_literal);
+    printf("Matched identifier token literal\n");
+    free(tok_literal);
+}
+
+static void
+test_literal_expression(expression_t *exp, const char *value)
+{
+    switch (exp->expression_type) {
+        case INTEGER_EXPRESSION:
+            test_integer_literal_value(exp,atol(value));
+            return;
+        case IDENTIFIER_EXPRESSION:
+            test_identifier(exp, value);
+            return;
+        default:
+            err(EXIT_FAILURE, "Unsupported expression type passed to test_literal_expression: %s",
+                get_expression_type_name(exp->expression_type));
+    }
+}
+
+static void
+test_infix_expression(expression_t *exp, const char *operator, const char *left, const char *right)
+{
+    test(exp->expression_type == INFIX_EXPRESSION,
+            "Expected to find expression of type INFIX_EXPRESSION, found %s\n",
+            get_expression_type_name(exp->expression_type));
+        printf("Found INFIX_EXPRESSION\n");
+
+        infix_expression_t *infix_exp = (infix_expression_t *) exp;
+
+        test_literal_expression(infix_exp->left, left);
+
+        test(strcmp(infix_exp->operator, operator) == 0,
+            "Expected infix expression operator to be %s, found %s\n",
+            operator, infix_exp->operator);
+        printf("matched infix expression operator\n");
+        printf("Testing left expression of the infix expression\n");
+        test_literal_expression(infix_exp->left, left);
+        printf("Testing right expression of the infix expression\n");
+        test_literal_expression(infix_exp->right, right);
+        printf("Successfully tested parsing of infix expression\n");
 }
 
 
@@ -183,26 +245,26 @@ test_parse_infix_expression()
     typedef struct test_input {
         const char *input;
         const char *operator;
-        long left;
-        long right;
+        const char *left;
+        const char *right;
     } test_input;
 
     test_input tests[] = {
-        {"5 + 5;", "+", 5, 5},
-        {"5 - 5;", "-", 5, 5},
-        {"5 * 5;", "*", 5, 5},
-        {"5 / 5;", "/", 5, 5},
-        {"5 > 5;", ">", 5, 5},
-        {"5 < 5;", "<", 5, 5},
-        {"5 == 5;", "==", 5, 5},
-        {"5 != 5;", "!=", 5, 5}
+        {"5 + 5;", "+", "5", "5"},
+        {"5 - 5;", "-", "5", "5"},
+        {"5 * 5;", "*", "5", "5"},
+        {"5 / 5;", "/", "5", "5"},
+        {"5 > 5;", ">", "5", "5"},
+        {"5 < 5;", "<", "5", "5"},
+        {"5 == 5;", "==", "5", "5"},
+        {"5 != 5;", "!=", "5", "5"}
     };
     print_test_separator_line();
     printf("Testing infix expressions\n");
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
-        printf("Testing expression %s\n", test.input);
+        printf("Testing expression: %s\n", test.input);
         lexer_t *lexer = lexer_init(test.input);
         parser_t *parser = parser_init(lexer);
         program_t *program = parse_program(parser);
@@ -220,12 +282,7 @@ test_parse_infix_expression()
             "Expected to find expression of type INFIX_EXPRESSION, found %s\n",
             get_expression_type_name(exp_stmt->expression->expression_type));
         printf("Found INFIX_EXPRESSION\n");
-        infix_expression_t *infix_exp = (infix_expression_t *) exp_stmt->expression;
-        test_integer_literal_value(infix_exp->left, test.left);
-        test_integer_literal_value(infix_exp->right, test.right);
-        test(strcmp(infix_exp->operator, test.operator) == 0,
-            "Expected infix expression operator to be %s, found %s\n",
-            test.operator, infix_exp->operator);
+        test_infix_expression(exp_stmt->expression, test.operator, test.left, test.right);
         program_free(program);
         parser_free(parser);
     }
