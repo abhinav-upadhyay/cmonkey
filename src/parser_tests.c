@@ -849,6 +849,59 @@ test_call_expression_parsing(void)
     printf("Call expression parsing test passed\n");
 }
 
+static void
+test_call_expression_argument_parsing(void)
+{
+    print_test_separator_line();
+    typedef struct {
+        const char *input;
+        const char *expected_ident;
+        size_t nargs;
+        const char *expected_args[3];
+    } test_input;
+
+    test_input tests[] = {
+        {"add();", "add", 0, {NULL, NULL, NULL}},
+        {"add(1);", "add", 1, {"1", NULL, NULL}},
+        {"add(1, 2 * 3, 4 + 5);", "add", 3, {"1", "(2 * 3)", "(4 + 5)"}}
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing call expression argument parsing for %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        test(program != NULL, "Failed to parse program\n");
+        check_parser_errors(parser);
+
+        expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+        test(exp_stmt->expression->expression_type == CALL_EXPRESSION,
+            "Expected CALL_EXPRESSION, found %s\n", get_expression_type_name(exp_stmt->expression->expression_type));
+
+        call_expression_t *call_exp = (call_expression_t *) exp_stmt->expression;
+        test_identifier(call_exp->function, test.expected_ident);
+        test(call_exp->arguments->length == test.nargs,
+            "Expected %zu arguments in call expression, found %zu\n",
+            test.nargs, call_exp->arguments->length);
+
+        cm_list_node *list_node = call_exp->arguments->head;
+        for (size_t j = 0; j < test.nargs; j++) {
+            expression_t *arg = (expression_t *) list_node->data;
+            char *arg_string = arg->node.string(arg);
+            test(strcmp(arg_string, test.expected_args[j]) == 0,
+                "Expected argument %zu to be %s, found %s\n",
+                j, test.expected_args[j], arg_string);
+            free(arg_string);
+            list_node = list_node->next;
+        }
+        program_free(program);
+        parser_free(parser);
+    }
+    printf("Call expression argument tests passed\n");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -866,6 +919,7 @@ main(int argc, char **argv)
     test_function_literal();
     test_function_parameter_parsing();
     test_call_expression_parsing();
+    test_call_expression_argument_parsing();
     printf("All tests passed\n");
 
 }
