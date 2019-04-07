@@ -30,10 +30,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ast.h"
 #include "token.h"
 #include "lexer.h"
+#include "parser.h"
 
 static const char * PROMPT = ">> ";
+
+static void
+print_parse_errors(parser_t *parser)
+{
+	cm_list_node *list_node = parser->errors->head;
+	while (list_node) {
+		printf("%s\n", (char *) list_node->data);
+		list_node = list_node->next;
+	}
+}
 
 int
 main(int argc, char **argv)
@@ -42,21 +54,38 @@ main(int argc, char **argv)
 	size_t linesize = 0;
 	char *line = NULL;
 	lexer_t *l;
+	parser_t *parser = NULL;
+	program_t *program = NULL;
 	token_t *tok;
 
 	printf("%s", PROMPT);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
 		l = lexer_init(line);
-		for (tok = lexer_next_token(l);
-				tok->type != END_OF_FILE;
-				tok = lexer_next_token(l)) {
-			printf("{Type: %s Literal: %s}\n", get_token_name(tok), tok->literal);
-			token_free(tok);
+		parser = parser_init(l);
+		program = parse_program(parser);
+
+		if (parser->errors) {
+			print_parse_errors(parser);
+			goto CONTINUE;
 		}
+
+		char *program_string = program->node.string(program);
+		printf("%s\n", program_string);
+		free(program_string);
+CONTINUE:
+		program_free(program);
+		parser_free(parser);
 		free(line);
 		line = NULL;
-		lexer_free(l);
+		program = NULL;
+		parser = NULL;
 		printf("%s", PROMPT);
 	}
 
+	if (program)
+		program_free(program);
+	if (parser)
+		parser_free(parser);
+	if (line)
+		free(line);
 }

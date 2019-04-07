@@ -28,8 +28,8 @@ lexer_tests:	${OBJDIR}/lexer_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
 parser_tests:	${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o
 	${CC} ${CFLAGS} -o ${BINDIR}/parser_tests ${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o
 
-repl:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
-	${CC} ${CFLAGS} -o ${BINDIR}/repl ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o
+repl:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o
+	${CC} ${CFLAGS} -o ${BINDIR}/repl ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o
 
 clean:
 	rm -rf $(BINDIR) $(OBJDIR) core
