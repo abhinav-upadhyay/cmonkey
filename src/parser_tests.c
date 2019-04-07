@@ -786,8 +786,8 @@ test_function_parameter_parsing(void)
 
         expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
         function_literal_t *function = (function_literal_t *) exp_stmt->expression;
-        test(function->nparameters == test.nparams,
-            "Expected %zu parameters, found %zu\n", test.nparams, function->nparameters);
+        test(function->parameters->length == test.nparams,
+            "Expected %zu parameters, found %zu\n", test.nparams, function->parameters->length);
 
         cm_list_node *list_node = function->parameters->head;
         for (size_t i = 0; i < test.nparams; i++) {
@@ -799,6 +799,51 @@ test_function_parameter_parsing(void)
         program_free(program);
         parser_free(parser);
     }
+}
+
+static void
+test_call_expression_parsing(void)
+{
+    const char *input = "add(1, 2 * 3, 4 + 5);";
+    print_test_separator_line();
+    printf("Testing call expression parsing\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "Failed to parse program\n");
+    check_parser_errors(parser);
+
+    test(program->nstatements == 1, "Expected 1 statement in program, found %zu\n",
+        program->nstatements);
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == CALL_EXPRESSION,
+        "Expected expression of type CALL_EXPRESSION, found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+
+    test(exp_stmt->expression->expression_type == CALL_EXPRESSION, "Expected CALL_EXPRESSION found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+
+    call_expression_t *call_exp = (call_expression_t *) exp_stmt->expression;
+    test(call_exp->function->expression_type == IDENTIFIER_EXPRESSION,
+        "Expected function to be IDENTIFIER_EXPRESSION, found %s\n",
+        get_expression_type_name(call_exp->function->expression_type));
+    test_identifier(call_exp->function, "add");
+    test(call_exp->arguments->length == 3, "Expected 3 arguments, found %zu\n",
+        call_exp->arguments->length);
+
+    test_literal_expression((expression_t *) call_exp->arguments->head->data, "1");
+    test_infix_expression((expression_t *) call_exp->arguments->head->next->data,
+        "*", "2", "3");
+    test_infix_expression((expression_t *) call_exp->arguments->head->next->next->data,
+        "+", "4", "5");
+    program_free(program);
+    parser_free(parser);
+    printf("Call expression parsing test passed\n");
 }
 
 int
@@ -817,6 +862,7 @@ main(int argc, char **argv)
     test_ifelse_expression();
     test_function_literal();
     test_function_parameter_parsing();
+    test_call_expression_parsing();
     printf("All tests passed\n");
 
 }
