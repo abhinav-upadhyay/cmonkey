@@ -758,6 +758,49 @@ test_function_literal(void)
     parser_free(parser);
 }
 
+static void
+test_function_parameter_parsing(void)
+{
+    typedef struct {
+        const char *input;
+        size_t nparams;
+        const char *expected_params[3];
+    } test_input;
+
+    test_input tests[] = {
+        {"fn () {};", 0, {NULL, NULL, NULL}},
+        {"fn (x) {};", 1, {"x", NULL, NULL}},
+        {"fn (x, y, z) {};", 3, {"x", "y", "z"}}
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    print_test_separator_line();
+
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing function parameter parsing for: %s\n", test.input);
+        lexer_t *lexer = lexer_init(test.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        test(program != NULL, "Program parsing failed\n");
+        check_parser_errors(parser);
+
+        expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+        function_literal_t *function = (function_literal_t *) exp_stmt->expression;
+        test(function->nparameters == test.nparams,
+            "Expected %zu parameters, found %zu\n", test.nparams, function->nparameters);
+
+        cm_list_node *list_node = function->parameters->head;
+        for (size_t i = 0; i < test.nparams; i++) {
+            identifier_t *param = (identifier_t *) list_node->data;
+            test_literal_expression((expression_t *) param, test.expected_params[i]);
+            list_node = list_node->next;
+        }
+
+        program_free(program);
+        parser_free(parser);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -773,6 +816,7 @@ main(int argc, char **argv)
     test_if_expression();
     test_ifelse_expression();
     test_function_literal();
+    test_function_parameter_parsing();
     printf("All tests passed\n");
 
 }

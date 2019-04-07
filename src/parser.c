@@ -527,7 +527,8 @@ create_function_literal(parser_t *parser)
     func->expression.node.token_literal = function_literal_token_literal;
     func->expression.expression_type = FUNCTION_LITERAL;
     func->expression.expression_node = NULL;
-    func->parameters = NULL;
+    func->nparameters = 0;
+    func->parameters = cm_list_init();
     func->token = token_copy(parser->cur_tok);
     func->body = NULL;
     return func;
@@ -1200,7 +1201,6 @@ parse_if_expression(parser_t *parser)
 static void
 parse_function_parameters(parser_t * parser, function_literal_t *function)
 {
-    function->parameters = cm_list_init();
     if (parser->peek_tok->type == RPAREN) {
         parser_next_token(parser);
         return;
@@ -1209,11 +1209,13 @@ parse_function_parameters(parser_t * parser, function_literal_t *function)
     parser_next_token(parser);
     identifier_t *identifier = create_identifier(parser);
     cm_list_add(function->parameters, identifier);
+    function->nparameters++;
     while (parser->peek_tok->type == COMMA) {
         parser_next_token(parser);
         parser_next_token(parser);
         identifier = create_identifier(parser);
         cm_list_add(function->parameters, identifier);
+        function->nparameters++;
     }
 
     if (!expect_peek(parser, RPAREN)) {

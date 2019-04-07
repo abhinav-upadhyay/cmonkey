@@ -140,6 +140,7 @@ typedef struct if_expression_t {
 typedef struct function_literal_t {
     expression_t expression;
     token_t *token;
+    size_t nparameters;
     cm_list *parameters;
     block_statement_t *body;
 } function_literal_t;
