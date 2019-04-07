@@ -15,6 +15,7 @@ static expression_t * parse_prefix_expression(parser_t *);
 static expression_t * parse_boolean_expression(parser_t *);
 static expression_t * parse_grouped_expression(parser_t *);
 static expression_t * parse_if_expression(parser_t *);
+static expression_t * parse_function_literal(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 
@@ -39,7 +40,7 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
      NULL, //RPAREN
      NULL, //LBRACE
      NULL, //RBRACE
-     NULL, //FUNCTION
+     parse_function_literal, //FUNCTION
      NULL, //LET
      parse_if_expression, //IF
      NULL, //ELSE
@@ -355,6 +356,60 @@ if_expression_string(void *exp)
     return string;
 }
 
+
+static char *
+generate_parameters_string(function_literal_t *func)
+{
+    char *string = NULL;
+    char *temp = NULL;
+    if (func->parameters == NULL || func->parameters->length == 0)
+        return strdup("");
+
+    cm_list_node *list_node = func->parameters->head;
+    while (list_node != NULL) {
+        identifier_t *param = (identifier_t *) list_node->data;
+        char *param_string = param->expression.node.string(param);
+        if (string == NULL) {
+            asprintf(&temp, "%s", param_string);
+            free(param_string);
+            if (temp == NULL)
+                errx(EXIT_FAILURE, "malloc failed");
+        } else {
+            asprintf(&temp, "%s, %s", string, param_string);
+            free(param_string);
+            free(string);
+            if (temp == NULL)
+                errx(EXIT_FAILURE, "malloc failed");
+            string = temp;
+        }
+        list_node = list_node->next;
+    }
+    return string;
+}
+
+static char *
+function_literal_string(void *exp)
+{
+    function_literal_t *func = (function_literal_t *) exp;
+    char *params_string = generate_parameters_string(func);
+    char *func_string = NULL;
+    char *func_token_literal = func->expression.node.token_literal(func);
+    char *body_string = func->body->statement.node.string(func->body);
+    asprintf(&func_string, "%s(%s) %s", func_token_literal, params_string, body_string);
+    free(params_string);
+    free(body_string);
+    if (func_string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return func_string;
+}
+
+static char *
+function_literal_token_literal(void *exp)
+{
+    function_literal_t *func = (function_literal_t *) exp;
+    return func->token->literal;
+}
+
 static char *
 program_string(void *prog_ptr)
 {
@@ -461,6 +516,23 @@ create_block_statement(parser_t *parser)
     return block_stmt;
 }
 
+static function_literal_t *
+create_function_literal(parser_t *parser)
+{
+    function_literal_t *func;
+    func = malloc(sizeof(*func));
+    if (func == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    func->expression.node.string = function_literal_string;
+    func->expression.node.token_literal = function_literal_token_literal;
+    func->expression.expression_type = FUNCTION_LITERAL;
+    func->expression.expression_node = NULL;
+    func->parameters = NULL;
+    func->token = token_copy(parser->cur_tok);
+    func->body = NULL;
+    return func;
+}
+
 void
 parser_free(parser_t *parser)
 {
@@ -504,8 +576,9 @@ create_statement(parser_t *parser, statement_type_t stmt_type)
 }
 
 static void
-free_identifier(identifier_t *ident)
+free_identifier(void *id)
 {
+    identifier_t *ident = (identifier_t *) id;
     token_free(ident->token);
     free(ident->value);
     free(ident);
@@ -581,6 +654,17 @@ free_if_expression(if_expression_t *if_exp)
 }
 
 static void
+free_function_literal(function_literal_t *function)
+{
+    if (function->body)
+        free_statement((statement_t *) function->body);
+    if (function->parameters)
+        cm_list_free(function->parameters, free_identifier);
+    token_free(function->token);
+    free(function);
+}
+
+static void
 free_expression(expression_t *exp)
 {
     switch (exp->expression_type)
@@ -602,6 +686,9 @@ free_expression(expression_t *exp)
             break;
         case IF_EXPRESSION:
             free_if_expression((if_expression_t *) exp);
+            break;
+        case FUNCTION_LITERAL:
+            free_function_literal((function_literal_t *) exp);
             break;
         default:
             break;
@@ -739,9 +826,8 @@ ident_token_literal(void *node)
     return ident->token->literal;
 }
 
-//TODO: can we create a create_expression API like we have for statements?
-static expression_t *
-parse_identifier_expression(parser_t * parser)
+static identifier_t *
+create_identifier(parser_t *parser)
 {
     identifier_t *ident;
     ident = malloc(sizeof(*ident));
@@ -761,6 +847,14 @@ parse_identifier_expression(parser_t * parser)
         free(ident);
         errx(EXIT_FAILURE, "malloc failed");
     }
+    return ident;
+}
+
+//TODO: can we create a create_expression API like we have for statements?
+static expression_t *
+parse_identifier_expression(parser_t * parser)
+{
+    identifier_t *ident = create_identifier(parser);
     return (expression_t *) ident;
 }
 
@@ -1101,5 +1195,51 @@ parse_if_expression(parser_t *parser)
         if_exp->alternative = parse_block_statement(parser);
     }
     return (expression_t *) if_exp;
+}
+
+static void
+parse_function_parameters(parser_t * parser, function_literal_t *function)
+{
+    function->parameters = cm_list_init();
+    if (parser->peek_tok->type == RPAREN) {
+        parser_next_token(parser);
+        return;
+    }
+
+    parser_next_token(parser);
+    identifier_t *identifier = create_identifier(parser);
+    cm_list_add(function->parameters, identifier);
+    while (parser->peek_tok->type == COMMA) {
+        parser_next_token(parser);
+        parser_next_token(parser);
+        identifier = create_identifier(parser);
+        cm_list_add(function->parameters, identifier);
+    }
+
+    if (!expect_peek(parser, RPAREN)) {
+        cm_list_free(function->parameters, free_identifier);
+        function->parameters = NULL;
+        return;
+    }
+}
+
+static expression_t *
+parse_function_literal(parser_t *parser)
+{
+    function_literal_t *function = create_function_literal(parser);
+    if (!expect_peek(parser, LPAREN)) {
+        free_function_literal(function);
+        return NULL;
+    }
+    parse_function_parameters(parser, function);
+    if (!expect_peek(parser, LBRACE)) {
+        cm_list_free(function->parameters, free_identifier);
+        token_free(function->token);
+        free(function);
+        return NULL;
+    }
+
+    function->body = parse_block_statement(parser);
+    return (expression_t *) function;
 }
 

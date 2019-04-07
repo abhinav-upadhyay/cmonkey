@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+
+#include "cmonkey_utils.h"
 #include "token.h"
 
 typedef enum node_type_t {
@@ -30,7 +32,8 @@ typedef enum expression_type_t {
     PREFIX_EXPRESSION,
     INFIX_EXPRESSION,
     BOOLEAN_EXPRESSION,
-    IF_EXPRESSION
+    IF_EXPRESSION,
+    FUNCTION_LITERAL
 } expression_type_t;
 
 static const char *expression_type_values[] = {
@@ -39,7 +42,8 @@ static const char *expression_type_values[] = {
     "PREFIX_EXPRESSION",
     "INFIX_EXPRESSION",
     "BOOLEAN_EXPRESSION",
-    "IF_EXPRESSION"
+    "IF_EXPRESSION",
+    "FUNCTION_LITERAL"
 };
 
 typedef struct node_t {
@@ -132,6 +136,13 @@ typedef struct if_expression_t {
     block_statement_t *consequence;
     block_statement_t *alternative;
 } if_expression_t;
+
+typedef struct function_literal_t {
+    expression_t expression;
+    token_t *token;
+    cm_list *parameters;
+    block_statement_t *body;
+} function_literal_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
 #define get_expression_type_name(type) expression_type_values[type]

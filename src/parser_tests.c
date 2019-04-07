@@ -713,6 +713,51 @@ test_if_expression(void)
     printf("if expression test passed\n");
 }
 
+static void
+test_function_literal(void)
+{
+    const char *input = "fn(x, y) { x + y; }";
+    print_test_separator_line();
+    printf("Testing function literal: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "Failed to parser program\n");
+    check_parser_errors(parser);
+
+    test(program->nstatements == 1, "Expected 1 statement in program, found %zu\n",
+        program->nstatements);
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == FUNCTION_LITERAL,
+        "Expected expression of type FUNCTION_LITERAL, found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+
+    function_literal_t *function = (function_literal_t *) exp_stmt->expression;
+    test(function->parameters->length == 2, "Expected 2 parameters in function, found %zu\n",
+        function->parameters->length);
+
+    test_literal_expression((expression_t *) function->parameters->head->data, "x");
+    test_literal_expression((expression_t *) function->parameters->head->next->data, "y");
+
+    test(function->body->nstatements == 1, "Expected 1 statement in function body, found %zu\n",
+        function->body->nstatements);
+
+    test(function->body->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT in function body, found %s\n",
+        get_statement_type_name(function->body->statements[0]->statement_type));
+
+    expression_statement_t *body_exp_statement = (expression_statement_t *) function->body->statements[0];
+    test_infix_expression(body_exp_statement->expression, "+", "x", "y");
+    printf("Function literal parsing test passed\n");
+    program_free(program);
+    parser_free(parser);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -727,6 +772,7 @@ main(int argc, char **argv)
     test_boolean_expression();
     test_if_expression();
     test_ifelse_expression();
+    test_function_literal();
     printf("All tests passed\n");
 
 }
