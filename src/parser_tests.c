@@ -330,7 +330,10 @@ test_parse_infix_expression()
         {"foobar > barfoo;", ">", "foobar", "barfoo"},
         {"foobar < barfoo;", "<", "foobar", "barfoo"},
         {"foobar == barfoo;", "==", "foobar", "barfoo"},
-        {"foobar != barfoo;", "!=", "foobar", "barfoo"}
+        {"foobar != barfoo;", "!=", "foobar", "barfoo"},
+        {"true == true", "==", "true", "true"},
+        {"true != false", "!=", "true", "false"},
+        {"false == false", "==", "false", "false"}
     };
     print_test_separator_line();
     printf("Testing infix expressions\n");
@@ -419,7 +422,9 @@ test_parse_prefix_expression()
         {"!5", "!", "5"},
         {"-15", "-", "15"},
         {"!foobar", "!", "foobar"},
-        {"-foobar", "-", "foobar"}
+        {"-foobar", "-", "foobar"},
+        {"!true", "!", "true"},
+        {"!false", "!", "false"}
     };
 
     print_test_separator_line();
