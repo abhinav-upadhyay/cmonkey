@@ -38,6 +38,16 @@ string_to_bool(const char *str)
         return false;
 }
 
+static const char *
+bool_to_string(_Bool value)
+{
+    if (value)
+        return "true";
+    else
+        return "false";
+}
+
+
 static void
 test_integer_literal_value(expression_t *exp, long expected_value)
 {
@@ -83,6 +93,24 @@ test_identifier(expression_t *exp, const char *expected_value)
 }
 
 static void
+test_boolean_literal(expression_t *exp, const char *expected_value)
+{
+    test(exp->expression_type == BOOLEAN_EXPRESSION,
+        "Expected expression type BOOLEAN_EXPRESSION, found %s\n",
+        get_expression_type_name(exp->expression_type));
+
+    boolean_expression_t *bool_exp = (boolean_expression_t *) exp;
+    test(bool_exp->value == string_to_bool(expected_value),
+        "Expected to find boolean expression value %s, found %s\n",
+        expected_value, bool_to_string(bool_exp->value));
+
+    char *tok_literal = bool_exp->expression.node.token_literal(bool_exp);
+    test(strcmp(tok_literal, expected_value) == 0,
+        "Expected token literal for boolean expression: %s, found %s\n",
+        expected_value, bool_to_string(bool_exp->value));
+}
+
+static void
 test_literal_expression(expression_t *exp, const char *value)
 {
     long expected_integer_value;
@@ -93,6 +121,9 @@ test_literal_expression(expression_t *exp, const char *value)
             return;
         case IDENTIFIER_EXPRESSION:
             test_identifier(exp, value);
+            return;
+        case BOOLEAN_EXPRESSION:
+            test_boolean_literal(exp, value);
             return;
         default:
             err(EXIT_FAILURE, "Unsupported expression type passed to test_literal_expression: %s",
@@ -563,15 +594,7 @@ test_boolean_expression()
         printf("Found EXPRESSION_STATEMENT\n");
 
         expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
-        test(exp_stmt->expression->expression_type == BOOLEAN_EXPRESSION,
-            "Expected BOOLEAN_EXPRESSION, found %s\n",
-            get_expression_type_name(exp_stmt->expression->expression_type));
-        printf("Found BOOLEAN_EXPRESSION\n");
-
-        boolean_expression_t *bool_exp = (boolean_expression_t *) exp_stmt->expression;
-        test(bool_exp->value == string_to_bool(test.expected_value),
-            "Failed to match boolean expression value, expected %s\n", test.expected_value);
-
+        test_literal_expression(exp_stmt->expression, test.expected_value);
         program_free(program);
         parser_free(parser);
     }
