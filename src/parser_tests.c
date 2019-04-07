@@ -388,7 +388,12 @@ test_operator_precedence_parsing()
         {"true", "true"},
         {"false", "false"},
         {"3 > 5 == false", "((3 > 5) == false)"},
-        {"3 < 5 == true", "((3 < 5) == true)"}
+        {"3 < 5 == true", "((3 < 5) == true)"},
+        {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
+        {"(5 + 5) * 2", "((5 + 5) * 2)"},
+        {"2 / (5 + 5)", "(2 / (5 + 5))"},
+        {"-(5 + 5)", "(-(5 + 5))"},
+        {"!(true == true)", "(!(true == true))"}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
@@ -609,7 +614,6 @@ int
 main(int argc, char **argv)
 {
     test_let_stmt();
-    // test_parser_errors();
     test_return_statement();
     test_identifier_expression();
     test_integer_literal_expression();

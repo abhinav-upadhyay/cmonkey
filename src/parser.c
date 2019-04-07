@@ -13,6 +13,7 @@ static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
 static expression_t * parse_boolean_expression(parser_t *);
+static expression_t * parse_grouped_expression(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 
@@ -33,7 +34,7 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
      NULL, //NOT_EQ
      NULL, //COMMA
      NULL, //SEMICOLON
-     NULL, //LPAREN
+     parse_grouped_expression, //LPAREN
      NULL, //RPAREN
      NULL, //LBRACE
      NULL, //RBRACE
@@ -886,5 +887,24 @@ parse_boolean_expression(parser_t *parser)
     else
         bool_exp->value = false;
     return (expression_t *) bool_exp;
+}
+
+static expression_t *
+parse_grouped_expression(parser_t *parser)
+{
+    #ifdef TRACE
+        trace("parse_grouped_expression");
+    #endif
+    parser_next_token(parser);
+    expression_t *exp = parse_expression(parser, LOWEST);
+    if (!expect_peek(parser, RPAREN)) {
+        free_expression(exp);
+        exp = NULL;
+    }
+
+    #ifdef TRACE
+        untrace("parse_grouped_expression");
+    #endif
+    return exp;
 }
 
