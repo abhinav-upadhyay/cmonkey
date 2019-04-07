@@ -14,6 +14,7 @@ static expression_t * parse_integer_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
 static expression_t * parse_boolean_expression(parser_t *);
 static expression_t * parse_grouped_expression(parser_t *);
+static expression_t * parse_if_expression(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 
@@ -40,7 +41,7 @@ static expression_t * parse_infix_expression(parser_t *, expression_t *);
      NULL, //RBRACE
      NULL, //FUNCTION
      NULL, //LET
-     NULL, //IF
+     parse_if_expression, //IF
      NULL, //ELSE
      NULL, //RETURN
      parse_boolean_expression, //TRUE
@@ -171,6 +172,13 @@ expression_statement_token_literal(void *stmt)
 }
 
 static char *
+block_statement_token_literal(void *stmt)
+{
+    block_statement_t *block_stmt = (block_statement_t *) stmt;
+    return block_stmt->token->literal;
+}
+
+static char *
 prefix_expression_token_literal(void *exp)
 {
     prefix_expression_t *prefix_exp = (prefix_expression_t *) exp;
@@ -189,6 +197,13 @@ boolean_expression_token_literal(void *exp)
 {
     boolean_expression_t *bool_exp = (boolean_expression_t *) exp;
     return bool_exp->token->literal;
+}
+
+static char *
+if_expression_token_literal(void *exp)
+{
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    return if_exp->token->literal;
 }
 
 void
@@ -281,6 +296,32 @@ expression_statement_string(void *stmt)
 }
 
 static char *
+block_statement_string(void *stmt)
+{
+    block_statement_t *block_stmt = (block_statement_t *) stmt;
+    char *string = NULL;
+    for (size_t i = 0; i < block_stmt->nstatements; i++) {
+        statement_t *s = block_stmt->statements[i];
+        char *stmt_string = s->node.string(s);
+        if (string == NULL)
+            string = stmt_string;
+        else {
+            char *temp = NULL;
+            asprintf(&temp, "%s %s", string, stmt_string);
+            if (temp == NULL) {
+                free(stmt_string);
+                free(string);
+                errx(EXIT_FAILURE, "malloc failed");
+            }
+            free(string);
+            free(stmt_string);
+            string = temp;
+        }
+    }
+    return string;
+}
+
+static char *
 boolean_expression_string(void *exp)
 {
     //TODO: error check for strdup needed
@@ -289,6 +330,29 @@ boolean_expression_string(void *exp)
         return strdup("true");
     else
         return strdup("false");
+}
+
+static char *
+if_expression_string(void *exp)
+{
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    char *string = NULL;
+    char *condition_string = if_exp->condition->node.string(if_exp->condition);
+    char *consequence_string = if_exp->consequence->statement.node.string(if_exp->consequence);
+    if (if_exp->alternative != NULL) {
+        char *alternative_string = if_exp->alternative->statement.node.string(if_exp->alternative);
+        asprintf(&string, "if%s %s else %s", condition_string, consequence_string, alternative_string);
+        free(alternative_string);
+    } else {
+        asprintf(&string, "if%s %s", condition_string, consequence_string);
+    }
+
+    free(condition_string);
+    free(consequence_string);
+
+    if (string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return string;
 }
 
 static char *
@@ -376,6 +440,27 @@ create_expression_statement(parser_t *parser)
     return exp_stmt;
 }
 
+static block_statement_t *
+create_block_statement(parser_t *parser)
+{
+    block_statement_t *block_stmt;
+    block_stmt = malloc(sizeof(*block_stmt));
+    if (block_stmt == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    block_stmt->statement.node.string = block_statement_string;
+    block_stmt->statement.node.token_literal = block_statement_token_literal;
+    block_stmt->statement.statement_type = BLOCK_STATEMENT;
+    block_stmt->array_size = 8;
+    block_stmt->statements = calloc(block_stmt->array_size, sizeof(*block_stmt->statements));
+    if (block_stmt->statements == NULL) {
+        free(block_stmt);
+        errx(EXIT_FAILURE, "malloc failed");
+    }
+    block_stmt->nstatements = 0;
+    block_stmt->token = token_copy(parser->cur_tok);
+    return block_stmt;
+}
+
 void
 parser_free(parser_t *parser)
 {
@@ -395,7 +480,7 @@ program_free(program_t *program)
     for (int i = 0; i < program->nstatements; i++) {
         statement_t *stmt = program->statements[i];
         if (stmt)
-            free_statement(stmt, stmt->statement_type);
+            free_statement(stmt);
     }
     free(program->statements);
     free(program);
@@ -411,6 +496,8 @@ create_statement(parser_t *parser, statement_type_t stmt_type)
             return create_return_statement(parser);
         case EXPRESSION_STATEMENT:
             return create_expression_statement(parser);
+        case BLOCK_STATEMENT:
+            return create_block_statement(parser);
         default:
             return NULL;
     }
@@ -481,6 +568,19 @@ free_letstatement(letstatement_t *let_stmt)
 }
 
 static void
+free_if_expression(if_expression_t *if_exp)
+{
+    token_free(if_exp->token);
+    if (if_exp->condition)
+        free_expression(if_exp->condition);
+    if (if_exp->consequence)
+        free_statement((statement_t *) if_exp->consequence);
+    if (if_exp->alternative)
+        free_statement((statement_t *) if_exp->alternative);
+    free(if_exp);
+}
+
+static void
 free_expression(expression_t *exp)
 {
     switch (exp->expression_type)
@@ -500,6 +600,9 @@ free_expression(expression_t *exp)
         case BOOLEAN_EXPRESSION:
             free_boolean_expression((boolean_expression_t *) exp);
             break;
+        case IF_EXPRESSION:
+            free_if_expression((if_expression_t *) exp);
+            break;
         default:
             break;
     }
@@ -515,10 +618,22 @@ free_expression_statement(expression_statement_t *exp_stmt)
     free(exp_stmt);
 }
 
-void
-free_statement(void *stmt, statement_type_t stmt_type)
+static void
+free_block_statement(block_statement_t *block_stmt)
 {
-    switch (stmt_type)
+    for (size_t i = 0; i < block_stmt->nstatements; i++) {
+        free_statement(block_stmt->statements[i]);
+    }
+    free(block_stmt->statements);
+    token_free(block_stmt->token);
+    free(block_stmt);
+}
+
+void
+free_statement(statement_t *stmt)
+{
+
+    switch (stmt->statement_type)
     {
         case LET_STATEMENT:
             free_letstatement((letstatement_t *) stmt);
@@ -528,6 +643,9 @@ free_statement(void *stmt, statement_type_t stmt_type)
             break;
         case EXPRESSION_STATEMENT:
             free_expression_statement((expression_statement_t *) stmt);
+            break;
+        case BLOCK_STATEMENT:
+            free_block_statement((block_statement_t *) stmt);
             break;
         default:
             free(stmt);
@@ -549,7 +667,6 @@ parser_init(lexer_t *l)
     parser_next_token(parser);
     parser_next_token(parser);
     return parser;
-
 }
 
 void
@@ -562,7 +679,7 @@ parser_next_token(parser_t *parser)
 }
 
 static int
-add_statement(program_t *program, statement_t *stmt)
+add_statement_to_program(program_t *program, statement_t *stmt)
 {
     if (program->nstatements == program->array_size) {
         size_t new_size = program->array_size * 2;
@@ -575,6 +692,22 @@ add_statement(program_t *program, statement_t *stmt)
     program->statements[program->nstatements++] = stmt;
     return 0;
 }
+
+static int
+add_statement_to_block(block_statement_t *block_stmt, statement_t *stmt)
+{
+    if (block_stmt->nstatements == block_stmt->array_size) {
+        size_t new_size = block_stmt->array_size * 2;
+        block_stmt->statements = reallocarray(block_stmt->statements,
+            new_size, sizeof(*block_stmt->statements));
+        if (block_stmt->statements == NULL)
+            return 1;
+        block_stmt->array_size = new_size;
+    }
+    block_stmt->statements[block_stmt->nstatements++] = stmt;
+    return 0;
+}
+
 
 static void
 peek_error(parser_t *parser, token_type tok_type)
@@ -673,14 +806,14 @@ parse_letstatement(parser_t *parser)
         errx(EXIT_FAILURE, "malloc failed"); // returning NULL would indicate no valid token
     
     if (!expect_peek(parser, IDENT)) {
-        free_statement(let_stmt, LET_STATEMENT);
+        free_statement((statement_t *) let_stmt);
         return NULL;
     }
 
     identifier_t *ident = (identifier_t *) parse_identifier_expression(parser);
     let_stmt->name = ident;
     if (!expect_peek(parser, ASSIGN)) {
-        free_statement(let_stmt, LET_STATEMENT);
+        free_statement((statement_t *) let_stmt);
         return NULL;
     }
     parser_next_token(parser);
@@ -732,7 +865,7 @@ parse_program(parser_t *parser)
     while (parser->cur_tok->type != END_OF_FILE) {
         statement_t *stmt = parser_parse_statement(parser);
         if (stmt != NULL) {
-            int status = add_statement(program, stmt);
+            int status = add_statement_to_program(program, stmt);
             if (status != 0) {
                 program_free(program);
                 return NULL;
@@ -906,5 +1039,67 @@ parse_grouped_expression(parser_t *parser)
         untrace("parse_grouped_expression");
     #endif
     return exp;
+}
+
+static block_statement_t *
+parse_block_statement(parser_t *parser)
+{
+    block_statement_t *block_stmt = create_block_statement(parser);
+    parser_next_token(parser);
+    while (parser->cur_tok->type != RBRACE && parser->cur_tok->type != END_OF_FILE) {
+        statement_t *stmt = parser_parse_statement(parser);
+        if (stmt != NULL)
+            add_statement_to_block(block_stmt, stmt);
+        parser_next_token(parser);
+    }
+    return block_stmt;
+}
+
+static expression_t *
+parse_if_expression(parser_t *parser)
+{
+    if_expression_t *if_exp;
+    if_exp = malloc(sizeof(*if_exp));
+    if (if_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+
+    if_exp->expression.node.string = if_expression_string;
+    if_exp->expression.node.token_literal = if_expression_token_literal;
+    if_exp->expression.expression_type = IF_EXPRESSION;
+    if_exp->token = token_copy(parser->cur_tok);
+    if_exp->expression.expression_node = NULL;
+    if_exp->condition = NULL;
+    if_exp->alternative = NULL;
+    if_exp->consequence = NULL;
+
+    if (!expect_peek(parser, LPAREN)) {
+        token_free(if_exp->token);
+        free(if_exp);
+        return NULL;
+    }
+
+    parser_next_token(parser);
+    if_exp->condition = parse_expression(parser, LOWEST);
+    if (!expect_peek(parser, RPAREN)) {
+        free_if_expression(if_exp);
+        return NULL;
+    }
+
+    if (!expect_peek(parser, LBRACE)) {
+        free_if_expression(if_exp);
+        return NULL;
+    }
+
+    if_exp->consequence = parse_block_statement(parser);
+
+    if (parser->peek_tok->type == ELSE) {
+        parser_next_token(parser);
+        if (!expect_peek(parser, LBRACE)) {
+            free_if_expression(if_exp);
+            return NULL;
+        }
+        if_exp->alternative = parse_block_statement(parser);
+    }
+    return (expression_t *) if_exp;
 }
 

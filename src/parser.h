@@ -36,7 +36,7 @@ program_t *program_init(void);
 void program_free(program_t *);
 void parser_free(parser_t *);
 void *create_statement(parser_t *, statement_type_t);
-void free_statement(void *, statement_type_t);
+void free_statement(statement_t *);
 void _statement_node(void);
 void _expression_node(void);
 

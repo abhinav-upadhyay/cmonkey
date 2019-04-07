@@ -610,6 +610,109 @@ test_boolean_expression()
     }
 }
 
+static void
+test_ifelse_expression(void)
+{
+    const char *input = "if (x < y) { x } else { y }";
+    print_test_separator_line();
+    printf("Testing if-else expression: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "Failed to parse program\n");
+
+    check_parser_errors(parser);
+    test(program->nstatements == 1,
+        "Expected 1 statement in program, found %zu\n", program->nstatements);
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    expression_t *exp = exp_stmt->expression;
+
+    test(exp->expression_type == IF_EXPRESSION,
+        "Expected IF_EXPRESSION, found %s\n", get_expression_type_name(exp->expression_type));
+
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    test_infix_expression(if_exp->condition, "<", "x", "y");
+
+    test(if_exp->consequence->nstatements == 1,
+        "Expected 1 statement in consequence, found %zu\n",
+        if_exp->consequence->nstatements);
+
+    test(if_exp->consequence->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT in consequence, found %s\n",
+        get_statement_type_name(if_exp->consequence->statements[0]->statement_type));
+
+    expression_statement_t *conseq_stmt = (expression_statement_t *) if_exp->consequence->statements[0];
+    test_identifier(conseq_stmt->expression, "x");
+
+    test(if_exp->alternative->nstatements == 1,
+        "Expected 1 statement in alternative of if expression, found %zu\n",
+        if_exp->alternative->nstatements);
+
+    test(if_exp->alternative->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT in alternative of if expression, found %s\n",
+        get_statement_type_name(if_exp->alternative->statements[0]->statement_type));
+
+    expression_statement_t *alternative_exp_stmt = (expression_statement_t *) if_exp->alternative->statements[0];
+    test_identifier(alternative_exp_stmt->expression, "y");
+
+    program_free(program);
+    parser_free(parser);
+    printf("if-else expression test passed\n");
+}
+
+
+static void
+test_if_expression(void)
+{
+    const char *input = "if (x < y) { x }";
+    print_test_separator_line();
+    printf("Testing if expression: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    test(program != NULL, "Failed to parse program\n");
+
+    check_parser_errors(parser);
+    test(program->nstatements == 1,
+        "Expected 1 statement in program, found %zu\n", program->nstatements);
+
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    expression_t *exp = exp_stmt->expression;
+
+    test(exp->expression_type == IF_EXPRESSION,
+        "Expected IF_EXPRESSION, found %s\n", get_expression_type_name(exp->expression_type));
+
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    test_infix_expression(if_exp->condition, "<", "x", "y");
+
+    test(if_exp->consequence->nstatements == 1,
+        "Expected 1 statement in consequence, found %zu\n",
+        if_exp->consequence->nstatements);
+
+    test(if_exp->consequence->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected statement of type EXPRESSION_STATEMENT in consequence, found %s\n",
+        get_statement_type_name(if_exp->consequence->statements[0]->statement_type));
+
+    expression_statement_t *conseq_stmt = (expression_statement_t *) if_exp->consequence->statements[0];
+    test_identifier(conseq_stmt->expression, "x");
+
+    test(if_exp->alternative == NULL,
+        "Expected alternative of if expression to be NULL\n");
+
+    program_free(program);
+    parser_free(parser);
+    printf("if expression test passed\n");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -622,6 +725,8 @@ main(int argc, char **argv)
     test_operator_precedence_parsing();
     test_string();
     test_boolean_expression();
+    test_if_expression();
+    test_ifelse_expression();
     printf("All tests passed\n");
 
 }
