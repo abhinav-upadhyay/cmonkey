@@ -393,7 +393,10 @@ test_operator_precedence_parsing()
         {"(5 + 5) * 2", "((5 + 5) * 2)"},
         {"2 / (5 + 5)", "(2 / (5 + 5))"},
         {"-(5 + 5)", "(-(5 + 5))"},
-        {"!(true == true)", "(!(true == true))"}
+        {"!(true == true)", "(!(true == true))"},
+        {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+        {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 *  8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);

@@ -377,6 +377,7 @@ generate_parameters_string(cm_list *parameters_list)
             free(param_string);
             if (temp == NULL)
                 errx(EXIT_FAILURE, "malloc failed");
+            string = temp;
         } else {
             asprintf(&temp, "%s, %s", string, param_string);
             free(param_string);
