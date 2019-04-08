@@ -73,7 +73,8 @@ main(int argc, char **argv)
 	parser_t *parser = NULL;
 	program_t *program = NULL;
 	token_t *tok;
-
+	printf("%s\n", MONKEY_FACE);
+	printf("Welcome to the monkey programming language\n");
 	printf("%s", PROMPT);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
 		l = lexer_init(line);
