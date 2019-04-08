@@ -38,7 +38,8 @@
 
 typedef enum node_type_t {
     STATEMENT,
-    EXPRESSION
+    EXPRESSION,
+    PROGRAM
 } node_type_t;
 
 typedef enum statement_type_t {
@@ -78,6 +79,7 @@ static const char *expression_type_values[] = {
 };
 
 typedef struct node_t {
+    node_type_t type;
     char * (*token_literal) (void *); // return token literal for the node
     char * (*string) (void *);
 } node_t;

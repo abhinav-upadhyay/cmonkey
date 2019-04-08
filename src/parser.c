@@ -507,6 +507,7 @@ create_letstatement(parser_t *parser)
     let_stmt->statement.statement_type = LET_STATEMENT;
     let_stmt->statement.node.token_literal = letstatement_token_literal;
     let_stmt->statement.node.string = letstatement_string;
+    let_stmt->statement.node.type = STATEMENT;
     let_stmt->name = NULL;
     let_stmt->value = NULL;
     return let_stmt;
@@ -528,6 +529,7 @@ create_return_statement(parser_t *parser)
     ret_stmt->statement.statement_type = RETURN_STATEMENT;
     ret_stmt->statement.node.token_literal = return_statement_token_literal;
     ret_stmt->statement.node.string = return_statement_string;
+    ret_stmt->statement.node.type = STATEMENT;
     return ret_stmt;
 }
 
@@ -547,6 +549,7 @@ create_expression_statement(parser_t *parser)
     exp_stmt->statement.statement_type = EXPRESSION_STATEMENT;
     exp_stmt->statement.node.token_literal = expression_statement_token_literal;
     exp_stmt->statement.node.string = expression_statement_string;
+    exp_stmt->statement.node.type = STATEMENT;
     return exp_stmt;
 }
 
@@ -559,6 +562,7 @@ create_block_statement(parser_t *parser)
         errx(EXIT_FAILURE, "malloc failed");
     block_stmt->statement.node.string = block_statement_string;
     block_stmt->statement.node.token_literal = block_statement_token_literal;
+    block_stmt->statement.node.type = STATEMENT;
     block_stmt->statement.statement_type = BLOCK_STATEMENT;
     block_stmt->array_size = 8;
     block_stmt->statements = calloc(block_stmt->array_size, sizeof(*block_stmt->statements));
@@ -580,6 +584,7 @@ create_function_literal(parser_t *parser)
         errx(EXIT_FAILURE, "malloc failed");
     func->expression.node.string = function_literal_string;
     func->expression.node.token_literal = function_literal_token_literal;
+    func->expression.node.type = EXPRESSION;
     func->expression.expression_type = FUNCTION_LITERAL;
     func->expression.expression_node = NULL;
     func->parameters = cm_list_init();
@@ -598,6 +603,7 @@ create_call_expression(parser_t *parser)
 
     call_exp->expression.node.token_literal = call_expression_token_literal;
     call_exp->expression.node.string = call_expression_string;
+    call_exp->expression.node.type = EXPRESSION;
     call_exp->expression.expression_type = CALL_EXPRESSION;
     call_exp->expression.expression_node = NULL;
     call_exp->arguments = cm_list_init();
@@ -932,6 +938,7 @@ create_identifier(parser_t *parser)
     ident->expression.node.token_literal = ident_token_literal;
     ident->expression.expression_type = IDENTIFIER_EXPRESSION;
     ident->expression.node.string = identifier_string;
+    ident->expression.node.type = EXPRESSION;
     ident->value = strdup(parser->cur_tok->literal);
     if (ident->value == NULL) {
         token_free(ident->token);
@@ -1030,6 +1037,7 @@ program_init(void)
         return NULL;
     program->node.token_literal = program_token_literal;
     program->node.string = program_string;
+    program->node.type = PROGRAM;
     program->array_size = 64;
     program->statements = calloc(64, sizeof(*program->statements));
     if (program->statements == NULL) {
@@ -1113,6 +1121,7 @@ parse_integer_expression(parser_t *parser)
         errx(EXIT_FAILURE, "malloc failed");
     int_exp->expression.node.token_literal = int_exp_token_literal;
     int_exp->expression.node.string = integer_string;
+    int_exp->expression.node.type = EXPRESSION;
     int_exp->expression.expression_type = INTEGER_EXPRESSION;
     int_exp->expression.expression_node = NULL;
     int_exp->token = token_copy(parser->cur_tok);
@@ -1148,6 +1157,7 @@ parse_prefix_expression(parser_t *parser)
     prefix_exp->expression.expression_node = NULL;
     prefix_exp->expression.node.string = prefix_expression_string;
     prefix_exp->expression.node.token_literal = prefix_expression_token_literal;
+    prefix_exp->expression.node.type = EXPRESSION;
     prefix_exp->token = token_copy(parser->cur_tok);
     prefix_exp->operator = strdup(parser->cur_tok->literal);
     if (prefix_exp->operator == NULL)
@@ -1175,6 +1185,7 @@ parse_infix_expression(parser_t *parser, expression_t *left)
     infix_exp->expression.expression_type = INFIX_EXPRESSION;
     infix_exp->expression.node.string = infix_expression_string;
     infix_exp->expression.node.token_literal = infix_expression_token_literal;
+    infix_exp->expression.node.type = EXPRESSION;
     infix_exp->left = left;
     infix_exp->operator = strdup(parser->cur_tok->literal);
     infix_exp->token = token_copy(parser->cur_tok);
@@ -1203,6 +1214,7 @@ parse_boolean_expression(parser_t *parser)
     bool_exp->expression.expression_type = BOOLEAN_EXPRESSION;
     bool_exp->expression.node.token_literal = boolean_expression_token_literal;
     bool_exp->expression.node.string = boolean_expression_string;
+    bool_exp->expression.node.type = EXPRESSION;
     if (parser->cur_tok->type == TRUE)
         bool_exp->value = true;
     else
@@ -1266,6 +1278,7 @@ parse_if_expression(parser_t *parser)
 
     if_exp->expression.node.string = if_expression_string;
     if_exp->expression.node.token_literal = if_expression_token_literal;
+    if_exp->expression.node.type = EXPRESSION;
     if_exp->expression.expression_type = IF_EXPRESSION;
     if_exp->token = token_copy(parser->cur_tok);
     if_exp->expression.expression_node = NULL;
