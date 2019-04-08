@@ -1191,6 +1191,9 @@ parse_infix_expression(parser_t *parser, expression_t *left)
 static expression_t *
 parse_boolean_expression(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_boolean_expression");
+    #endif
     boolean_expression_t *bool_exp;
     bool_exp = malloc(sizeof(*bool_exp));
     if (bool_exp == NULL)
@@ -1204,6 +1207,10 @@ parse_boolean_expression(parser_t *parser)
         bool_exp->value = true;
     else
         bool_exp->value = false;
+
+    #ifdef TRACE
+        untrace("parse_boolean_expression");
+    #endif
     return (expression_t *) bool_exp;
 }
 
@@ -1229,6 +1236,9 @@ parse_grouped_expression(parser_t *parser)
 static block_statement_t *
 parse_block_statement(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_block_statement");
+    #endif
     block_statement_t *block_stmt = create_block_statement(parser);
     parser_next_token(parser);
     while (parser->cur_tok->type != RBRACE && parser->cur_tok->type != END_OF_FILE) {
@@ -1237,12 +1247,18 @@ parse_block_statement(parser_t *parser)
             add_statement_to_block(block_stmt, stmt);
         parser_next_token(parser);
     }
+    #ifdef TRACE
+        untrace("parse_block_statement");
+    #endif
     return block_stmt;
 }
 
 static expression_t *
 parse_if_expression(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_if_expression");
+    #endif
     if_expression_t *if_exp;
     if_exp = malloc(sizeof(*if_exp));
     if (if_exp == NULL)
@@ -1285,6 +1301,9 @@ parse_if_expression(parser_t *parser)
         }
         if_exp->alternative = parse_block_statement(parser);
     }
+    #ifdef TRACE
+        untrace("parse_if_expression")
+    #endif
     return (expression_t *) if_exp;
 }
 
@@ -1316,6 +1335,9 @@ parse_function_parameters(parser_t * parser, function_literal_t *function)
 static expression_t *
 parse_function_literal(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_function_literal");
+    #endif
     function_literal_t *function = create_function_literal(parser);
     if (!expect_peek(parser, LPAREN)) {
         free_function_literal(function);
@@ -1335,6 +1357,9 @@ parse_function_literal(parser_t *parser)
     }
 
     function->body = parse_block_statement(parser);
+    #ifdef TRACE
+        untrace("parse_function_literal")
+    #endif
     return (expression_t *) function;
 }
 
@@ -1366,6 +1391,9 @@ parse_call_arguments(parser_t *parser, call_expression_t *call_exp)
 static expression_t *
 parse_call_expression(parser_t *parser, expression_t *function)
 {
+    #ifdef TRACE
+        trace("parse_call_expression");
+    #endif
     call_expression_t *call_exp = create_call_expression(parser);
     parse_call_arguments(parser, call_exp);
     if (call_exp->arguments == NULL) {
@@ -1373,6 +1401,9 @@ parse_call_expression(parser_t *parser, expression_t *function)
         return NULL;
     }
     call_exp->function = function;
+    #ifdef TRACE
+        untrace("parse_call_expression");
+    #endif
     return (expression_t *) call_exp;
 }
 
