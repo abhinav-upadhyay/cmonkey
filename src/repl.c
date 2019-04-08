@@ -36,13 +36,29 @@
 #include "parser.h"
 
 static const char * PROMPT = ">> ";
+static const char *MONKEY_FACE = "            __,__\n\
+   .--.  .-\"     \"-.  .--.\n\
+  / .. \\/  .-. .-.  \\/ .. \\\n\
+ | |  '|  /   Y   \\  |'  | |\n\
+ | \\   \\  \\ 0 | 0 /  /   / |\n\
+  \\ '- ,\\.-\"\"\"\"\"\"\"-./, -' /\n\
+   ''-' /_   ^ ^   _\\ '-''\n\
+       |  \\._   _./  |\n\
+       \\   \\ '~' /   /\n\
+        '._ '-=-' _.'\n\
+           '-----'\n\
+";
+
 
 static void
 print_parse_errors(parser_t *parser)
 {
+	printf("%s\n", MONKEY_FACE);
+	printf("Woops! We ran into some monkey business here!\n");
+	printf(" Parser errors:\n");
 	cm_list_node *list_node = parser->errors->head;
 	while (list_node) {
-		printf("%s\n", (char *) list_node->data);
+		printf("\t%s\n", (char *) list_node->data);
 		list_node = list_node->next;
 	}
 }
