@@ -31,6 +31,8 @@
 #include <stdlib.h>
 
 #include "ast.h"
+#include "evaluator.h"
+#include "object.h"
 #include "token.h"
 #include "lexer.h"
 #include "parser.h"
@@ -86,9 +88,14 @@ main(int argc, char **argv)
 			goto CONTINUE;
 		}
 
-		char *program_string = program->node.string(program);
-		printf("%s\n", program_string);
-		free(program_string);
+		monkey_object_t *evaluated = monkey_eval((node_t *) program);
+		if (evaluated != NULL) {
+			char *s = evaluated->inspect(evaluated);
+			printf("%s\n", s);
+			free(s);
+			free(evaluated);
+		}
+
 CONTINUE:
 		program_free(program);
 		parser_free(parser);
