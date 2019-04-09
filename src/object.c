@@ -6,6 +6,10 @@
 #include "object.h"
 #include "cmonkey_utils.h"
 
+monkey_bool_t *MONKEY_TRUE_OBJ = NULL;
+monkey_bool_t *MONKEY_FALSE_OBJ = NULL;
+monkey_null_t *MONKEY_NULL_OBJ = NULL;
+
 static char *
 inspect(monkey_object_t *obj)
 {
@@ -42,24 +46,46 @@ create_monkey_int(long value)
 monkey_bool_t *
 create_monkey_bool(_Bool value)
 {
-    monkey_bool_t *bool_obj;
-    bool_obj = malloc(sizeof(*bool_obj));
-    if (bool_obj == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
-    bool_obj->object.inspect = inspect;
-    bool_obj->object.type = MONKEY_BOOL;
-    bool_obj->value = value;
-    return bool_obj;
+    if (value) {
+        if (MONKEY_TRUE_OBJ == NULL) {
+            MONKEY_TRUE_OBJ = malloc(sizeof(*MONKEY_TRUE_OBJ));
+            if (MONKEY_TRUE_OBJ == NULL)
+                errx(EXIT_FAILURE, "malloc failed");
+            MONKEY_TRUE_OBJ->object.inspect = inspect;
+            MONKEY_TRUE_OBJ->object.type = MONKEY_BOOL;
+            MONKEY_TRUE_OBJ->value = value;
+        }
+        return MONKEY_TRUE_OBJ;
+    } else {
+            if (MONKEY_FALSE_OBJ == NULL) {
+            MONKEY_FALSE_OBJ = malloc(sizeof(*MONKEY_FALSE_OBJ));
+            if (MONKEY_FALSE_OBJ == NULL)
+                errx(EXIT_FAILURE, "malloc failed");
+            MONKEY_FALSE_OBJ->object.inspect = inspect;
+            MONKEY_FALSE_OBJ->object.type = MONKEY_BOOL;
+            MONKEY_FALSE_OBJ->value = value;
+            }
+        return MONKEY_FALSE_OBJ;
+    }
 }
 
 monkey_null_t *
 create_monkey_null(void)
 {
-    monkey_null_t *null_obj;
-    null_obj = malloc(sizeof(*null_obj));
-    if (null_obj == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
-    null_obj->object.inspect = inspect;
-    null_obj->object.type = MONKEY_NULL;
-    return null_obj;
+    if (MONKEY_NULL_OBJ == NULL) {
+        monkey_null_t *null_obj;
+        null_obj = malloc(sizeof(*null_obj));
+        if (null_obj == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+        null_obj->object.inspect = inspect;
+        null_obj->object.type = MONKEY_NULL;
+        MONKEY_NULL_OBJ = null_obj;
+    }
+    return MONKEY_NULL_OBJ;
+}
+
+void
+free_monkey_object(monkey_object_t *object)
+{
+
 }
