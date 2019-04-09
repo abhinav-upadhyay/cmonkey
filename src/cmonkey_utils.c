@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-#include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "cmonkey_utils.h"
@@ -48,7 +48,6 @@ cm_list_init(void)
 int
 cm_list_add(cm_list *list, void *data)
 {
-    assert(list != NULL);
     cm_list_node *node = malloc(sizeof(*node));
     if (node == NULL)
         return 0;
@@ -113,4 +112,12 @@ long_to_string(long l)
     if (l > 0)
         str[index] = 48 + l;
     return str;
+}
+
+const char *
+bool_to_string(_Bool value)
+{
+    if (value)
+        return "true";
+    return "false";
 }

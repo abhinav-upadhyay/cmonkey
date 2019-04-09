@@ -30,6 +30,8 @@
 #ifndef CMONKEY_UTILS_H
 #define CMONKEY_UTILS_H
 
+#include <stdbool.h>
+
 typedef struct cm_list_node {
     void *data;
     struct cm_list_node *next;
@@ -46,4 +48,5 @@ cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
 char *long_to_string(long);
+const char *bool_to_string(_Bool);
 #endif

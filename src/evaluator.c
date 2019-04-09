@@ -6,11 +6,15 @@ static monkey_object_t *
 eval_expression(expression_t *exp)
 {
     integer_t *int_exp;
+    boolean_expression_t *bool_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
             int_exp = (integer_t *) exp;
             return (monkey_object_t *) create_monkey_int(int_exp->value);
+        case BOOLEAN_EXPRESSION:
+            bool_exp = (boolean_expression_t *) exp;
+            return (monkey_object_t *) create_monkey_bool(bool_exp->value);
         default:
             break;
     }
