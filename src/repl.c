@@ -93,7 +93,7 @@ main(int argc, char **argv)
 			char *s = evaluated->inspect(evaluated);
 			printf("%s\n", s);
 			free(s);
-			free(evaluated);
+			free_monkey_object(evaluated);
 		}
 
 CONTINUE:
