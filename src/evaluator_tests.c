@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cmonkey_utils.h"
 #include "evaluator.h"
@@ -246,6 +247,64 @@ test_return_statements(void)
     }
 }
 
+static void
+test_error_handling(void)
+{
+    typedef struct {
+        const char *input;
+        const char *message;
+    } test_input;
+    test_input tests[] = {
+        {
+            "5 + true;",
+            "type mismatch: INTEGER + BOOLEAN"
+        },
+        {
+            "5 + true; 5;",
+            "type mismatch: INTEGER + BOOLEAN"
+        },
+        {
+            "-true",
+            "unknown operator: -BOOLEAN"
+        },
+        {
+            "true + false;",
+            "unknown operator: BOOLEAN + BOOLEAN"
+        },
+        {
+            "5; true + false; 5",
+            "unknown operator: BOOLEAN + BOOLEAN"
+        },
+        {
+            "if (10 > 1) { true + false;}",
+            "unknown operator: BOOLEAN + BOOLEAN"
+        },
+        {
+            "if (10 > 1) {\n"\
+            "   if (10 > 1) {\n"\
+            "       return true + false;\n"\
+            "   }\n"\
+            "   return 1;\n"\
+            "}",
+            "unknown operator: BOOLEAN + BOOLEAN"
+        }
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Test error handling for %s\n", test.input);
+        monkey_object_t *evaluated = test_eval(test.input);
+        test(evaluated->type == MONKEY_ERROR, "Expected MONKEY_ERROR to be returned, found %s\n",
+            get_type_name(evaluated->type));
+        monkey_error_t *err = (monkey_error_t *) evaluated;
+        test(strcmp(err->message, test.message) == 0,
+            "Expected error message %s, got %s\n", test.message, err->message);
+        free_monkey_object(evaluated);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -254,5 +313,6 @@ main(int argc, char **argv)
     test_bang_operator();
     test_if_else_expressions();
     test_return_statements();
+    test_error_handling();
     return 0;
 }

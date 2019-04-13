@@ -31,15 +31,18 @@ eval_integer_infix_expression(const char *operator,
         return (monkey_object_t *)
             create_monkey_bool(left_value->value != right_value->value);
     else
-        return (monkey_object_t *) create_monkey_null;
+        return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
+            get_type_name(left_value->object.type), operator,
+            get_type_name(right_value->object.type));
     return (monkey_object_t *) create_monkey_int(result);
 }
 
 static monkey_object_t *
-eval_minus_expression(monkey_object_t *right_value)
+eval_minus_prefix_expression(monkey_object_t *right_value)
 {
     if (right_value->type != MONKEY_INT)
-        return (monkey_object_t *) create_monkey_null();
+        return (monkey_object_t *) create_monkey_error("unknown operator: -%s",
+            get_type_name(right_value->type));
     monkey_int_t *int_obj = (monkey_int_t *) right_value;
     return (monkey_object_t *) create_monkey_int(-(int_obj->value));
 }
@@ -65,9 +68,10 @@ eval_prefix_epxression(const char *operator, monkey_object_t *right_value)
     if (strcmp(operator, "!") == 0) {
         return eval_bang_expression(right_value);
     } else if (strcmp(operator, "-") == 0) {
-        return eval_minus_expression(right_value);
+        return eval_minus_prefix_expression(right_value);
     }
-    return (monkey_object_t *) create_monkey_null();
+    return (monkey_object_t *) create_monkey_error("unknown operator: %s%s",
+        operator, get_type_name(right_value->type));
 }
 
 static monkey_object_t *
@@ -85,6 +89,12 @@ eval_infix_expression(const char *operator,
     else if (strcmp(operator, "!=") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value != right_value);
+    else if (left_value->type != right_value->type)
+        return (monkey_object_t *) create_monkey_error("type mismatch: %s %s %s",
+            get_type_name(left_value->type), operator, get_type_name(right_value->type));
+    else
+        return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
+            get_type_name(left_value->type), operator, get_type_name(right_value->type));
     return (monkey_object_t *) create_monkey_null();
 }
 
@@ -165,7 +175,9 @@ eval_block_statement(block_statement_t *block_stmt)
         if (object)
             free_monkey_object(object);
         object = monkey_eval((node_t *) block_stmt->statements[i]);
-        if (object != NULL && object->type == MONKEY_RETURN_VALUE) {
+        if (object != NULL &&
+            (object->type == MONKEY_RETURN_VALUE ||
+            object->type == MONKEY_ERROR)) {
             return object;
         }
     }
@@ -187,7 +199,8 @@ eval_program(program_t *program)
             ret_value = return_value_object->value;
             free_monkey_object((monkey_object_t *) return_value_object);
             return ret_value;
-        }
+        } else if (object->type == MONKEY_ERROR)
+            return object;
     }
     return object;
 }

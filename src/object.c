@@ -1,5 +1,7 @@
 #include <err.h>
+#include <stdarg.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,6 +21,7 @@ inspect(monkey_object_t *obj)
     monkey_bool_t *bool_obj;
     monkey_null_t *null_obj;
     monkey_return_value_t *ret_obj;
+    monkey_error_t *err_obj;
 
     switch (obj->type)
     {
@@ -33,6 +36,9 @@ inspect(monkey_object_t *obj)
         case MONKEY_RETURN_VALUE:
             ret_obj = (monkey_return_value_t *) obj;
             return ret_obj->value->inspect(ret_obj->value);
+        case MONKEY_ERROR:
+            err_obj = (monkey_object_t *) obj;
+            return strdup(err_obj->message);
     }
 }
 
@@ -78,15 +84,42 @@ create_monkey_return_value(monkey_object_t *value)
     return ret;
 }
 
+monkey_error_t *
+create_monkey_error(const char *fmt, ...)
+{
+    monkey_error_t *error;
+    char *message = NULL;
+    error = malloc(sizeof(*error));
+    if (error == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    error->object.type = MONKEY_ERROR;
+    error->object.inspect = inspect;
+    va_list args;
+    va_start(args, fmt);
+    int ret = vasprintf(&message, fmt, args);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    va_end(args);
+
+    error->message = message;
+    return error;
+}
+
 void
 free_monkey_object(monkey_object_t *object)
 {
+    monkey_error_t *err_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
             break;
         case MONKEY_INT:
             free((monkey_int_t *) object);
+            break;
+        case MONKEY_ERROR:
+            err_obj = (monkey_error_t *) object;
+            free(err_obj->message);
+            free(err_obj);
             break;
         default:
             free(object);
