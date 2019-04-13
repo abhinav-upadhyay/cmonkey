@@ -5,6 +5,15 @@
 #include "object.h"
 
 static monkey_object_t *
+eval_minus_expression(monkey_object_t *right_value)
+{
+    if (right_value->type != MONKEY_INT)
+        return (monkey_object_t *) create_monkey_null();
+    monkey_int_t *int_obj = (monkey_int_t *) right_value;
+    return (monkey_object_t *) create_monkey_int(-(int_obj->value));
+}
+
+static monkey_object_t *
 eval_bang_expression(monkey_object_t *right_value)
 {
     if (right_value->type == MONKEY_NULL)
@@ -24,6 +33,8 @@ eval_prefix_epxression(const char *operator, monkey_object_t *right_value)
 {
     if (strcmp(operator, "!") == 0) {
         return eval_bang_expression(right_value);
+    } else if (strcmp(operator, "-") == 0) {
+        return eval_minus_expression(right_value);
     }
     return (monkey_object_t *) create_monkey_null();
 }
