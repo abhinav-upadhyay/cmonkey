@@ -89,11 +89,14 @@ static
 size_t calculate_string_size(long l)
 {
     size_t size = 0;
+    if (l < 10)
+        return 1;
+
     while (l >= 10) {
         l /= 10;
         size++;
     }
-    return size;
+    return size + 1;
 }
 
 char *
@@ -103,14 +106,13 @@ long_to_string(long l)
     size_t str_size = calculate_string_size(l) + 1;
     char *str = malloc(str_size + 1);
     size_t index = str_size;
-    str[index--] = 0;
+    str[--index] = 0;
     while (l >= 10) {
         rem = l % 10;
         l /= 10;
-        str[index--] = 48 + rem;
+        str[--index] = 48 + rem;
     }
-    if (l > 0)
-        str[index] = 48 + l;
+    str[--index] = 48 + l;
     return str;
 }
 

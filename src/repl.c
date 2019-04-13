@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ast.h"
 #include "evaluator.h"
@@ -79,6 +80,8 @@ main(int argc, char **argv)
 	printf("Welcome to the monkey programming language\n");
 	printf("%s", PROMPT);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
+		if (strcmp(line, "quit\n") == 0)
+			goto QUIT;
 		l = lexer_init(line);
 		parser = parser_init(l);
 		program = parse_program(parser);
@@ -105,6 +108,7 @@ CONTINUE:
 		parser = NULL;
 		printf("%s", PROMPT);
 	}
+QUIT:
 
 	if (program)
 		program_free(program);

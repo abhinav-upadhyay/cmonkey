@@ -62,7 +62,8 @@ test_eval_integer_expression(void)
 
     test_input tests[] = {
         {"5", 5},
-        {"10", 10}
+        {"10", 10},
+        {"0", 0}
     };
 
     print_test_separator_line();
