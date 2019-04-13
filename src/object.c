@@ -18,6 +18,7 @@ inspect(monkey_object_t *obj)
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
     monkey_null_t *null_obj;
+    monkey_return_value_t *ret_obj;
 
     switch (obj->type)
     {
@@ -29,6 +30,9 @@ inspect(monkey_object_t *obj)
             return bool_obj->value? strdup("true"): strdup("false");
         case MONKEY_NULL:
             return strdup("null");
+        case MONKEY_RETURN_VALUE:
+            ret_obj = (monkey_return_value_t *) obj;
+            return ret_obj->value->inspect(ret_obj->value);
     }
 }
 
@@ -59,6 +63,19 @@ monkey_null_t *
 create_monkey_null(void)
 {
     return &MONKEY_NULL_OBJ;
+}
+
+monkey_return_value_t *
+create_monkey_return_value(monkey_object_t *value)
+{
+    monkey_return_value_t *ret;
+    ret = malloc(sizeof(*ret));
+    if (ret == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    ret->value = value;
+    ret->object.type = MONKEY_RETURN_VALUE;
+    ret->object.inspect = inspect;
+    return ret;
 }
 
 void

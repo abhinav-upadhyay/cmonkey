@@ -172,6 +172,17 @@ test_bang_operator(void)
 }
 
 static void
+_test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
+{
+    test(obj->type == expected->type, "Expected object of type %s, got %s\n",
+        get_type_name(expected->type), get_type_name(obj->type));
+    if (expected->type == MONKEY_INT)
+        test_integer_object(obj, ((monkey_int_t *) expected)->value);
+    else if (expected->type == MONKEY_BOOL)
+        test_boolean_object(obj, ((monkey_bool_t *) expected)->value);
+}
+
+static void
 test_if_else_expressions(void)
 {
     typedef struct {
@@ -203,6 +214,38 @@ test_if_else_expressions(void)
     }
 }
 
+static void
+test_return_statements(void)
+{
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {"return 10;", (monkey_object_t *) create_monkey_int(10)},
+        {"return 10; 9;", (monkey_object_t *) create_monkey_int(10)},
+        {"return 2 * 5; 9;", (monkey_object_t *) create_monkey_int(10)},
+        {"9; return 2 * 5; 9", (monkey_object_t *) create_monkey_int(10)},
+        {"if (10 > 1) {\n"\
+        "   if (10 > 1) {\n"\
+                "return 10;\n"\
+            "}\n"\
+            "return 1;\n"\
+        "}\n", (monkey_object_t *) create_monkey_int(10)}
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing return statement evaluation for \"%s\"\n", test.input);
+        monkey_object_t *evaluated = test_eval(test.input);
+        _test_monkey_object(evaluated, test.expected);
+        free_monkey_object(test.expected);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -210,5 +253,6 @@ main(int argc, char **argv)
     test_eval_bool_expression();
     test_bang_operator();
     test_if_else_expressions();
+    test_return_statements();
     return 0;
 }

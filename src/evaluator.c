@@ -158,11 +158,36 @@ eval_expression(expression_t *exp)
 }
 
 static monkey_object_t *
-eval_statements(statement_t **statements, size_t nstatements)
+eval_block_statement(block_statement_t *block_stmt)
 {
-    monkey_object_t *object;
-    for (size_t i = 0; i < nstatements; i++) {
-        object = monkey_eval((node_t *) statements[i]);
+    monkey_object_t *object = NULL;
+    for (size_t i = 0; i < block_stmt->nstatements; i++) {
+        if (object)
+            free_monkey_object(object);
+        object = monkey_eval((node_t *) block_stmt->statements[i]);
+        if (object != NULL && object->type == MONKEY_RETURN_VALUE) {
+            return object;
+        }
+    }
+    return object;
+}
+
+static monkey_object_t *
+eval_program(program_t *program)
+{
+    monkey_object_t *object = NULL;
+    monkey_return_value_t *return_value_object;
+    monkey_object_t *ret_value;
+    for (size_t i = 0; i < program->nstatements; i++) {
+        if (object)
+            free_monkey_object(object);
+        object = monkey_eval((node_t *) program->statements[i]);
+        if (object->type == MONKEY_RETURN_VALUE) {
+            return_value_object = (monkey_return_value_t *) object;
+            ret_value = return_value_object->value;
+            free_monkey_object((monkey_object_t *) return_value_object);
+            return ret_value;
+        }
     }
     return object;
 }
@@ -172,6 +197,8 @@ eval_statement(statement_t *statement)
 {
     expression_statement_t *exp_stmt;
     block_statement_t *block_stmt;
+    return_statement_t *ret_stmt;
+    monkey_object_t *evaluated;
     switch (statement->statement_type)
     {
         case EXPRESSION_STATEMENT:
@@ -179,7 +206,11 @@ eval_statement(statement_t *statement)
             return eval_expression(exp_stmt->expression);
         case BLOCK_STATEMENT:
             block_stmt = (block_statement_t *) statement;
-            return eval_statements(block_stmt->statements, block_stmt->nstatements);
+            return eval_block_statement(block_stmt);
+        case RETURN_STATEMENT:
+            ret_stmt = (return_statement_t *) statement;
+            evaluated = monkey_eval((node_t *) ret_stmt->return_value);
+            return (monkey_object_t *)create_monkey_return_value(evaluated);
         default:
             break;
     }
@@ -199,7 +230,7 @@ monkey_eval(node_t *node)
             return eval_expression((expression_t *) node);
         case PROGRAM:
             program = (program_t *) node;
-            return eval_statements(program->statements, program->nstatements);
+            return eval_program(program);
         default:
             break;
     }
