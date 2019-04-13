@@ -79,6 +79,12 @@ eval_infix_expression(const char *operator,
         return eval_integer_infix_expression(operator,
             (monkey_int_t *) left_value,
             (monkey_int_t *) right_value);
+    else if (strcmp(operator, "==") == 0)
+        return (monkey_object_t *)
+            create_monkey_bool(left_value == right_value);
+    else if (strcmp(operator, "!=") == 0)
+        return (monkey_object_t *)
+            create_monkey_bool(left_value != right_value);
     return (monkey_object_t *) create_monkey_null();
 }
 
