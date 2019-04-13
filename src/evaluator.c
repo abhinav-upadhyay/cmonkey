@@ -1,8 +1,15 @@
+#include <stdbool.h>
 #include <string.h>
 
 #include "ast.h"
 #include "evaluator.h"
 #include "object.h"
+
+static _Bool
+is_error(monkey_object_t *obj)
+{
+    return obj != NULL && obj->type == MONKEY_ERROR;
+}
 
 static monkey_object_t *
 eval_integer_infix_expression(const char *operator,
@@ -116,6 +123,8 @@ eval_if_expression(expression_t *exp)
 {
     if_expression_t *if_exp = (if_expression_t *) exp;
     monkey_object_t *condition_value = monkey_eval((node_t *) if_exp->condition);
+    if (is_error(condition_value))
+        return condition_value;
     monkey_object_t *result;
     if (is_truthy(condition_value)) {
         result = monkey_eval((node_t *) if_exp->consequence);
@@ -148,13 +157,21 @@ eval_expression(expression_t *exp)
         case PREFIX_EXPRESSION:
             prefix_exp = (prefix_expression_t *) exp;
             right_value = monkey_eval((node_t *) prefix_exp->right);
+            if (is_error(right_value))
+                return right_value;
             exp_value = eval_prefix_epxression(prefix_exp->operator, right_value);
             free_monkey_object(right_value);
             return exp_value;
         case INFIX_EXPRESSION:
             infix_exp = (infix_expression_t *) exp;
             left_value = monkey_eval((node_t *) infix_exp->left);
+            if (is_error(left_value))
+                return left_value;
             right_value = monkey_eval((node_t *) infix_exp->right);
+            if (is_error(right_value)) {
+                free_monkey_object(left_value);
+                return right_value;
+            }
             exp_value = eval_infix_expression(infix_exp->operator, left_value, right_value);
             free_monkey_object(left_value);
             free_monkey_object(right_value);
@@ -223,6 +240,8 @@ eval_statement(statement_t *statement)
         case RETURN_STATEMENT:
             ret_stmt = (return_statement_t *) statement;
             evaluated = monkey_eval((node_t *) ret_stmt->return_value);
+            if (is_error(evaluated))
+                return evaluated;
             return (monkey_object_t *)create_monkey_return_value(evaluated);
         default:
             break;
