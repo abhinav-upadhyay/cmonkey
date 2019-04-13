@@ -5,6 +5,25 @@
 #include "object.h"
 
 static monkey_object_t *
+eval_integer_infix_expression(const char *operator,
+    monkey_int_t *left_value,
+    monkey_int_t *right_value)
+{
+    long result;
+    if (strcmp(operator, "+") == 0)
+        result = left_value->value + right_value->value;
+    else if (strcmp(operator, "-") == 0)
+        result = left_value->value - right_value->value;
+    else if (strcmp(operator, "*") == 0)
+        result = left_value->value * right_value->value;
+    else if (strcmp(operator, "/") == 0)
+        result = left_value->value / right_value->value;
+    else
+        return (monkey_object_t *) create_monkey_null;
+    return (monkey_object_t *) create_monkey_int(result);
+}
+
+static monkey_object_t *
 eval_minus_expression(monkey_object_t *right_value)
 {
     if (right_value->type != MONKEY_INT)
@@ -40,13 +59,27 @@ eval_prefix_epxression(const char *operator, monkey_object_t *right_value)
 }
 
 static monkey_object_t *
+eval_infix_expression(const char *operator,
+    monkey_object_t *left_value,
+    monkey_object_t *right_value)
+{
+    if (left_value->type == MONKEY_INT && right_value->type == MONKEY_INT)
+        return eval_integer_infix_expression(operator,
+            (monkey_int_t *) left_value,
+            (monkey_int_t *) right_value);
+    return (monkey_object_t *) create_monkey_null();
+}
+
+static monkey_object_t *
 eval_expression(expression_t *exp)
 {
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
     prefix_expression_t *prefix_exp;
+    infix_expression_t *infix_exp;
+    monkey_object_t *left_value;
     monkey_object_t *right_value;
-    monkey_object_t *prefix_exp_value;
+    monkey_object_t *exp_value;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -58,9 +91,17 @@ eval_expression(expression_t *exp)
         case PREFIX_EXPRESSION:
             prefix_exp = (prefix_expression_t *) exp;
             right_value = monkey_eval((node_t *) prefix_exp->right);
-            prefix_exp_value = eval_prefix_epxression(prefix_exp->operator, right_value);
+            exp_value = eval_prefix_epxression(prefix_exp->operator, right_value);
             free_monkey_object(right_value);
-            return prefix_exp_value;
+            return exp_value;
+        case INFIX_EXPRESSION:
+            infix_exp = (infix_expression_t *) exp;
+            left_value = monkey_eval((node_t *) infix_exp->left);
+            right_value = monkey_eval((node_t *) infix_exp->right);
+            exp_value = eval_infix_expression(infix_exp->operator, left_value, right_value);
+            free_monkey_object(left_value);
+            free_monkey_object(right_value);
+            return exp_value;
         default:
             break;
     }
