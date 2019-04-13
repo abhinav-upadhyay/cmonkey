@@ -67,16 +67,6 @@ string_to_bool(const char *str)
         return false;
 }
 
-static const char *
-bool_to_string(_Bool value)
-{
-    if (value)
-        return "true";
-    else
-        return "false";
-}
-
-
 static void
 test_integer_literal_value(expression_t *exp, long expected_value)
 {

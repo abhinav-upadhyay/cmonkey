@@ -1,12 +1,41 @@
+#include <string.h>
+
 #include "ast.h"
 #include "evaluator.h"
 #include "object.h"
+
+static monkey_object_t *
+eval_bang_expression(monkey_object_t *right_value)
+{
+    if (right_value->type == MONKEY_NULL)
+        return (monkey_object_t *) create_monkey_null();
+    else if (right_value->type == MONKEY_BOOL) {
+        monkey_bool_t *value = (monkey_bool_t *) right_value;
+        if (value->value)
+            return (monkey_object_t *) create_monkey_bool(false);
+        else
+            return (monkey_object_t *) create_monkey_bool(true);
+    } else
+        return (monkey_object_t *) create_monkey_bool(false);
+}
+
+static monkey_object_t *
+eval_prefix_epxression(const char *operator, monkey_object_t *right_value)
+{
+    if (strcmp(operator, "!") == 0) {
+        return eval_bang_expression(right_value);
+    }
+    return (monkey_object_t *) create_monkey_null();
+}
 
 static monkey_object_t *
 eval_expression(expression_t *exp)
 {
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
+    prefix_expression_t *prefix_exp;
+    monkey_object_t *right_value;
+    monkey_object_t *prefix_exp_value;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -15,6 +44,12 @@ eval_expression(expression_t *exp)
         case BOOLEAN_EXPRESSION:
             bool_exp = (boolean_expression_t *) exp;
             return (monkey_object_t *) create_monkey_bool(bool_exp->value);
+        case PREFIX_EXPRESSION:
+            prefix_exp = (prefix_expression_t *) exp;
+            right_value = monkey_eval((node_t *) prefix_exp->right);
+            prefix_exp_value = eval_prefix_epxression(prefix_exp->operator, right_value);
+            free_monkey_object(right_value);
+            return prefix_exp_value;
         default:
             break;
     }

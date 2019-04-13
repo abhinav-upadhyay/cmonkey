@@ -39,6 +39,7 @@ typedef struct monkey_null_t {
 monkey_int_t * create_monkey_int(long);
 monkey_bool_t * create_monkey_bool(_Bool);
 monkey_null_t * create_monkey_null(void);
+monkey_bool_t *get_monkey_true(void);
 void free_monkey_object(monkey_object_t *);
 
 #endif
