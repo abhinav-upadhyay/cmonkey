@@ -53,6 +53,14 @@ test_integer_object(monkey_object_t *object, long expected_value)
 }
 
 static void
+test_null_object(monkey_object_t *object)
+{
+    test(object->type == MONKEY_NULL, "Expected a MONKEY_NULL object, found %s\n",
+        get_type_name(object->type));
+    test(object == (monkey_object_t *) create_monkey_null(), "object is not NULL\n");
+}
+
+static void
 test_eval_integer_expression(void)
 {
     typedef struct {
@@ -163,11 +171,44 @@ test_bang_operator(void)
     }
 }
 
+static void
+test_if_else_expressions(void)
+{
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {"if (true) { 10 }", (monkey_object_t *) create_monkey_int(10)},
+        {"if (false) { 10 }", (monkey_object_t *) create_monkey_null()},
+        {"if (1) { 10 }", (monkey_object_t *) create_monkey_int(10)},
+        {"if (1 < 2) { 10 }", (monkey_object_t *) create_monkey_int(10)},
+        {"if (1 > 2) { 10 }", (monkey_object_t *) create_monkey_null()},
+        {"if (1 > 2) { 10 } else { 20 }", (monkey_object_t *) create_monkey_int(20)},
+        {"if (1 < 2) { 10 } else { 20 }", (monkey_object_t *) create_monkey_int(10)}
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing if else expression evaluation for \"%s\"\n", test.input);
+        monkey_object_t *evaluated = test_eval(test.input);
+        if (test.expected->type == MONKEY_INT) {
+            monkey_int_t *expected_int = (monkey_int_t *) test.expected;
+            test_integer_object(evaluated, expected_int->value);
+        } else
+            test_null_object(evaluated);
+        free_monkey_object(test.expected);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
     test_eval_integer_expression();
     test_eval_bool_expression();
     test_bang_operator();
+    test_if_else_expressions();
     return 0;
 }

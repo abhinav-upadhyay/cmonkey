@@ -88,6 +88,35 @@ eval_infix_expression(const char *operator,
     return (monkey_object_t *) create_monkey_null();
 }
 
+static _Bool
+is_truthy(monkey_object_t *value)
+{
+    switch (value->type) {
+        case MONKEY_NULL:
+            return false;
+        case MONKEY_BOOL:
+            return create_monkey_bool(true) == (monkey_bool_t *) value;
+        default:
+            return true;
+    }
+}
+
+static monkey_object_t *
+eval_if_expression(expression_t *exp)
+{
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    monkey_object_t *condition_value = monkey_eval((node_t *) if_exp->condition);
+    monkey_object_t *result;
+    if (is_truthy(condition_value)) {
+        result = monkey_eval((node_t *) if_exp->consequence);
+    } else if (if_exp->alternative != NULL)
+        result = monkey_eval((node_t *) if_exp->alternative);
+    else
+        result = (monkey_object_t *) create_monkey_null();
+    free_monkey_object(condition_value);
+    return result;
+}
+
 static monkey_object_t *
 eval_expression(expression_t *exp)
 {
@@ -120,27 +149,13 @@ eval_expression(expression_t *exp)
             free_monkey_object(left_value);
             free_monkey_object(right_value);
             return exp_value;
+        case IF_EXPRESSION:
+            return eval_if_expression(exp);
         default:
             break;
     }
     return NULL;
 }
-
-static monkey_object_t *
-eval_statement(statement_t *statement)
-{
-    expression_statement_t *exp_stmt;
-    switch (statement->statement_type)
-    {
-        case EXPRESSION_STATEMENT:
-            exp_stmt = (expression_statement_t *) statement;
-            return eval_expression(exp_stmt->expression);
-        default:
-            break;
-    }
-    return NULL;
-}
-
 
 static monkey_object_t *
 eval_statements(statement_t **statements, size_t nstatements)
@@ -152,6 +167,24 @@ eval_statements(statement_t **statements, size_t nstatements)
     return object;
 }
 
+static monkey_object_t *
+eval_statement(statement_t *statement)
+{
+    expression_statement_t *exp_stmt;
+    block_statement_t *block_stmt;
+    switch (statement->statement_type)
+    {
+        case EXPRESSION_STATEMENT:
+            exp_stmt = (expression_statement_t *) statement;
+            return eval_expression(exp_stmt->expression);
+        case BLOCK_STATEMENT:
+            block_stmt = (block_statement_t *) statement;
+            return eval_statements(block_stmt->statements, block_stmt->nstatements);
+        default:
+            break;
+    }
+    return NULL;
+}
 
 monkey_object_t *
 monkey_eval(node_t *node)
