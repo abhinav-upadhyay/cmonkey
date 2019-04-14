@@ -287,6 +287,10 @@ test_error_handling(void)
             "   return 1;\n"\
             "}",
             "unknown operator: BOOLEAN + BOOLEAN"
+        },
+        {
+            "foobar;",
+            "identifier not found: foobar"
         }
     };
 
@@ -305,6 +309,39 @@ test_error_handling(void)
     }
 }
 
+static void
+test_let_statements(void)
+{
+    typedef struct {
+        const char *input;
+        long expected;
+    } test_input;
+
+    test_input tests[] = {
+        {
+            "let a = 5; a;", 5
+        },
+        {
+            "let a = 5 * 5; a;", 25
+        },
+        {
+            "let a = 5; let b = a; b;", 5
+        },
+        {
+            "let a = 5; let b = a; let c = a + b + 5; c;", 15
+        }
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing let statement for %s\n", test.input);
+        monkey_object_t *evaluated = test_eval(test.input);
+        test_integer_object(evaluated, test.expected);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -314,5 +351,6 @@ main(int argc, char **argv)
     test_if_else_expressions();
     test_return_statements();
     test_error_handling();
+    test_let_statements();
     return 0;
 }
