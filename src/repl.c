@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "environment.h"
 #include "evaluator.h"
 #include "object.h"
 #include "token.h"
@@ -75,6 +76,7 @@ main(int argc, char **argv)
 	lexer_t *l;
 	parser_t *parser = NULL;
 	program_t *program = NULL;
+	environment_t *env = create_env();
 	token_t *tok;
 	printf("%s\n", MONKEY_FACE);
 	printf("Welcome to the monkey programming language\n");
@@ -91,7 +93,7 @@ main(int argc, char **argv)
 			goto CONTINUE;
 		}
 
-		monkey_object_t *evaluated = monkey_eval((node_t *) program);
+		monkey_object_t *evaluated = monkey_eval((node_t *) program, env);
 		if (evaluated != NULL) {
 			char *s = evaluated->inspect(evaluated);
 			printf("%s\n", s);
@@ -116,4 +118,5 @@ QUIT:
 		parser_free(parser);
 	if (line)
 		free(line);
+	env_free(env);
 }

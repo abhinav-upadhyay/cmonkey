@@ -37,7 +37,7 @@ inspect(monkey_object_t *obj)
             ret_obj = (monkey_return_value_t *) obj;
             return ret_obj->value->inspect(ret_obj->value);
         case MONKEY_ERROR:
-            err_obj = (monkey_object_t *) obj;
+            err_obj = (monkey_error_t *) obj;
             return strdup(err_obj->message);
     }
 }
@@ -124,5 +124,20 @@ free_monkey_object(monkey_object_t *object)
         default:
             free(object);
     }
+}
 
+monkey_object_t *
+copy_monkey_object(monkey_object_t *object)
+{
+    monkey_int_t *int_obj;
+    switch (object->type) {
+        case MONKEY_BOOL:
+        case MONKEY_NULL:
+            return object;
+        case MONKEY_INT:
+            int_obj = (monkey_int_t *) object;
+            return (monkey_object_t *) create_monkey_int(int_obj->value);
+        default:
+            return NULL;
+    }
 }

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "environment.h"
 #include "evaluator.h"
 #include "object.h"
 
@@ -119,17 +120,17 @@ is_truthy(monkey_object_t *value)
 }
 
 static monkey_object_t *
-eval_if_expression(expression_t *exp)
+eval_if_expression(expression_t *exp, environment_t *env)
 {
     if_expression_t *if_exp = (if_expression_t *) exp;
-    monkey_object_t *condition_value = monkey_eval((node_t *) if_exp->condition);
+    monkey_object_t *condition_value = monkey_eval((node_t *) if_exp->condition, env);
     if (is_error(condition_value))
         return condition_value;
     monkey_object_t *result;
     if (is_truthy(condition_value)) {
-        result = monkey_eval((node_t *) if_exp->consequence);
+        result = monkey_eval((node_t *) if_exp->consequence, env);
     } else if (if_exp->alternative != NULL)
-        result = monkey_eval((node_t *) if_exp->alternative);
+        result = monkey_eval((node_t *) if_exp->alternative, env);
     else
         result = (monkey_object_t *) create_monkey_null();
     free_monkey_object(condition_value);
@@ -137,7 +138,18 @@ eval_if_expression(expression_t *exp)
 }
 
 static monkey_object_t *
-eval_expression(expression_t *exp)
+eval_identifier_expression(expression_t *exp, environment_t *env)
+{
+    identifier_t *ident_exp = (identifier_t *) exp;
+    void *value_obj = env_get(env, ident_exp->value);
+    if (value_obj == NULL)
+        return (monkey_object_t *) create_monkey_error("identifier not found: %s", ident_exp->value);
+    // return a copy of the value, we don't want anyone else to a value stored in the hash table
+    return copy_monkey_object((monkey_object_t *) value_obj);
+}
+
+static monkey_object_t *
+eval_expression(expression_t *exp, environment_t *env)
 {
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
@@ -156,7 +168,7 @@ eval_expression(expression_t *exp)
             return (monkey_object_t *) create_monkey_bool(bool_exp->value);
         case PREFIX_EXPRESSION:
             prefix_exp = (prefix_expression_t *) exp;
-            right_value = monkey_eval((node_t *) prefix_exp->right);
+            right_value = monkey_eval((node_t *) prefix_exp->right, env);
             if (is_error(right_value))
                 return right_value;
             exp_value = eval_prefix_epxression(prefix_exp->operator, right_value);
@@ -164,10 +176,10 @@ eval_expression(expression_t *exp)
             return exp_value;
         case INFIX_EXPRESSION:
             infix_exp = (infix_expression_t *) exp;
-            left_value = monkey_eval((node_t *) infix_exp->left);
+            left_value = monkey_eval((node_t *) infix_exp->left, env);
             if (is_error(left_value))
                 return left_value;
-            right_value = monkey_eval((node_t *) infix_exp->right);
+            right_value = monkey_eval((node_t *) infix_exp->right, env);
             if (is_error(right_value)) {
                 free_monkey_object(left_value);
                 return right_value;
@@ -177,7 +189,9 @@ eval_expression(expression_t *exp)
             free_monkey_object(right_value);
             return exp_value;
         case IF_EXPRESSION:
-            return eval_if_expression(exp);
+            return eval_if_expression(exp, env);
+        case IDENTIFIER_EXPRESSION:
+            return eval_identifier_expression(exp, env);
         default:
             break;
     }
@@ -185,13 +199,13 @@ eval_expression(expression_t *exp)
 }
 
 static monkey_object_t *
-eval_block_statement(block_statement_t *block_stmt)
+eval_block_statement(block_statement_t *block_stmt, environment_t *env)
 {
     monkey_object_t *object = NULL;
     for (size_t i = 0; i < block_stmt->nstatements; i++) {
         if (object)
             free_monkey_object(object);
-        object = monkey_eval((node_t *) block_stmt->statements[i]);
+        object = monkey_eval((node_t *) block_stmt->statements[i], env);
         if (object != NULL &&
             (object->type == MONKEY_RETURN_VALUE ||
             object->type == MONKEY_ERROR)) {
@@ -202,7 +216,7 @@ eval_block_statement(block_statement_t *block_stmt)
 }
 
 static monkey_object_t *
-eval_program(program_t *program)
+eval_program(program_t *program, environment_t *env)
 {
     monkey_object_t *object = NULL;
     monkey_return_value_t *return_value_object;
@@ -210,39 +224,48 @@ eval_program(program_t *program)
     for (size_t i = 0; i < program->nstatements; i++) {
         if (object)
             free_monkey_object(object);
-        object = monkey_eval((node_t *) program->statements[i]);
-        if (object->type == MONKEY_RETURN_VALUE) {
-            return_value_object = (monkey_return_value_t *) object;
-            ret_value = return_value_object->value;
-            free_monkey_object((monkey_object_t *) return_value_object);
-            return ret_value;
-        } else if (object->type == MONKEY_ERROR)
-            return object;
+        object = monkey_eval((node_t *) program->statements[i], env);
+        if (object != NULL) {
+            if (object->type == MONKEY_RETURN_VALUE) {
+                return_value_object = (monkey_return_value_t *) object;
+                ret_value = return_value_object->value;
+                free_monkey_object((monkey_object_t *) return_value_object);
+                return ret_value;
+            } else if (object->type == MONKEY_ERROR)
+                return object;
+        }
     }
     return object;
 }
 
 static monkey_object_t *
-eval_statement(statement_t *statement)
+eval_statement(statement_t *statement, environment_t *env)
 {
     expression_statement_t *exp_stmt;
     block_statement_t *block_stmt;
     return_statement_t *ret_stmt;
+    letstatement_t *let_stmt;
     monkey_object_t *evaluated;
     switch (statement->statement_type)
     {
         case EXPRESSION_STATEMENT:
             exp_stmt = (expression_statement_t *) statement;
-            return eval_expression(exp_stmt->expression);
+            return eval_expression(exp_stmt->expression, env);
         case BLOCK_STATEMENT:
             block_stmt = (block_statement_t *) statement;
-            return eval_block_statement(block_stmt);
+            return eval_block_statement(block_stmt, env);
         case RETURN_STATEMENT:
             ret_stmt = (return_statement_t *) statement;
-            evaluated = monkey_eval((node_t *) ret_stmt->return_value);
+            evaluated = monkey_eval((node_t *) ret_stmt->return_value, env);
             if (is_error(evaluated))
                 return evaluated;
             return (monkey_object_t *)create_monkey_return_value(evaluated);
+        case LET_STATEMENT:
+            let_stmt = (letstatement_t *) statement;
+            evaluated = monkey_eval((node_t *) let_stmt->value, env);
+            if (is_error(evaluated))
+                return evaluated;
+            env_put(env, let_stmt->name->value, evaluated);
         default:
             break;
     }
@@ -250,20 +273,18 @@ eval_statement(statement_t *statement)
 }
 
 monkey_object_t *
-monkey_eval(node_t *node)
+monkey_eval(node_t *node, environment_t *env)
 {
     program_t *program;
     switch (node->type)
     {
         case STATEMENT:
-            return eval_statement((statement_t *) node);
+            return eval_statement((statement_t *) node, env);
             break;
         case EXPRESSION:
-            return eval_expression((expression_t *) node);
+            return eval_expression((expression_t *) node, env);
         case PROGRAM:
             program = (program_t *) node;
-            return eval_program(program);
-        default:
-            break;
+            return eval_program(program, env);
     }
 }

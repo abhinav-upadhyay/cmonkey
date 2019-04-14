@@ -5,7 +5,7 @@ OBJDIR := obj
 BINDIR := bin
 
 OBJS := $(addprefix $(OBJDIR)/, lexer_tests.o lexer.o token.o repl.o cmonkey_utils.o parser_tracing.o \
-	parser_tests.o evaluator_tests.o object.o cmonkey_utils_tests.o)
+	parser_tests.o evaluator_tests.o object.o cmonkey_utils_tests.o environment.o)
 BINS := $(addprefix $(BINDIR)/, lexer_tests parser_tests evaluator_tests cmonkey_utils_tests repl)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
@@ -32,17 +32,18 @@ parser_tests:	${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJ
 		${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o
 
 evaluator_tests:	${OBJDIR}/evaluator.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
-	$(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o
+	$(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o
 	${CC} ${CFLAGS} -o ${BINDIR}/evaluator_tests ${OBJDIR}/evaluator_tests.o ${OBJDIR}/lexer.o \
-		${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o
+		${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o \
+		$(OBJDIR)/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o
 
 cmonkey_utils_tests: $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/cmonkey_utils_tests.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/cmonkey_utils_tests $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/cmonkey_utils_tests.o
 
 repl:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o \
-	$(OBJDIR)/evaluator.o ${OBJDIR}/object.o
+	$(OBJDIR)/evaluator.o ${OBJDIR}/object.o $(OBJDIR)/environment.o
 	${CC} ${CFLAGS} -o ${BINDIR}/repl ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
-		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o
+		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o
 
 clean:
 	rm -rf $(BINDIR) $(OBJDIR) core

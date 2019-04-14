@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "cmonkey_utils.h"
+#include "environment.h"
 #include "evaluator.h"
 #include "lexer.h"
 #include "parser.h"
@@ -10,12 +11,12 @@
 #include "test_utils.h"
 
 static monkey_object_t *
-test_eval(const char *input)
+test_eval(const char *input, environment_t *env)
 {
     lexer_t *lexer = lexer_init(input);
     parser_t *parser = parser_init(lexer);
     program_t *program = parse_program(parser);
-    monkey_object_t *obj = monkey_eval((node_t *) program);
+    monkey_object_t *obj = monkey_eval((node_t *) program, env);
     program_free(program);
     parser_free(parser);
     return obj;
@@ -55,6 +56,7 @@ test_null_object(monkey_object_t *object)
 static void
 test_eval_integer_expression(void)
 {
+    environment_t *env;
     typedef struct {
         const char *input;
         long expected_value;
@@ -84,8 +86,10 @@ test_eval_integer_expression(void)
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing eval for integer expression: %s\n", test.input);
-        monkey_object_t *obj = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *obj = test_eval(test.input, env);
         test_integer_object(obj, test.expected_value);
+        env_free(env);
     }
     printf("integer expression eval test passed\n");
 }
@@ -93,6 +97,7 @@ test_eval_integer_expression(void)
 static void
 test_eval_bool_expression(void)
 {
+    environment_t *env;
     typedef struct {
         const char *input;
         _Bool expected_value;
@@ -128,9 +133,11 @@ test_eval_bool_expression(void)
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing eval for boolean expression: %s\n", test.input);
-        monkey_object_t *obj = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *obj = test_eval(test.input, env);
         test_boolean_object(obj, test.expected_value);
         free_monkey_object(obj);
+        env_free(env);
     }
     printf("boolean expression eval test passed\n");
 }
@@ -138,6 +145,8 @@ test_eval_bool_expression(void)
 static void
 test_bang_operator(void)
 {
+    environment_t *env;
+
     typedef struct {
         const char *input;
         _Bool expected;
@@ -157,9 +166,11 @@ test_bang_operator(void)
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing bang operator for expression: %s\n", test.input);
-        monkey_object_t *obj = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *obj = test_eval(test.input, env);
         test_boolean_object(obj, test.expected);
         free_monkey_object(obj);
+        env_free(env);
     }
 }
 
@@ -177,6 +188,7 @@ _test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
 static void
 test_if_else_expressions(void)
 {
+    environment_t *env;
     typedef struct {
         const char *input;
         monkey_object_t *expected;
@@ -196,19 +208,22 @@ test_if_else_expressions(void)
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing if else expression evaluation for \"%s\"\n", test.input);
-        monkey_object_t *evaluated = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
         if (test.expected->type == MONKEY_INT) {
             monkey_int_t *expected_int = (monkey_int_t *) test.expected;
             test_integer_object(evaluated, expected_int->value);
         } else
             test_null_object(evaluated);
         free_monkey_object(test.expected);
+        env_free(env);
     }
 }
 
 static void
 test_return_statements(void)
 {
+    environment_t *env;
     typedef struct {
         const char *input;
         monkey_object_t *expected;
@@ -232,9 +247,11 @@ test_return_statements(void)
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing return statement evaluation for \"%s\"\n", test.input);
-        monkey_object_t *evaluated = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
         _test_monkey_object(evaluated, test.expected);
         free_monkey_object(test.expected);
+        env_free(env);
     }
 }
 
@@ -286,23 +303,27 @@ test_error_handling(void)
     };
 
     print_test_separator_line();
+    environment_t *env;
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Test error handling for %s\n", test.input);
-        monkey_object_t *evaluated = test_eval(test.input);
+        env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
         test(evaluated->type == MONKEY_ERROR, "Expected MONKEY_ERROR to be returned, found %s\n",
             get_type_name(evaluated->type));
         monkey_error_t *err = (monkey_error_t *) evaluated;
         test(strcmp(err->message, test.message) == 0,
             "Expected error message %s, got %s\n", test.message, err->message);
         free_monkey_object(evaluated);
+        env_free(env);
     }
 }
 
 static void
 test_let_statements(void)
 {
+    environment_t *env;
     typedef struct {
         const char *input;
         long expected;
@@ -327,9 +348,11 @@ test_let_statements(void)
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
+        env = create_env();
         printf("Testing let statement for %s\n", test.input);
-        monkey_object_t *evaluated = test_eval(test.input);
+        monkey_object_t *evaluated = test_eval(test.input, env);
         test_integer_object(evaluated, test.expected);
+        env_free(env);
     }
 }
 
