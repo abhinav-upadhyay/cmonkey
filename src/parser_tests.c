@@ -38,14 +38,6 @@
 #include "test_utils.h"
 
 static void
-print_test_separator_line(void)
-{
-    for (int i = 0; i < 100; i++)
-        printf("-");
-    printf("\n");
-}
-
-static void
 check_parser_errors(parser_t *parser)
 {
     if (parser->errors == NULL)

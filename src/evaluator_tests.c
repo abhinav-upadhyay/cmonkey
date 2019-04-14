@@ -9,15 +9,6 @@
 #include "object.h"
 #include "test_utils.h"
 
-static void
-print_test_separator_line(void)
-{
-    for (int i = 0; i < 100; i++)
-        printf("-");
-    printf("\n");
-}
-
-
 static monkey_object_t *
 test_eval(const char *input)
 {

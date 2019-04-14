@@ -27,8 +27,10 @@
  * SUCH DAMAGE.
  */
 
+#include <err.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cmonkey_utils.h"
 
@@ -38,7 +40,7 @@ cm_list_init(void)
     cm_list *list;
     list = malloc(sizeof(*list));
     if (list == NULL)
-        return NULL;
+        errx(EXIT_FAILURE, "malloc failed");
     list->head = NULL;
     list->tail = NULL;
     list->length = 0;
@@ -128,4 +130,119 @@ bool_to_string(_Bool value)
     if (value)
         return "true";
     return "false";
+}
+
+cm_hash_table *
+cm_hash_table_init(size_t (*hash_func)(void *),
+    _Bool (*keycmp) (void *, void *),
+    void (*free_key) (void *),
+    void (*free_value) (void *))
+{
+    cm_hash_table *table;
+    table = malloc(sizeof(*table));
+    if (table == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    table->hash_func = hash_func;
+    table->keycmp = keycmp;
+    table->free_key = free_key;
+    table->free_value = free_value;
+    table->table_size = INITIAL_HASHTABLE_SIZE;
+    table->table = calloc(table->table_size, sizeof(*table->table));
+    if (table->table == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    table->nentries = 0;
+    table->nkeys = 0;
+    return table;
+}
+
+void
+cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
+{
+    cm_hash_entry *entry;
+    size_t index = hash_table->hash_func(key) % hash_table->table_size;
+    cm_list *list_entry = hash_table->table[index];
+    if (list_entry == NULL) {
+        list_entry = cm_list_init();
+        hash_table->table[index] = list_entry;
+        hash_table->nentries++;
+        //TODO: resize when nentries == table size
+    }
+    entry = malloc(sizeof*entry);
+    if (entry == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    entry->key = key;
+    entry->value = value;
+    hash_table->nkeys++;
+    cm_list_add(list_entry, entry);
+}
+
+void *
+cm_hash_table_get(cm_hash_table *hash_table, void *key)
+{
+    size_t index = hash_table->hash_func(key) % hash_table->table_size;
+    cm_list *entry_list = hash_table->table[index];
+    cm_hash_entry *entry;
+    if (entry_list == NULL)
+        return NULL;
+    cm_list_node *list_node = entry_list->head;
+    while (list_node) {
+        entry = (cm_hash_entry *) list_node->data;
+        if (hash_table->keycmp(entry->key, key))
+            return entry->value;
+        list_node = list_node->next;
+    }
+    return NULL;
+}
+
+size_t
+string_hash_function(void *key)
+{
+    unsigned long hash = 5381;
+    char *str = (char *) key;
+    int c;
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c;
+    return hash;
+}
+
+_Bool
+string_keycmp(void *key1, void *key2)
+{
+    char *strkey1 = (char *) key1;
+    char *strkey2 = (char *) key2;
+    return strcmp(strkey1, strkey2) == 0;
+}
+
+static void
+free_entry_list(cm_hash_table *table, cm_list *entry_list)
+{
+    cm_list_node *node = entry_list->head;
+    cm_list_node *temp;
+    while (node != NULL) {
+        cm_hash_entry *entry = (cm_hash_entry *) node->data;
+        if (table->free_key != NULL) {
+            table->free_key(entry->key);
+        }
+        if (table->free_value != NULL) {
+            table->free_value(entry->value);
+        }
+        free(entry);
+        temp = node->next;
+        free(node);
+        node = temp;
+    }
+    free(entry_list);
+}
+
+void
+cm_hash_table_free(cm_hash_table *table)
+{
+    for (size_t i = 0; i < table->table_size; i++) {
+        cm_list *entry_list = table->table[i];
+        if (entry_list != NULL) {
+            free_entry_list(table, entry_list);
+        }
+    }
+    free(table->table);
+    free(table);
 }

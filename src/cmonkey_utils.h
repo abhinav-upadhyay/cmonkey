@@ -31,6 +31,9 @@
 #define CMONKEY_UTILS_H
 
 #include <stdbool.h>
+#include <stdlib.h>
+
+#define INITIAL_HASHTABLE_SIZE 64
 
 typedef struct cm_list_node {
     void *data;
@@ -43,10 +46,36 @@ typedef struct cm_list {
     size_t length;
 } cm_list;
 
+typedef struct cm_hash_entry {
+    void *key;
+    void *value;
+} cm_hash_entry;
+
+typedef struct cm_hash_table {
+    cm_list **table;
+    size_t table_size;
+    size_t nentries; // number of slots used in the table
+    size_t nkeys; // actual number of keys stored
+    size_t (*hash_func) (void *);
+    _Bool (*keycmp) (void *, void *);
+    void (*free_key) (void *);
+    void (*free_value) (void *);
+} cm_hash_table;
+
 
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
 char *long_to_string(long);
 const char *bool_to_string(_Bool);
+cm_hash_table *cm_hash_table_init(
+    size_t (*hash_func)(void *),
+    _Bool (*keycmp) (void *, void *),
+    void (*free_key) (void *),
+    void (*free_value) (void *));
+void cm_hash_table_put(cm_hash_table *, void *, void *);
+void *cm_hash_table_get(cm_hash_table *, void *);
+void cm_hash_table_free(cm_hash_table *);
+size_t string_hash_function(void *);
+_Bool string_keycmp(void *, void *);
 #endif
