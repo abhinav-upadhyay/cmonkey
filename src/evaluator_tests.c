@@ -356,6 +356,31 @@ test_let_statements(void)
     }
 }
 
+static void
+test_function_object(void)
+{
+    const char *input = "fn(x) { x + 2;};";
+    environment_t *env = create_env();
+    print_test_separator_line();
+    printf("Testing function object\n");
+    monkey_object_t *evaluated = test_eval(input, env);
+    test(evaluated->type == MONKEY_FUNCTION,
+        "Expected object of type MONKEY_FUNCTION, found %s\n",
+        get_type_name(evaluated->type));
+    monkey_function_t *function_obj = (monkey_function_t *) evaluated;
+    test(function_obj->parameters->length == 1,
+        "Expected 1 parameters in the function, found %zu\n", function_obj->parameters->length);
+    identifier_t *first_param = (identifier_t *) function_obj->parameters->head->data;
+    test(strcmp(first_param->value, "x") == 0, "Expected param name to be x, found %s\n", first_param->value);
+    const char *expected_body = "(x + 2)";
+    char *actual_body = function_obj->body->statement.node.string(function_obj->body);
+    test(strcmp(expected_body, actual_body) == 0, "Expected function body %s, found %s\n",
+        expected_body, actual_body);
+    free(actual_body);
+    env_free(env);
+    free_monkey_object(evaluated);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -366,5 +391,6 @@ main(int argc, char **argv)
     test_return_statements();
     test_error_handling();
     test_let_statements();
+    test_function_object();
     return 0;
 }

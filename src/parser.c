@@ -37,7 +37,6 @@
 #include "parser.h"
 #include "parser_tracing.h"
 
-static void free_expression(void *);
 static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
@@ -389,8 +388,8 @@ if_expression_string(void *exp)
 }
 
 
-static char *
-generate_parameters_string(cm_list *parameters_list)
+char *
+join_parameters_list(cm_list *parameters_list)
 {
     char *string = NULL;
     char *temp = NULL;
@@ -424,7 +423,7 @@ static char *
 function_literal_string(void *exp)
 {
     function_literal_t *func = (function_literal_t *) exp;
-    char *params_string = generate_parameters_string(func->parameters);
+    char *params_string = join_parameters_list(func->parameters);
     char *func_string = NULL;
     char *func_token_literal = func->expression.node.token_literal(func);
     char *body_string = func->body->statement.node.string(func->body);
@@ -447,7 +446,7 @@ static char *
 call_expression_string(void *exp)
 {
     call_expression_t *call_exp = (call_expression_t *) exp;
-    char *args_string = generate_parameters_string(call_exp->arguments);
+    char *args_string = join_parameters_list(call_exp->arguments);
     char *function_string = call_exp->function->node.string(call_exp->function);
     char *string = NULL;
     asprintf(&string, "%s(%s)", function_string, args_string);
@@ -757,7 +756,7 @@ free_call_expression(call_expression_t *call_exp)
     free(call_exp);
 }
 
-static void
+void
 free_expression(void *e)
 {
     expression_t *exp = (expression_t *) e;
@@ -1418,5 +1417,290 @@ parse_call_expression(parser_t *parser, expression_t *function)
         untrace("parse_call_expression");
     #endif
     return (expression_t *) call_exp;
+}
+
+static expression_t *
+copy_identifier_expression(expression_t *exp)
+{
+    identifier_t *ident_exp = (identifier_t *) exp;
+    identifier_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = identifier_string;
+    copy->expression.node.token_literal = ident_token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = IDENTIFIER_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(ident_exp->token);
+    copy->value = strdup(ident_exp->value);
+    if (copy->value == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_integer_expression(expression_t *exp)
+{
+    integer_t *int_exp = (integer_t *)exp;
+    integer_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->token = token_copy(int_exp->token);
+    copy->expression.expression_node = NULL;
+    copy->expression.node.string = integer_string;
+    copy->expression.node.token_literal = int_exp_token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = INTEGER_EXPRESSION;
+    copy->value = int_exp->value;
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_prefix_expression(expression_t *exp)
+{
+    prefix_expression_t *prefix_exp = (prefix_expression_t *)exp;
+    prefix_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = prefix_exp->expression.node.string;
+    copy->expression.node.token_literal = prefix_exp->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = PREFIX_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(prefix_exp->token);
+    copy->operator = strdup(prefix_exp->operator);
+    if (copy->operator == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->right = copy_expression(prefix_exp->right);
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_infix_expression(expression_t *exp)
+{
+    infix_expression_t *infix_exp = (infix_expression_t *) exp;
+    infix_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = infix_exp->expression.node.string;
+    copy->expression.node.token_literal = infix_exp->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = INFIX_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(infix_exp->token);
+    copy->operator = strdup(infix_exp->operator);
+    if (copy->operator == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->left = copy_expression(infix_exp->left);
+    copy->right = copy_expression(infix_exp->right);
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_boolean_expression(expression_t *exp)
+{
+    boolean_expression_t *bool_exp = (boolean_expression_t *) exp;
+    boolean_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = bool_exp->expression.node.string;
+    copy->expression.node.token_literal = bool_exp->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = BOOLEAN_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(bool_exp->token);
+    copy->value = bool_exp->value;
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_if_expression(expression_t *exp)
+{
+    if_expression_t *if_exp = (if_expression_t *) exp;
+    if_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = if_exp->expression.node.string;
+    copy->expression.node.token_literal = if_exp->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = IF_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(if_exp->token);
+    copy->condition = copy_expression(if_exp->condition);
+    copy->consequence = (block_statement_t *) copy_statement((statement_t *) if_exp->consequence);
+    if (if_exp->alternative)
+        copy->alternative = (block_statement_t *) copy_statement((statement_t *) if_exp->alternative);
+    else
+        copy->alternative = NULL;
+    return (expression_t *) copy;
+}
+
+cm_list *
+copy_parameters(cm_list *parameters)
+{
+    cm_list *copy_list = cm_list_init();
+    cm_list_node *parameters_list_node = parameters->head;
+    while (parameters_list_node) {
+        identifier_t *param = (identifier_t *) parameters_list_node->data;
+        cm_list_add(copy_list, copy_expression((expression_t *) param));
+        parameters_list_node = parameters_list_node->next;
+    }
+    return copy_list;
+}
+
+static expression_t *
+copy_function_literal(expression_t *exp)
+{
+    function_literal_t *func = (function_literal_t *) exp;
+    function_literal_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = func->expression.node.string;
+    copy->expression.node.token_literal = func->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->expression.expression_type = FUNCTION_LITERAL;
+    copy->body = (block_statement_t *) copy_statement((statement_t *) func->body);
+    copy->token = token_copy(func->token);
+    copy->parameters = copy_parameters(func->parameters);
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_call_expression(expression_t *exp)
+{
+    call_expression_t *call_exp = (call_expression_t *)exp;
+    call_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = call_exp->expression.node.string;
+    copy->expression.node.token_literal = call_exp->expression.node.token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->expression.expression_type = CALL_EXPRESSION;
+    copy->token = token_copy(call_exp->token);
+    copy->arguments = copy_parameters(call_exp->arguments);
+    copy->function = copy_expression(call_exp->function);
+    return (expression_t *) copy;
+}
+
+expression_t *
+copy_expression(expression_t *exp)
+{
+    switch (exp->expression_type) {
+        case IDENTIFIER_EXPRESSION:
+            return copy_identifier_expression(exp);
+        case INTEGER_EXPRESSION:
+            return copy_integer_expression(exp);
+        case PREFIX_EXPRESSION:
+            return copy_prefix_expression(exp);
+        case INFIX_EXPRESSION:
+            return copy_infix_expression(exp);
+        case BOOLEAN_EXPRESSION:
+            return copy_boolean_expression(exp);
+        case IF_EXPRESSION:
+            return copy_if_expression(exp);
+        case FUNCTION_LITERAL:
+            return copy_function_literal(exp);
+        case CALL_EXPRESSION:
+            return copy_call_expression(exp);
+        default:
+            return NULL;
+    }
+}
+
+static statement_t *
+copy_letstatement(statement_t *stmt)
+{
+    letstatement_t *let_stmt = (letstatement_t *) stmt;
+    letstatement_t *copy_stmt = malloc(sizeof(*let_stmt));
+    if (copy_stmt == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy_stmt->name = malloc(sizeof(*copy_stmt->name));
+    if (copy_stmt->name == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy_stmt->name->token = token_copy(let_stmt->token);
+    copy_stmt->name->value = strdup(let_stmt->name->value);
+    if (copy_stmt->name->value == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy_stmt->value = copy_expression(let_stmt->value);
+    copy_stmt->value = copy_expression(let_stmt->value);
+    copy_stmt->statement.node.string = letstatement_string;
+    copy_stmt->statement.node.token_literal = letstatement_token_literal;
+    copy_stmt->statement.node.type = STATEMENT;
+    copy_stmt->statement.statement_type = LET_STATEMENT;
+    return (statement_t *)copy_statement;
+}
+
+static statement_t *
+copy_return_statement(statement_t *stmt)
+{
+    return_statement_t *ret_stmt = (return_statement_t *) stmt;
+    return_statement_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->token = token_copy(ret_stmt->token);
+    copy->statement.node.string = return_statement_string;
+    copy->statement.node.token_literal = return_statement_token_literal;
+    copy->statement.node.type = STATEMENT;
+    copy->statement.statement_type = RETURN_STATEMENT;
+    copy->return_value = copy_expression(ret_stmt->return_value);
+    return (statement_t *) copy;
+}
+
+static statement_t *
+copy_expression_statement(statement_t *stmt)
+{
+    expression_statement_t *exp_stmt = (expression_statement_t *) stmt;
+    expression_statement_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->statement.node.string = exp_stmt->statement.node.string;
+    copy->statement.node.token_literal = exp_stmt->statement.node.token_literal;
+    copy->statement.node.type = STATEMENT;
+    copy->statement.statement_type = EXPRESSION_STATEMENT;
+    copy->token = token_copy(exp_stmt->token);
+    copy->expression = copy_expression(exp_stmt->expression);
+    return (statement_t *) copy;
+}
+
+static statement_t *
+copy_block_statement(statement_t *stmt)
+{
+    block_statement_t *block_stmt = (block_statement_t *) stmt;
+    block_statement_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->statement.node.string = block_stmt->statement.node.string;
+    copy->statement.node.token_literal = block_stmt->statement.node.token_literal;
+    copy->statement.node.type = STATEMENT;
+    copy->statement.statement_type = BLOCK_STATEMENT;
+    copy->token = token_copy(block_stmt->token);
+    copy->nstatements = block_stmt->nstatements;
+    copy->array_size = block_stmt->array_size;
+    copy->statements = calloc(copy->nstatements, sizeof(*copy->statements));
+    if (copy->statements == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < copy->nstatements; i++) {
+        copy->statements[i] = copy_statement(block_stmt->statements[i]);
+    }
+    return (statement_t *) copy;
+}
+
+
+statement_t *
+copy_statement(statement_t *stmt)
+{
+    letstatement_t *let_stmt;
+    switch (stmt->statement_type) {
+        case LET_STATEMENT:
+            return copy_letstatement(stmt);
+        case RETURN_STATEMENT:
+            return copy_return_statement(stmt);
+        case EXPRESSION_STATEMENT:
+            return copy_expression_statement(stmt);
+        case BLOCK_STATEMENT:
+            return copy_block_statement(stmt);
+    }
 }
 

@@ -158,6 +158,7 @@ eval_expression(expression_t *exp, environment_t *env)
     monkey_object_t *left_value;
     monkey_object_t *right_value;
     monkey_object_t *exp_value;
+    function_literal_t *function_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -192,6 +193,12 @@ eval_expression(expression_t *exp, environment_t *env)
             return eval_if_expression(exp, env);
         case IDENTIFIER_EXPRESSION:
             return eval_identifier_expression(exp, env);
+        case FUNCTION_LITERAL:
+            function_exp = (function_literal_t *) exp;
+            return (monkey_object_t *) create_monkey_function(
+                    function_exp->parameters,
+                    function_exp->body,
+                    env);
         default:
             break;
     }

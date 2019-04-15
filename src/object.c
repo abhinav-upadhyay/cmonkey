@@ -5,14 +5,30 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "object.h"
 #include "cmonkey_utils.h"
+#include "parser.h"
+#include "object.h"
 
 static char *inspect(monkey_object_t *);
 
 monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect}, true};
 monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect}, false};
 monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect}};
+
+static char *
+monkey_function_inspect(monkey_object_t *obj)
+{
+    monkey_function_t *function = (monkey_function_t *) obj;
+    char *str = NULL;
+    char *params_str = join_parameters_list(function->parameters);
+    char *body_str = function->body->statement.node.string(function->body);
+    int ret = asprintf(&str,"fn(%s) {\n%s\n}", params_str, body_str);
+    free(params_str);
+    free(body_str);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    return str;
+}
 
 static char *
 inspect(monkey_object_t *obj)
@@ -39,6 +55,8 @@ inspect(monkey_object_t *obj)
         case MONKEY_ERROR:
             err_obj = (monkey_error_t *) obj;
             return strdup(err_obj->message);
+        case MONKEY_FUNCTION:
+            return monkey_function_inspect(obj);
     }
 }
 
@@ -105,6 +123,14 @@ create_monkey_error(const char *fmt, ...)
     return error;
 }
 
+static void
+free_monkey_function_object(monkey_function_t *function_obj)
+{
+    free_statement(function_obj->body);
+    cm_list_free(function_obj->parameters, free_expression);
+    free(function_obj);
+}
+
 void
 free_monkey_object(monkey_object_t *object)
 {
@@ -120,6 +146,9 @@ free_monkey_object(monkey_object_t *object)
             err_obj = (monkey_error_t *) object;
             free(err_obj->message);
             free(err_obj);
+            break;
+        case MONKEY_FUNCTION:
+            free_monkey_function_object((monkey_function_t *) object);
             break;
         default:
             free(object);
@@ -140,4 +169,20 @@ copy_monkey_object(monkey_object_t *object)
         default:
             return NULL;
     }
+}
+
+
+monkey_function_t *
+create_monkey_function(cm_list *parameters, block_statement_t *body, environment_t *env)
+{
+    monkey_function_t *function;
+    function = malloc(sizeof(*function));
+    if (function == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    function->parameters = copy_parameters(parameters);
+    function->body = (block_statement_t *) copy_statement((statement_t *) body);
+    function->env = env;
+    function->object.type = MONKEY_FUNCTION;
+    function->object.inspect = inspect;
+    return function;
 }

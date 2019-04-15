@@ -54,9 +54,6 @@ typedef struct parser_t {
 typedef expression_t * (*prefix_parse_fn)(parser_t *);
 typedef expression_t * (*infix_parse_fn)(parser_t *, expression_t *);
 
-//  #define infix_fns_map(tok_type) infix_fns[tok_type]
-//  #define prefix_fns_map(tok_type) prefix_fns[tok_type]
-
 parser_t * parser_init(lexer_t *);
 void parser_next_token(parser_t *);
 program_t *parse_program(parser_t *);
@@ -68,5 +65,9 @@ void *create_statement(parser_t *, statement_type_t);
 void free_statement(statement_t *);
 void _statement_node(void);
 void _expression_node(void);
-
+char *join_parameters_list(cm_list *);
+statement_t *copy_statement(statement_t *);
+expression_t *copy_expression(expression_t *);
+cm_list *copy_parameters(cm_list *);
+void free_expression(void *);
 #endif
