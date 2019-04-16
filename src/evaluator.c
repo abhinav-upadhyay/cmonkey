@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -148,6 +149,53 @@ eval_identifier_expression(expression_t *exp, environment_t *env)
     return copy_monkey_object((monkey_object_t *) value_obj);
 }
 
+static cm_list *
+eval_expressions(cm_list *expression_list, environment_t *env)
+{
+    cm_list *values = cm_list_init();
+    monkey_object_t *value;
+    cm_list_node *exp_node = expression_list->head;
+    while (exp_node != NULL) {
+        value = monkey_eval((node_t *) exp_node->data, env);
+        if (is_error(value)) {
+            cm_list_free(values, free_monkey_object);
+            values = cm_list_init();
+            cm_list_add(values, value);
+            return values;
+        }
+        cm_list_add(values, value);
+        exp_node = exp_node->next;
+    }
+    return values;
+}
+
+static monkey_object_t *
+apply_function(monkey_object_t *function_obj, cm_list *arguments_list)
+{
+    if (function_obj->type != MONKEY_FUNCTION)
+        return (monkey_object_t *) create_monkey_error("not a function: %s", get_type_name(function_obj->type));
+    monkey_function_t *function = (monkey_function_t *) function_obj;
+    environment_t *extended_env = create_enclosed_env(function->env);
+    cm_list_node *arg_node = arguments_list->head;
+    cm_list_node *param_node = function->parameters->head;
+    assert(function->parameters->length == arguments_list->length);
+    while (arg_node != NULL) {
+        identifier_t *param = (identifier_t *) param_node->data;
+        env_put(extended_env, strdup(param->value), copy_monkey_object(arg_node->data));
+        arg_node = arg_node->next;
+        param_node = param_node->next;
+    }
+    monkey_object_t *function_value = monkey_eval((node_t *) function->body, extended_env);
+    env_free(extended_env);
+    if (function_value->type == MONKEY_RETURN_VALUE) {
+        monkey_return_value_t *ret_value = (monkey_return_value_t *) function_value;
+        monkey_object_t *ret = copy_monkey_object(ret_value->value);
+        free_monkey_object(ret_value);
+        return ret;
+    }
+    return function_value;
+}
+
 static monkey_object_t *
 eval_expression(expression_t *exp, environment_t *env)
 {
@@ -158,7 +206,11 @@ eval_expression(expression_t *exp, environment_t *env)
     monkey_object_t *left_value;
     monkey_object_t *right_value;
     monkey_object_t *exp_value;
+    monkey_object_t *function_value;
+    monkey_object_t *call_exp_value;
+    cm_list *arguments_value;
     function_literal_t *function_exp;
+    call_expression_t *call_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -199,6 +251,24 @@ eval_expression(expression_t *exp, environment_t *env)
                     function_exp->parameters,
                     function_exp->body,
                     env);
+        case CALL_EXPRESSION:
+            call_exp = (call_expression_t *) exp;
+            function_value = monkey_eval((node_t *) call_exp->function, env);
+            if (is_error(function_value)) {
+                return function_value;
+            }
+            arguments_value = eval_expressions(call_exp->arguments, env);
+            if (arguments_value->length == 1 &&
+                is_error((monkey_object_t *) arguments_value->head->data)) {
+                    free_monkey_object(function_value);
+                    exp_value = copy_monkey_object((monkey_object_t *) arguments_value->head->data);
+                    cm_list_free(arguments_value, free_monkey_object);
+                    return exp_value;
+            }
+            call_exp_value = apply_function(function_value, arguments_value);
+            free_monkey_object(function_value);
+            cm_list_free(arguments_value, free_monkey_object);
+            return call_exp_value;
         default:
             break;
     }

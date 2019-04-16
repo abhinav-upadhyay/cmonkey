@@ -126,15 +126,17 @@ create_monkey_error(const char *fmt, ...)
 static void
 free_monkey_function_object(monkey_function_t *function_obj)
 {
-    free_statement(function_obj->body);
+    free_statement((statement_t *) function_obj->body);
     cm_list_free(function_obj->parameters, free_expression);
     free(function_obj);
 }
 
 void
-free_monkey_object(monkey_object_t *object)
+free_monkey_object(void *v)
 {
+    monkey_object_t *object = (monkey_object_t *) v;
     monkey_error_t *err_obj;
+    monkey_return_value_t *return_value;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -150,6 +152,11 @@ free_monkey_object(monkey_object_t *object)
         case MONKEY_FUNCTION:
             free_monkey_function_object((monkey_function_t *) object);
             break;
+        case MONKEY_RETURN_VALUE:
+            return_value = (monkey_return_value_t *) object;
+            free_monkey_object(return_value->value);
+            free(return_value);
+            break;
         default:
             free(object);
     }
@@ -159,6 +166,7 @@ monkey_object_t *
 copy_monkey_object(monkey_object_t *object)
 {
     monkey_int_t *int_obj;
+    monkey_function_t *function_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -166,6 +174,10 @@ copy_monkey_object(monkey_object_t *object)
         case MONKEY_INT:
             int_obj = (monkey_int_t *) object;
             return (monkey_object_t *) create_monkey_int(int_obj->value);
+        case MONKEY_FUNCTION:
+            function_obj = (monkey_function_t *) object;
+            return (monkey_object_t *) create_monkey_function(
+                function_obj->parameters, function_obj->body, function_obj->env);
         default:
             return NULL;
     }

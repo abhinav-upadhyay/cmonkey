@@ -56,7 +56,7 @@ typedef struct monkey_error_t {
 
 typedef struct monkey_function_t {
     monkey_object_t object;
-    cm_list *parameters;
+    cm_list *parameters; // list of identifiers
     block_statement_t *body;
     environment_t *env;
 } monkey_function_t;
@@ -69,6 +69,6 @@ monkey_object_t *copy_monkey_object(monkey_object_t *);
 monkey_return_value_t *create_monkey_return_value(monkey_object_t *);
 monkey_error_t *create_monkey_error(const char *, ...);
 monkey_function_t *create_monkey_function(cm_list *, block_statement_t *, environment_t *);
-void free_monkey_object(monkey_object_t *);
+void free_monkey_object(void *);
 
 #endif

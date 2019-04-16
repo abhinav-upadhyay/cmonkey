@@ -381,16 +381,63 @@ test_function_object(void)
     free_monkey_object(evaluated);
 }
 
+static void
+test_function_application(void)
+{
+    typedef struct {
+        const char *input;
+        long expected;
+    } test_input;
+
+    test_input tests[] = {
+        {
+            "let identity = fn(x) {x;}; identity(5);",
+            5
+        },
+        {
+            "let identity = fn(x) { return x;}; identity(5);",
+            5
+        },
+        {
+            "let double = fn(x) { x * 2;} double(5);",
+            10
+        },
+        {
+            "let add = fn(x, y) {x + y;}; add(5, 5);",
+            10
+        },
+        {
+            "let add = fn(x, y) {x + y;}; add(5 + 5, add(5, 5));", 20
+        },
+        {
+            "fn(x) { x; }(5)",
+            5
+        }
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing function application for %s\n", test.input);
+        environment_t *env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        test_integer_object(evaluated, test.expected);
+        env_free(env);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
-    test_eval_integer_expression();
-    test_eval_bool_expression();
-    test_bang_operator();
-    test_if_else_expressions();
-    test_return_statements();
-    test_error_handling();
-    test_let_statements();
-    test_function_object();
+    // test_eval_integer_expression();
+    // test_eval_bool_expression();
+    // test_bang_operator();
+    // test_if_else_expressions();
+    // test_return_statements();
+    // test_error_handling();
+    // test_let_statements();
+    // test_function_object();
+    test_function_application();
     return 0;
 }
