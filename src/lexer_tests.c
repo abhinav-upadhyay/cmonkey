@@ -58,6 +58,7 @@ main(int argc, char **argv)
 			 "10 == 10;\n"\
 			 "10 != 9;\n"\
 			 "!5;\n"\
+			 "return 10;\n"\
 			 "\"foobar\"\n"\
 			 "\"foo bar\"\n";
 
@@ -138,6 +139,9 @@ main(int argc, char **argv)
 		{BANG, "!"},
 		{INT, "5"},
 		{SEMICOLON, ";"},
+		{RETURN, "return"},
+		{INT, "10"},
+		{SEMICOLON, ";"},
 		{STRING, "foobar"},
 		{STRING, "foo bar"},
 		{ END_OF_FILE, "" }
@@ -154,7 +158,6 @@ main(int argc, char **argv)
 			get_token_name_from_type(tests[i].type), get_token_name_from_type(t->type));
 		test(strcmp(t->literal, tests[i].literal) == 0,
 			"Expected literal %s, found %s\n", tests[i].literal, t->literal);
-		printf("Test %d passed\n", i);
 		token_free(t);
 	}
 	lexer_free(l);
