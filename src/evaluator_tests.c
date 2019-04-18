@@ -427,6 +427,25 @@ test_function_application(void)
     }
 }
 
+static void
+test_string_literal(void)
+{
+    const char *input = "\"Hello, world!\"";
+    environment_t *env = create_env();
+    monkey_object_t *evaluated = test_eval(input, env);
+    print_test_separator_line();
+    printf("Testing string literal evaluation\n");
+    test(evaluated->type == MONKEY_STRING,
+        "Expected object of type MONKEY_STRING, got %s\n",
+        get_type_name(evaluated->type));
+    monkey_string_t *str = (monkey_string_t *) evaluated;
+    test(strcmp(str->value, "Hello, world!") == 0,
+        "Expected string literal value \"Hello, world!\", found \"%s\"\n",
+        str->value);
+    free_monkey_object(str);
+    env_free(env);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -439,5 +458,6 @@ main(int argc, char **argv)
     test_let_statements();
     test_function_object();
     test_function_application();
+    test_string_literal();
     return 0;
 }

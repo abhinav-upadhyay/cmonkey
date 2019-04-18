@@ -211,6 +211,8 @@ eval_expression(expression_t *exp, environment_t *env)
     cm_list *arguments_value;
     function_literal_t *function_exp;
     call_expression_t *call_exp;
+    monkey_string_t *string_obj;
+    string_t *string_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -269,6 +271,9 @@ eval_expression(expression_t *exp, environment_t *env)
             free_monkey_object(function_value);
             cm_list_free(arguments_value, free_monkey_object);
             return call_exp_value;
+        case STRING_EXPRESSION:
+            string_exp = (string_t *) exp;
+            return (monkey_object_t *) create_monkey_string(string_exp->value, string_exp->length);
         default:
             break;
     }

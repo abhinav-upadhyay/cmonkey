@@ -86,18 +86,6 @@ get_token_type(char *literal)
 	return IDENT;
 }
 
-static char *
-copy_string(char *s)
-{
-	size_t l = strlen(s);
-	char *d = malloc(100);
-	int i = 0;
-	while (*s)
-		d[i++] = *s++;
-	d[i] = 0;
-	return d;
-}
-
 token_t *
 token_copy(token_t *src)
 {
@@ -105,8 +93,7 @@ token_copy(token_t *src)
 	if (copy == NULL)
 		return NULL;
 	copy->type = src->type;
-	// copy->literal = strdup(src->literal);
-	copy->literal = copy_string(src->literal);
+	copy->literal = strdup(src->literal);
 	if (copy->literal == NULL) {
 		free(copy);
 		return NULL;

@@ -720,6 +720,7 @@ static void
 free_string(string_t *string)
 {
     free(string->value);
+    token_free(string->token);
     free(string);
 }
 
