@@ -305,7 +305,7 @@ eval_program(program_t *program, environment_t *env)
         if (object != NULL) {
             if (object->type == MONKEY_RETURN_VALUE) {
                 return_value_object = (monkey_return_value_t *) object;
-                ret_value = return_value_object->value;
+                ret_value = copy_monkey_object(return_value_object->value);
                 free_monkey_object((monkey_object_t *) return_value_object);
                 return ret_value;
             } else if (object->type == MONKEY_ERROR)
