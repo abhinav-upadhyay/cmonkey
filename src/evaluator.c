@@ -47,6 +47,27 @@ eval_integer_infix_expression(const char *operator,
 }
 
 static monkey_object_t *
+eval_string_infix_expression(const char *operator,
+    monkey_string_t *left_value,
+    monkey_string_t *right_value)
+{
+    if (strcmp(operator, "+") != 0) {
+        return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
+            get_type_name(left_value->object.type),
+            operator,
+            get_type_name(right_value->object.type));
+    }
+    size_t new_len = left_value->length + right_value->length;
+    char *new_string = malloc(new_len + 1);
+    memcpy(new_string, left_value->value, left_value->length);
+    memcpy(new_string + left_value->length, right_value->value, right_value->length);
+    new_string[new_len] = 0;
+    monkey_string_t *new_string_obj = create_monkey_string(new_string, new_len);
+    free(new_string);
+    return (monkey_object_t *) new_string_obj;
+}
+
+static monkey_object_t *
 eval_minus_prefix_expression(monkey_object_t *right_value)
 {
     if (right_value->type != MONKEY_INT)
@@ -92,6 +113,10 @@ eval_infix_expression(const char *operator,
         return eval_integer_infix_expression(operator,
             (monkey_int_t *) left_value,
             (monkey_int_t *) right_value);
+    if (left_value->type == MONKEY_STRING && right_value->type == MONKEY_STRING)
+        return eval_string_infix_expression(operator,
+            (monkey_string_t *) left_value,
+            (monkey_string_t *) right_value);
     else if (strcmp(operator, "==") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value == right_value);

@@ -22,7 +22,7 @@ static const char *type_names[] = {
     "RETURN_VALUE",
     "MONKEY_ERROR",
     "FUNCTION",
-    "MONKEY_STRING"
+    "STRING"
 };
 
 #define get_type_name(type) type_names[type]
