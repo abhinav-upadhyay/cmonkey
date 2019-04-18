@@ -77,7 +77,7 @@ monkey_object_t *copy_monkey_object(monkey_object_t *);
 monkey_return_value_t *create_monkey_return_value(monkey_object_t *);
 monkey_error_t *create_monkey_error(const char *, ...);
 monkey_function_t *create_monkey_function(cm_list *, block_statement_t *, environment_t *);
-monkey_string_t *create_monkey_string(char *, size_t);
+monkey_string_t *create_monkey_string(const char *, size_t);
 void free_monkey_object(void *);
 
 #endif

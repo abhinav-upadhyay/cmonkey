@@ -58,7 +58,7 @@ main(int argc, char **argv)
 			 "10 == 10;\n"\
 			 "10 != 9;\n"\
 			 "!5;\n"\
-			 "return 10;\n"\
+			 "return 10; 10;\n"\
 			 "\"foobar\"\n"\
 			 "\"foo bar\"\n";
 
@@ -140,6 +140,8 @@ main(int argc, char **argv)
 		{INT, "5"},
 		{SEMICOLON, ";"},
 		{RETURN, "return"},
+		{INT, "10"},
+		{SEMICOLON, ";"},
 		{INT, "10"},
 		{SEMICOLON, ";"},
 		{STRING, "foobar"},

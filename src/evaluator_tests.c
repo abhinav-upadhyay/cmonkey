@@ -430,14 +430,14 @@ test_function_application(void)
 int
 main(int argc, char **argv)
 {
-    // test_eval_integer_expression();
-    // test_eval_bool_expression();
-    // test_bang_operator();
-    // test_if_else_expressions();
-    // test_return_statements();
-    // test_error_handling();
-    // test_let_statements();
-    // test_function_object();
+    test_eval_integer_expression();
+    test_eval_bool_expression();
+    test_bang_operator();
+    test_if_else_expressions();
+    test_return_statements();
+    test_error_handling();
+    test_let_statements();
+    test_function_object();
     test_function_application();
     return 0;
 }

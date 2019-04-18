@@ -57,6 +57,8 @@ inspect(monkey_object_t *obj)
             return strdup(err_obj->message);
         case MONKEY_FUNCTION:
             return monkey_function_inspect(obj);
+        case MONKEY_STRING:
+            return ((monkey_string_t *) obj)->value;
     }
 }
 
@@ -137,6 +139,7 @@ free_monkey_object(void *v)
     monkey_object_t *object = (monkey_object_t *) v;
     monkey_error_t *err_obj;
     monkey_return_value_t *return_value;
+    monkey_string_t *str_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -157,6 +160,11 @@ free_monkey_object(void *v)
             free_monkey_object(return_value->value);
             free(return_value);
             break;
+        case MONKEY_STRING:
+            str_obj = (monkey_string_t *) object;
+            free(str_obj->value);
+            free(str_obj);
+            break;
         default:
             free(object);
     }
@@ -167,6 +175,7 @@ copy_monkey_object(monkey_object_t *object)
 {
     monkey_int_t *int_obj;
     monkey_function_t *function_obj;
+    monkey_string_t *str_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -178,6 +187,9 @@ copy_monkey_object(monkey_object_t *object)
             function_obj = (monkey_function_t *) object;
             return (monkey_object_t *) create_monkey_function(
                 function_obj->parameters, function_obj->body, function_obj->env);
+        case MONKEY_STRING:
+            str_obj = (monkey_string_t *) object;
+            return (monkey_object_t *) create_monkey_string(str_obj->value, str_obj->length);
         default:
             return NULL;
     }
@@ -197,4 +209,20 @@ create_monkey_function(cm_list *parameters, block_statement_t *body, environment
     function->object.type = MONKEY_FUNCTION;
     function->object.inspect = inspect;
     return function;
+}
+
+monkey_string_t *
+create_monkey_string(const char *value, size_t length)
+{
+    monkey_string_t *string_obj;
+    string_obj = malloc(sizeof(*string_obj));
+    if (string_obj == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    string_obj->value = strdup(value);
+    if (string_obj->value == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    string_obj->length = length;
+    string_obj->object.type = MONKEY_STRING;
+    string_obj->object.inspect = inspect;
+    return string_obj;
 }
