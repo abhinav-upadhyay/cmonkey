@@ -1186,6 +1186,7 @@ parse_string_expression(parser_t *parser)
     string->expression.expression_node = NULL;
     string->token = token_copy(parser->cur_tok);
     string->value = strdup(parser->cur_tok->literal);
+    string->length = strlen(parser->cur_tok->literal);
     if (string->value == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     #ifdef TRACE
