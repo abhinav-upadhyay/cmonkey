@@ -1637,6 +1637,26 @@ copy_call_expression(expression_t *exp)
     return (expression_t *) copy;
 }
 
+static expression_t *
+copy_string_expression(expression_t *exp)
+{
+    string_t *string = (string_t *) exp;
+    string_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->length = string->length;
+    copy->token = token_copy(string->token);
+    copy->expression.node.string = string_string;
+    copy->expression.node.token_literal = string_token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = STRING_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->value = strdup(string->value);
+    if (copy->value == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    return (expression_t *) copy;
+}
+
 expression_t *
 copy_expression(expression_t *exp)
 {
@@ -1657,6 +1677,8 @@ copy_expression(expression_t *exp)
             return copy_function_literal(exp);
         case CALL_EXPRESSION:
             return copy_call_expression(exp);
+        case STRING_EXPRESSION:
+            return copy_string_expression(exp);
         default:
             return NULL;
     }

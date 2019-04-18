@@ -11,7 +11,8 @@ typedef enum monkey_object_type {
     MONKEY_NULL,
     MONKEY_RETURN_VALUE,
     MONKEY_ERROR,
-    MONKEY_FUNCTION
+    MONKEY_FUNCTION,
+    MONKEY_STRING
 } monkey_object_type;
 
 static const char *type_names[] = {
@@ -20,7 +21,8 @@ static const char *type_names[] = {
     "NULL",
     "RETURN_VALUE",
     "MONKEY_ERROR",
-    "FUNCTION"
+    "FUNCTION",
+    "MONKEY_STRING"
 };
 
 #define get_type_name(type) type_names[type]
@@ -61,6 +63,12 @@ typedef struct monkey_function_t {
     environment_t *env;
 } monkey_function_t;
 
+typedef struct monkey_string_t {
+    monkey_object_t object;
+    char *value;
+    size_t length;
+} monkey_string_t;
+
 monkey_int_t * create_monkey_int(long);
 monkey_bool_t * create_monkey_bool(_Bool);
 monkey_null_t * create_monkey_null(void);
@@ -69,6 +77,7 @@ monkey_object_t *copy_monkey_object(monkey_object_t *);
 monkey_return_value_t *create_monkey_return_value(monkey_object_t *);
 monkey_error_t *create_monkey_error(const char *, ...);
 monkey_function_t *create_monkey_function(cm_list *, block_statement_t *, environment_t *);
+monkey_string_t *create_monkey_string(char *, size_t);
 void free_monkey_object(void *);
 
 #endif
