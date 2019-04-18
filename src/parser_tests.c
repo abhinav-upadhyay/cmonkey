@@ -913,6 +913,31 @@ test_call_expression_argument_parsing(void)
     printf("Call expression argument tests passed\n");
 }
 
+static void
+test_string_literal(void)
+{
+    const char *input = "\"hello, world!\"";
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    print_test_separator_line();
+    printf("Test string expression parsing\n");
+    test(program->nstatements == 1, "Expected 1 statement, found %zu\n",
+        program->nstatements);
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == STRING_EXPRESSION,
+        "Expected expression of type STRING_EXPRESSION, found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    string_t *string = (string_t *) exp_stmt->expression;
+    test(strcmp(string->value, "hello, world!") == 0,
+        "Expected string literal \"hello, world!\", found \"%s\"\n", string->value);
+    program_free(program);
+    parser_free(parser);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -931,6 +956,7 @@ main(int argc, char **argv)
     test_function_parameter_parsing();
     test_call_expression_parsing();
     test_call_expression_argument_parsing();
+    test_string_literal();
     printf("All tests passed\n");
 
 }

@@ -59,6 +59,7 @@ static const char *statement_type_values[] = {
 typedef enum expression_type_t {
     IDENTIFIER_EXPRESSION,
     INTEGER_EXPRESSION,
+    STRING_EXPRESSION,
     PREFIX_EXPRESSION,
     INFIX_EXPRESSION,
     BOOLEAN_EXPRESSION,
@@ -70,6 +71,7 @@ typedef enum expression_type_t {
 static const char *expression_type_values[] = {
     "IDENTIFIER_EXPRESSION",
     "INTEGER_EXPRESSION",
+    "STRING_EXPRESSION",
     "PREFIX_EXPRESSION",
     "INFIX_EXPRESSION",
     "BOOLEAN_EXPRESSION",
@@ -113,6 +115,13 @@ typedef struct integer_t {
     token_t *token;
     long value;
 } integer_t;
+
+typedef struct string_t {
+    expression_t expression;
+    token_t *token;
+    char *value;
+    size_t length;
+} string_t;
 
 typedef struct prefix_expression_t {
     expression_t expression;

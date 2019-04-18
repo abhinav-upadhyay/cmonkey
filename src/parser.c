@@ -39,6 +39,7 @@
 
 static expression_t * parse_identifier_expression(parser_t *);
 static expression_t * parse_integer_expression(parser_t *);
+static expression_t * parse_string_expression(parser_t *);
 static expression_t * parse_prefix_expression(parser_t *);
 static expression_t * parse_boolean_expression(parser_t *);
 static expression_t * parse_grouped_expression(parser_t *);
@@ -53,6 +54,7 @@ static expression_t * parse_call_expression(parser_t *, expression_t *);
      NULL, //END OF FILE
      parse_identifier_expression, //IDENT
      parse_integer_expression, //INT
+     parse_string_expression, //STRING
      NULL, //ASSIGN
      NULL, //PLUS
      parse_prefix_expression, //MINUS
@@ -83,6 +85,7 @@ static expression_t * parse_call_expression(parser_t *, expression_t *);
      NULL, //END OF FILE
      NULL, //IDENT
      NULL, //INT
+     NULL, //STRING
      NULL, //ASSIGN
      parse_infix_expression, //PLUS
      parse_infix_expression, //MINUS
@@ -197,6 +200,13 @@ identifier_token_literal(identifier_t *id)
 }
 
 static char *
+string_token_literal(void *exp)
+{
+    string_t *string = (string_t *) exp;
+    return string->token->literal;
+}
+
+static char *
 expression_statement_token_literal(void *stmt)
 {
     expression_statement_t *exp_stmt = (expression_statement_t *) stmt;
@@ -241,6 +251,13 @@ if_expression_token_literal(void *exp)
 void
 _expression_node(void)
 {
+}
+
+static char *
+string_string(void *exp)
+{
+    string_t *string = (string_t *) exp;
+    return strdup(string->value);
 }
 
 static char *
@@ -700,6 +717,13 @@ free_boolean_expression(boolean_expression_t *bool_exp)
 }
 
 static void
+free_string(string_t *string)
+{
+    free(string->value);
+    free(string);
+}
+
+static void
 free_return_statement(return_statement_t *ret_stmt)
 {
     if (ret_stmt->token)
@@ -785,6 +809,9 @@ free_expression(void *e)
             break;
         case CALL_EXPRESSION:
             free_call_expression((call_expression_t *) exp);
+            break;
+        case STRING_EXPRESSION:
+            free_string((string_t *) exp);
             break;
         default:
             break;
@@ -1140,6 +1167,31 @@ parse_integer_expression(parser_t *parser)
     #endif
 
     return (expression_t *) int_exp;
+}
+
+expression_t *
+parse_string_expression(parser_t *parser)
+{
+    #ifdef TRACE
+        trace("parse_string_expression");
+    #endif
+    string_t *string;
+    string = malloc(sizeof(*string));
+    if (string == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    string->expression.node.string = string_string;
+    string->expression.node.token_literal = string_token_literal;
+    string->expression.node.type = EXPRESSION;
+    string->expression.expression_type = STRING_EXPRESSION;
+    string->expression.expression_node = NULL;
+    string->token = token_copy(parser->cur_tok);
+    string->value = strdup(parser->cur_tok->literal);
+    if (string->value == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    #ifdef TRACE
+        untrace("parse_string_expression");
+    #endif
+    return (expression_t *) string;
 }
 
 expression_t *
