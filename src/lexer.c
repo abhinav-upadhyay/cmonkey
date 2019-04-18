@@ -63,6 +63,8 @@ read_identifier(lexer_t *l)
 	}
 	size_t nchars = l->current_offset - position;
 	char *identifier = malloc(nchars + 1);
+	if (identifier == NULL)
+		errx(EXIT_FAILURE, "malloc failed");
 	memcpy(identifier, l->input + position, nchars); 
 	identifier[nchars] = 0;
 	l->read_offset = l->current_offset + 1;
@@ -85,6 +87,26 @@ eat_whitespace(lexer_t *l)
 {
 	while (l->ch && (l->ch == ' ' || l->ch == '\n' || l->ch == '\r' || l->ch == '\t'))
 		read_char(l);
+}
+
+static char *
+read_string(lexer_t *l)
+{
+	size_t position = l->current_offset + 1;
+	l->current_offset++;
+	while(l->input[l->current_offset] != '"' && l->input[l->current_offset] != 0)
+		l->current_offset++;
+
+	size_t length = l->current_offset - position;
+	char *string = malloc(length + 1);
+	if (string == NULL)
+		errx(EXIT_FAILURE, "malloc failed");
+	memcpy(string, l->input + position, length);
+	string[length] = 0;
+	l->current_offset++;
+	l->read_offset = l->current_offset + 1;
+	l->ch = l->input[l->current_offset];
+	return string;
 }
 
 token_t *
@@ -186,6 +208,10 @@ lexer_next_token(lexer_t *l)
 		t->literal = "";
 		t->type = END_OF_FILE;
 		break;
+	case '"':
+		t->literal = read_string(l);
+		t->type = STRING;
+		break;
 	default:
 		if (is_character(l->ch)) {
 			t->literal = read_identifier(l);
@@ -194,8 +220,7 @@ lexer_next_token(lexer_t *l)
 			t->literal = NULL;
 			t->type = ILLEGAL;
 			read_char(l);
-	}
-		break;
+		}
 	}
 
 	return t;

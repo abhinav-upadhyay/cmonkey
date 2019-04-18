@@ -33,6 +33,7 @@
 
 #include "lexer.h"
 #include "token.h"
+#include "test_utils.h"
 
 int
 main(int argc, char **argv)
@@ -56,7 +57,9 @@ main(int argc, char **argv)
 			 "\n"\
 			 "10 == 10;\n"\
 			 "10 != 9;\n"\
-			 "!5;\n";
+			 "!5;\n"\
+			 "\"foobar\"\n"\
+			 "\"foo bar\"\n";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -135,6 +138,8 @@ main(int argc, char **argv)
 		{BANG, "!"},
 		{INT, "5"},
 		{SEMICOLON, ";"},
+		{STRING, "foobar"},
+		{STRING, "foo bar"},
 		{ END_OF_FILE, "" }
 
 	};
@@ -144,8 +149,11 @@ main(int argc, char **argv)
 	token_t *t;
 	for (i = 0; i < sizeof(tests)/sizeof(tests[0]); i++) {
 		t = lexer_next_token(l);
-		assert (t->type == tests[i].type);
-		assert(strcmp(t->literal, tests[i].literal) == 0);
+		printf("Testing lexing for input %s\n", tests[i].literal);
+		test(t->type == tests[i].type, "Expected token %s, got %s\n",
+			get_token_name_from_type(tests[i].type), get_token_name_from_type(t->type));
+		test(strcmp(t->literal, tests[i].literal) == 0,
+			"Expected literal %s, found %s\n", tests[i].literal, t->literal);
 		printf("Test %d passed\n", i);
 		token_free(t);
 	}

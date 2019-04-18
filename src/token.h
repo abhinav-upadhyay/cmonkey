@@ -37,6 +37,7 @@ typedef enum token_type {
 	// identifiers, literals
 	IDENT,
 	INT,
+	STRING,
 
 	//operators
 	ASSIGN,
@@ -75,6 +76,7 @@ static const char *token_names[] = {
 	// identifiers, literals
 	"IDENT",
 	"INT",
+	"STRING",
 
 	//operators
 	"ASSIGN",
