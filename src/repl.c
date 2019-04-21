@@ -77,7 +77,6 @@ main(int argc, char **argv)
 	parser_t *parser = NULL;
 	program_t *program = NULL;
 	environment_t *env = create_env();
-	token_t *tok;
 	printf("%s\n", MONKEY_FACE);
 	printf("Welcome to the monkey programming language\n");
 	printf("%s", PROMPT);

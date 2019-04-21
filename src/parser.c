@@ -194,12 +194,6 @@ return_statement_token_literal(void *stmt)
 }
 
 static char *
-identifier_token_literal(identifier_t *id)
-{
-    return id->token->literal;
-}
-
-static char *
 string_token_literal(void *exp)
 {
     string_t *string = (string_t *) exp;
@@ -1767,7 +1761,6 @@ copy_block_statement(statement_t *stmt)
 statement_t *
 copy_statement(statement_t *stmt)
 {
-    letstatement_t *let_stmt;
     switch (stmt->statement_type) {
         case LET_STATEMENT:
             return copy_letstatement(stmt);

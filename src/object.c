@@ -35,7 +35,6 @@ inspect(monkey_object_t *obj)
 {
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
-    monkey_null_t *null_obj;
     monkey_return_value_t *ret_obj;
     monkey_error_t *err_obj;
 
