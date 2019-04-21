@@ -60,7 +60,8 @@ main(int argc, char **argv)
 			 "!5;\n"\
 			 "return 10; 10;\n"\
 			 "\"foobar\"\n"\
-			 "\"foo bar\"\n";
+			 "\"foo bar\"\n"\
+			 "[1, 2];";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -146,8 +147,13 @@ main(int argc, char **argv)
 		{SEMICOLON, ";"},
 		{STRING, "foobar"},
 		{STRING, "foo bar"},
+		{LBRACKET, "["},
+		{INT, "1"},
+		{COMMA, ","},
+		{INT, "2"},
+		{RBRACKET, "]"},
+		{SEMICOLON, ";"},
 		{ END_OF_FILE, "" }
-
 	};
 
 	lexer_t *l = lexer_init((char *) input);

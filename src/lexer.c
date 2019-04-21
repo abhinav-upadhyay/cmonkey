@@ -212,6 +212,16 @@ lexer_next_token(lexer_t *l)
 		t->literal = read_string(l);
 		t->type = STRING;
 		break;
+	case '[':
+		t->literal = strdup("[");
+		t->type = LBRACKET;
+		read_char(l);
+		break;
+	case ']':
+		t->literal = strdup("]");
+		t->type = RBRACKET;
+		read_char(l);
+		break;
 	default:
 		if (is_character(l->ch)) {
 			t->literal = read_identifier(l);
