@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "environment.h"
 
+
 typedef enum monkey_object_type {
     MONKEY_INT,
     MONKEY_BOOL,
@@ -12,7 +13,8 @@ typedef enum monkey_object_type {
     MONKEY_RETURN_VALUE,
     MONKEY_ERROR,
     MONKEY_FUNCTION,
-    MONKEY_STRING
+    MONKEY_STRING,
+    MONKEY_BUILTIN
 } monkey_object_type;
 
 static const char *type_names[] = {
@@ -22,7 +24,8 @@ static const char *type_names[] = {
     "RETURN_VALUE",
     "MONKEY_ERROR",
     "FUNCTION",
-    "STRING"
+    "STRING",
+    "BUILTIN"
 };
 
 #define get_type_name(type) type_names[type]
@@ -69,6 +72,14 @@ typedef struct monkey_string_t {
     size_t length;
 } monkey_string_t;
 
+typedef monkey_object_t * (*builtin_fn) (cm_list *);
+
+typedef struct monkey_builtin_t {
+    monkey_object_t object;
+    builtin_fn function;
+} monkey_builtin_t;
+
+
 monkey_int_t * create_monkey_int(long);
 monkey_bool_t * create_monkey_bool(_Bool);
 monkey_null_t * create_monkey_null(void);
@@ -78,6 +89,7 @@ monkey_return_value_t *create_monkey_return_value(monkey_object_t *);
 monkey_error_t *create_monkey_error(const char *, ...);
 monkey_function_t *create_monkey_function(cm_list *, block_statement_t *, environment_t *);
 monkey_string_t *create_monkey_string(const char *, size_t);
+monkey_builtin_t *create_monkey_builtin(builtin_fn);
 void free_monkey_object(void *);
 
 #endif

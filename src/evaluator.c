@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "builtins.h"
 #include "environment.h"
 #include "evaluator.h"
 #include "object.h"
@@ -169,6 +170,8 @@ eval_identifier_expression(expression_t *exp, environment_t *env)
     identifier_t *ident_exp = (identifier_t *) exp;
     void *value_obj = env_get(env, ident_exp->value);
     if (value_obj == NULL)
+        value_obj = (void *) get_builtins(ident_exp->value);
+    if (value_obj == NULL)
         return (monkey_object_t *) create_monkey_error("identifier not found: %s", ident_exp->value);
     // return a copy of the value, we don't want anyone else to a value stored in the hash table
     return copy_monkey_object((monkey_object_t *) value_obj);
@@ -197,28 +200,45 @@ eval_expressions(cm_list *expression_list, environment_t *env)
 static monkey_object_t *
 apply_function(monkey_object_t *function_obj, cm_list *arguments_list)
 {
-    if (function_obj->type != MONKEY_FUNCTION)
-        return (monkey_object_t *) create_monkey_error("not a function: %s", get_type_name(function_obj->type));
-    monkey_function_t *function = (monkey_function_t *) function_obj;
-    environment_t *extended_env = create_enclosed_env(function->env);
-    cm_list_node *arg_node = arguments_list->head;
-    cm_list_node *param_node = function->parameters->head;
-    assert(function->parameters->length == arguments_list->length);
-    while (arg_node != NULL) {
-        identifier_t *param = (identifier_t *) param_node->data;
-        env_put(extended_env, strdup(param->value), copy_monkey_object(arg_node->data));
-        arg_node = arg_node->next;
-        param_node = param_node->next;
+    monkey_function_t *function;
+    monkey_builtin_t *builtin;
+    environment_t *extended_env;
+    monkey_object_t *function_value;
+    monkey_return_value_t *ret_value;
+    monkey_object_t *ret;
+    cm_list_node *arg_node;
+    cm_list_node *param_node;
+
+    switch (function_obj->type) {
+        case MONKEY_FUNCTION:
+            function = (monkey_function_t *) function_obj;
+            extended_env = create_enclosed_env(function->env);
+            arg_node = arguments_list->head;
+            param_node = function->parameters->head;
+            assert(function->parameters->length == arguments_list->length);
+            while (arg_node != NULL) {
+                identifier_t *param = (identifier_t *) param_node->data;
+                env_put(extended_env, strdup(param->value), copy_monkey_object(arg_node->data));
+                arg_node = arg_node->next;
+                param_node = param_node->next;
+            }
+            function_value = monkey_eval((node_t *) function->body, extended_env);
+            env_free(extended_env);
+            if (function_value->type == MONKEY_RETURN_VALUE) {
+                ret_value = (monkey_return_value_t *) function_value;
+                ret = copy_monkey_object(ret_value->value);
+                free_monkey_object(ret_value);
+                return ret;
+            }
+            return function_value;
+            break;
+        case MONKEY_BUILTIN:
+            builtin = (monkey_builtin_t *) function_obj;
+            return builtin->function(arguments_list);
+            break;
+        default:
+            return (monkey_object_t *) create_monkey_error("not a function: %s", get_type_name(function_obj->type));
     }
-    monkey_object_t *function_value = monkey_eval((node_t *) function->body, extended_env);
-    env_free(extended_env);
-    if (function_value->type == MONKEY_RETURN_VALUE) {
-        monkey_return_value_t *ret_value = (monkey_return_value_t *) function_value;
-        monkey_object_t *ret = copy_monkey_object(ret_value->value);
-        free_monkey_object(ret_value);
-        return ret;
-    }
-    return function_value;
 }
 
 static monkey_object_t *
@@ -236,7 +256,6 @@ eval_expression(expression_t *exp, environment_t *env)
     cm_list *arguments_value;
     function_literal_t *function_exp;
     call_expression_t *call_exp;
-    monkey_string_t *string_obj;
     string_t *string_exp;
     switch (exp->expression_type)
     {

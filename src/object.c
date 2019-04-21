@@ -59,6 +59,8 @@ inspect(monkey_object_t *obj)
             return monkey_function_inspect(obj);
         case MONKEY_STRING:
             return ((monkey_string_t *) obj)->value;
+        case MONKEY_BUILTIN:
+            return strdup("builtin function");
     }
 }
 
@@ -176,6 +178,7 @@ copy_monkey_object(monkey_object_t *object)
     monkey_int_t *int_obj;
     monkey_function_t *function_obj;
     monkey_string_t *str_obj;
+    monkey_builtin_t *builtin;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -190,6 +193,9 @@ copy_monkey_object(monkey_object_t *object)
         case MONKEY_STRING:
             str_obj = (monkey_string_t *) object;
             return (monkey_object_t *) create_monkey_string(str_obj->value, str_obj->length);
+        case MONKEY_BUILTIN:
+            builtin = (monkey_builtin_t *) object;
+            return (monkey_object_t *) create_monkey_builtin(builtin->function);
         default:
             return NULL;
     }
@@ -225,4 +231,16 @@ create_monkey_string(const char *value, size_t length)
     string_obj->object.type = MONKEY_STRING;
     string_obj->object.inspect = inspect;
     return string_obj;
+}
+
+monkey_builtin_t *
+create_monkey_builtin(builtin_fn function)
+{
+    monkey_builtin_t *builtin = malloc(sizeof(*builtin));
+    if (builtin == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    builtin->object.type = MONKEY_BUILTIN;
+    builtin->object.inspect = inspect;
+    builtin->function = function;
+    return builtin;
 }

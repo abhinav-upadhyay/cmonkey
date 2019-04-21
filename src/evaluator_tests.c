@@ -469,6 +469,54 @@ test_string_concatenation(void)
     env_free(env);
 }
 
+static void
+test_builtins(void)
+{
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {"len(\"\")", (monkey_object_t *) create_monkey_int(0)},
+        {"len(\"four\")", (monkey_object_t *) create_monkey_int(4)},
+        {"len(\"hello world\")", (monkey_object_t *) create_monkey_int(11)},
+        {"len(1)", (monkey_object_t *) create_monkey_error("argument to len not supported, got INTEGER")},
+        {"len(\"one\", \"two\")", (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")}
+    };
+
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    print_test_separator_line();
+    monkey_int_t *actual_int;
+    monkey_error_t *actual_err;
+    monkey_error_t *expected_err;
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing builtin function %s\n", test.input);
+        environment_t *env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        switch (test.expected->type) {
+            case MONKEY_INT:
+                actual_int = (monkey_int_t *) evaluated;
+                test_integer_object(evaluated, actual_int->value);
+                free_monkey_object(test.expected);
+                break;
+            case MONKEY_ERROR:
+                actual_err = (monkey_error_t *) evaluated;
+                expected_err = (monkey_error_t *) test.expected;
+                test(strcmp(actual_err->message, expected_err->message) == 0,
+                    "Expected error message %s, got %s\n", expected_err->message,
+                    actual_err->message);
+                free_monkey_object(evaluated);
+                free_monkey_object(test.expected);
+                break;
+            default:
+                break;
+        }
+        env_free(env);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -483,5 +531,6 @@ main(int argc, char **argv)
     test_function_application();
     test_string_literal();
     test_string_concatenation();
+    test_builtins();
     return 0;
 }
