@@ -246,3 +246,98 @@ cm_hash_table_free(cm_hash_table *table)
     free(table->table);
     free(table);
 }
+
+cm_array_list *
+cm_array_list_init(size_t init_size, void (*free_func) (void *))
+{
+    cm_array_list *list;
+    list = malloc(sizeof(*list));
+    if (list == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    list->array = calloc(init_size, sizeof(*list->array));
+    if (list->array == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    list->array_size = init_size;
+    list->length = 0;
+    list->free_func = free_func;
+    return list;
+}
+
+int
+cm_array_list_add(cm_array_list *list, void *value)
+{
+    if (list->length == list->array_size) {
+        list->array_size *= 2;
+        list->array = reallocarray(list->array, list->array_size, sizeof(*list->array));
+        if (list->array == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+    }
+    list->array[list->length++] = value;
+    return 1;
+}
+
+int
+cm_array_list_add_at(cm_array_list *list, size_t index, void *value)
+{
+    if (index > list->length - 1)
+        return 0;
+    if (list->free_func != NULL)
+        list->free_func(list->array[index]);
+    list->array[index] = value;
+    return 1;
+}
+
+void *
+cm_array_list_get(cm_array_list *list, size_t index)
+{
+    if (index > list->length - 1)
+        return NULL;
+
+    return list->array[index];
+}
+
+void *
+cm_array_list_first(cm_array_list *list)
+{
+    return cm_array_list_get(list, 0);
+}
+
+void *cm_array_list_last(cm_array_list *list)
+{
+    return cm_array_list_get(list, list->length - 1);
+}
+
+void
+cm_array_list_remove(cm_array_list *list, size_t index)
+{
+    cm_array_list *copy = cm_array_list_init(list->length - 1, list->free_func);
+    for (size_t i = 0; i < list->length; i++) {
+        if (i == index) {
+            list->free_func(list->array[i]);
+            continue;
+        }
+        cm_array_list_add(copy, list->array[i]);
+    }
+    // if (list->free_func != NULL) {
+    //     for (size_t i = 0; i < list->length; i++) {
+    //         list->free_func(list->array[i]);
+    //     }
+    // }
+    free(list->array);
+    list->array = copy->array;
+    list->length = copy->length;
+    list->array_size = copy->array_size;
+    free(copy);
+}
+
+void
+cm_array_list_free(cm_array_list *list)
+{
+    if (list->free_func != NULL) {
+        for (size_t i = 0; i < list->length; i++) {
+            list->free_func(list->array[i]);
+        }
+    }
+    free(list->array);
+    free(list);
+}

@@ -62,12 +62,29 @@ typedef struct cm_hash_table {
     void (*free_value) (void *);
 } cm_hash_table;
 
+typedef struct cm_array_list {
+    void **array;
+    size_t length;
+    size_t array_size;
+    void (*free_func) (void *);
+} cm_array_list;
 
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
+
+cm_array_list * cm_array_list_init(size_t, void (*free_func) (void *));
+int cm_array_list_add(cm_array_list *, void *);
+int cm_array_list_add_at(cm_array_list *, size_t, void *);
+void *cm_array_list_get(cm_array_list *, size_t);
+void *cm_array_list_last(cm_array_list *);
+void *cm_array_list_first(cm_array_list *);
+void cm_array_list_remove(cm_array_list *, size_t);
+void cm_array_list_free(cm_array_list *);
+
 char *long_to_string(long);
 const char *bool_to_string(_Bool);
+
 cm_hash_table *cm_hash_table_init(
     size_t (*hash_func)(void *),
     _Bool (*keycmp) (void *, void *),
@@ -78,4 +95,5 @@ void *cm_hash_table_get(cm_hash_table *, void *);
 void cm_hash_table_free(cm_hash_table *);
 size_t string_hash_function(void *);
 _Bool string_keycmp(void *, void *);
+
 #endif
