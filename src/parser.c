@@ -1372,6 +1372,9 @@ parse_grouped_expression(parser_t *parser)
 static expression_t *
 parse_array_literal(parser_t *parser)
 {
+    #ifdef TRACE
+        trace("parse_array_literal");
+    #endif
     array_literal_t *array;
     array = malloc(sizeof(*array));
     if (array == NULL)
@@ -1383,6 +1386,9 @@ parse_array_literal(parser_t *parser)
     array->expression.node.type = EXPRESSION;
     array->expression.expression_type = ARRAY_LITERAL;
     array->expression.expression_node = NULL;
+    #ifdef TRACE
+        untrace("parse_array_literal");
+    #endif
     return (expression_t *) array;
 }
 
