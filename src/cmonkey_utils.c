@@ -86,6 +86,18 @@ cm_list_free(cm_list *list, void (*free_data) (void *))
     free(list);
 }
 
+void *
+cm_list_get(cm_list *list, void *key, _Bool (*cmp) (void *, void *))
+{
+    cm_list_node *node = list->head;
+    while (node) {
+        if (cmp(node->data, key))
+            return node->data;
+        node = node->next;
+    }
+    return NULL;
+}
+
 
 static
 size_t calculate_string_size(long l)
@@ -155,25 +167,39 @@ cm_hash_table_init(size_t (*hash_func)(void *),
     return table;
 }
 
+static _Bool
+entry_cmp(void *e1, void *e2)
+{
+    cm_hash_entry *entry1 = (cm_hash_entry *) e1;
+    cm_hash_entry *entry2 = (cm_hash_entry *) e2;
+    return string_keycmp(entry1->key, entry2->key);
+}
+
 void
 cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
 {
-    cm_hash_entry *entry;
+    cm_hash_entry *entry = NULL;
     size_t index = hash_table->hash_func(key) % hash_table->table_size;
-    cm_list *list_entry = hash_table->table[index];
-    if (list_entry == NULL) {
-        list_entry = cm_list_init();
-        hash_table->table[index] = list_entry;
+    cm_list *entry_list = hash_table->table[index];
+    if (entry_list == NULL) {
+        entry_list = cm_list_init();
+        hash_table->table[index] = entry_list;
         hash_table->nentries++;
         //TODO: resize when nentries == table size
+    } else {
+        cm_hash_entry temp_entry = {key, NULL};
+        entry = cm_list_get(entry_list, &temp_entry, entry_cmp);
     }
-    entry = malloc(sizeof*entry);
-    if (entry == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
+
+    if (entry == NULL) {
+        entry = malloc(sizeof*entry);
+        if (entry == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+    }
     entry->key = key;
     entry->value = value;
     hash_table->nkeys++;
-    cm_list_add(list_entry, entry);
+    cm_list_add(entry_list, entry);
 }
 
 void *

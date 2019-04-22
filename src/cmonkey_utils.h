@@ -72,6 +72,7 @@ typedef struct cm_array_list {
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
+void *cm_list_get(cm_list *, void *, _Bool (*cmp) (void *, void *));
 
 cm_array_list * cm_array_list_init(size_t, void (*free_func) (void *));
 int cm_array_list_add(cm_array_list *, void *);
