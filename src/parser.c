@@ -1788,6 +1788,8 @@ copy_expression(expression_t *exp)
             return copy_call_expression(exp);
         case STRING_EXPRESSION:
             return copy_string_expression(exp);
+        case ARRAY_LITERAL:
+            return copy_array_literal(exp);
         default:
             return NULL;
     }
