@@ -49,6 +49,7 @@ static expression_t * parse_array_literal(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 static expression_t * parse_call_expression(parser_t *, expression_t *);
+static expression_t * parse_index_expression(parser_t *, expression_t *);
 
  static prefix_parse_fn prefix_fns [] = {
      NULL, //ILLEGAL
@@ -105,6 +106,8 @@ static expression_t * parse_call_expression(parser_t *, expression_t *);
      NULL, //RPAREN
      NULL, //LBRACE
      NULL, //RBRACE
+     parse_index_expression, //LBRACKET
+     NULL, //RBRACKET
      NULL, //FUNCTION
      NULL, //LET
      NULL, //IF
@@ -154,6 +157,8 @@ precedence(token_type tok_type)
             return PRODUCT;
         case LPAREN:
             return CALL;
+        case LBRACKET:
+            return INDEX;
         default:
             return LOWEST;
     }
@@ -435,6 +440,21 @@ array_literal_string(void *exp)
         errx(EXIT_FAILURE, "malloc failed");
     free(string);
     return temp;
+}
+
+static char *
+index_exp_string(void *exp)
+{
+    index_expression_t *index_exp = (index_expression_t *) exp;
+    char *string = NULL;
+    char *left_string = index_exp->left->node.string(index_exp->left);
+    char *index_string = index_exp->index->node.string(index_exp->index);
+    int ret = asprintf(&string, "(%s[%s])", left_string, index_string);
+    free(left_string);
+    free(index_string);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    return string;
 }
 
 char *
@@ -823,6 +843,17 @@ free_array_literal(array_literal_t *array)
     free(array);
 }
 
+static void
+free_index_expression(index_expression_t *index_exp)
+{
+    token_free(index_exp->token);
+    if (index_exp->left)
+        free_expression(index_exp->left);
+    if (index_exp->index)
+        free_expression(index_exp->index);
+    free(index_exp);
+}
+
 void
 free_expression(void *e)
 {
@@ -858,6 +889,9 @@ free_expression(void *e)
             break;
         case ARRAY_LITERAL:
             free_array_literal((array_literal_t *) exp);
+            break;
+        case INDEX_EXPRESSION:
+            free_index_expression((index_expression_t *) exp);
             break;
         default:
             break;
@@ -1181,6 +1215,13 @@ int_exp_token_literal(void *node)
     return int_exp->token->literal;
 }
 
+static char *
+index_exp_token_literal(void *exp)
+{
+    index_expression_t *index_exp = (index_expression_t *) exp;
+    return index_exp->token->literal;
+}
+
 expression_t *
 parse_integer_expression(parser_t *parser)
 {
@@ -1390,6 +1431,36 @@ parse_array_literal(parser_t *parser)
         untrace("parse_array_literal");
     #endif
     return (expression_t *) array;
+}
+
+static expression_t *
+parse_index_expression(parser_t *parser, expression_t *left)
+{
+    #ifdef TRACE
+        trace("parse_index_expression");
+    #endif
+    index_expression_t *index_exp;
+    index_exp = malloc(sizeof(*index_exp));
+    if (index_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    index_exp->expression.node.string = index_exp_string;
+    index_exp->expression.node.token_literal = index_exp_token_literal;
+    index_exp->expression.node.type = EXPRESSION;
+    index_exp->expression.expression_type = INDEX_EXPRESSION;
+    index_exp->expression.expression_node = NULL;
+    index_exp->left = left;
+    index_exp->index = NULL;
+    index_exp->token = token_copy(parser->cur_tok);
+    parser_next_token(parser);
+    index_exp->index = parse_expression(parser, LOWEST);
+    if (!expect_peek(parser, RBRACKET)) {
+        free_index_expression(index_exp);
+        index_exp = NULL;
+    }
+    #ifdef TRACE
+        untrace("parse_index_expression");
+    #endif
+    return (expression_t *) index_exp;
 }
 
 static block_statement_t *
@@ -1769,7 +1840,25 @@ copy_array_literal(expression_t *exp)
     for (size_t i = 0; i < array->elements->length; i++) {
         cm_array_list_add(copy->elements, copy_expression(array->elements->array[i]));
     }
-    return copy;
+    return (expression_t *) copy;
+}
+
+static expression_t *
+copy_index_expression(expression_t *exp)
+{
+    index_expression_t *index_exp = (index_expression_t *) exp;
+    index_expression_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->expression.node.string = index_exp_string;
+    copy->expression.node.token_literal = index_exp_token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = INDEX_EXPRESSION;
+    copy->expression.expression_node = NULL;
+    copy->token = token_copy(index_exp->token);
+    copy->left = copy_expression(index_exp->left);
+    copy->index = copy_expression(index_exp->index);
+    return (expression_t *) copy;
 }
 
 expression_t *
@@ -1796,6 +1885,8 @@ copy_expression(expression_t *exp)
             return copy_string_expression(exp);
         case ARRAY_LITERAL:
             return copy_array_literal(exp);
+        case INDEX_EXPRESSION:
+            return copy_index_expression(exp);
         default:
             return NULL;
     }

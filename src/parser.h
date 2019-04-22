@@ -48,7 +48,8 @@ typedef struct parser_t {
      SUM,
      PRODUCT,
      PREFIX,
-     CALL
+     CALL,
+     INDEX
  } operator_precedence_t;
 
 typedef expression_t * (*prefix_parse_fn)(parser_t *);

@@ -407,7 +407,9 @@ test_operator_precedence_parsing()
         {"!(true == true)", "(!(true == true))"},
         {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
         {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 *  8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"}
+        {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
+        {"a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"},
+        {"add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
@@ -964,6 +966,30 @@ test_parse_array_literal(void)
     parser_free(parser);
 }
 
+static void
+test_parse_index_expression(void)
+{
+    const char *input = "my_array[1 + 1]";
+    print_test_separator_line();
+    printf("Testing index expression parsing\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, got %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == INDEX_EXPRESSION,
+        "Expected EXPRESSION_STATEMENT, got %s\n", get_expression_type_name(exp_stmt->expression->expression_type));
+    index_expression_t *index_exp = (index_expression_t *) exp_stmt->expression;
+    test_identifier(index_exp->left, "my_array");
+    test_infix_expression(index_exp->index, "+", "1", "1");
+    program_free(program);
+    parser_free(parser);
+    printf("Index expression parsing test passed\n");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -984,6 +1010,7 @@ main(int argc, char **argv)
     test_call_expression_argument_parsing();
     test_string_literal();
     test_parse_array_literal();
+    test_parse_index_expression();
     printf("All tests passed\n");
 
 }
