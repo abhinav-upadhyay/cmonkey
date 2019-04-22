@@ -196,11 +196,18 @@ cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
         entry = malloc(sizeof*entry);
         if (entry == NULL)
             errx(EXIT_FAILURE, "malloc failed");
+        entry->key = key;
+        entry->value = value;
+        hash_table->nkeys++;
+        cm_list_add(entry_list, entry);
+    } else {
+        if (hash_table->free_value)
+            hash_table->free_value(entry->value);
+        if (hash_table->free_key)
+            hash_table->free_key(entry->key);
+        entry->value = value;
+        entry->key = key;
     }
-    entry->key = key;
-    entry->value = value;
-    hash_table->nkeys++;
-    cm_list_add(entry_list, entry);
 }
 
 void *

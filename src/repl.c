@@ -82,7 +82,7 @@ main(int argc, char **argv)
 	printf("%s", PROMPT);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
 		if (strcmp(line, "quit\n") == 0)
-			goto QUIT;
+			break;
 		l = lexer_init(line);
 		parser = parser_init(l);
 		program = parse_program(parser);
@@ -109,7 +109,6 @@ CONTINUE:
 		parser = NULL;
 		printf("%s", PROMPT);
 	}
-QUIT:
 
 	if (program)
 		program_free(program);
