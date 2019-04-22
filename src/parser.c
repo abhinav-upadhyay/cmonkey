@@ -45,6 +45,7 @@ static expression_t * parse_boolean_expression(parser_t *);
 static expression_t * parse_grouped_expression(parser_t *);
 static expression_t * parse_if_expression(parser_t *);
 static expression_t * parse_function_literal(parser_t *);
+static expression_t * parse_array_literal(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 static expression_t * parse_call_expression(parser_t *, expression_t *);
@@ -71,6 +72,8 @@ static expression_t * parse_call_expression(parser_t *, expression_t *);
      NULL, //RPAREN
      NULL, //LBRACE
      NULL, //RBRACE
+     parse_array_literal, //LBRACKET
+     NULL, //RBRACKET
      parse_function_literal, //FUNCTION
      NULL, //LET
      parse_if_expression, //IF
@@ -205,6 +208,13 @@ expression_statement_token_literal(void *stmt)
 {
     expression_statement_t *exp_stmt = (expression_statement_t *) stmt;
     return exp_stmt->token->literal;
+}
+
+static char *
+array_literal_token_literal(void *exp)
+{
+    array_literal_t *array = (array_literal_t *) exp;
+    return array->token->literal;
 }
 
 static char *
@@ -398,6 +408,34 @@ if_expression_string(void *exp)
     return string;
 }
 
+static char *
+array_literal_string(void *exp)
+{
+    array_literal_t *array = (array_literal_t *) exp;
+    char *string = NULL;
+    char *temp = NULL;
+    int ret;
+    for (size_t i = 0; i < array->elements->length; i++) {
+        expression_t *element = (expression_t *) cm_array_list_get(array->elements, i);
+        char *element_string = element->node.string(element);
+        if (string == NULL)
+            ret = asprintf(&temp, "%s", element_string);
+        else {
+            ret = asprintf(&temp, "%s, %s", string, element_string);
+            free(string);
+        }
+        free(element_string);
+        if (ret == -1)
+            errx(EXIT_FAILURE, "malloc failed");
+        string = temp;
+        temp = NULL;
+    }
+    ret = asprintf(&temp, "[%s]", string);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    free(string);
+    return temp;
+}
 
 char *
 join_parameters_list(cm_list *parameters_list)
@@ -775,6 +813,16 @@ free_call_expression(call_expression_t *call_exp)
     free(call_exp);
 }
 
+static void
+free_array_literal(array_literal_t *array)
+{
+    if (array->elements->free_func) {
+        cm_array_list_free(array->elements);
+    }
+    token_free(array->token);
+    free(array);
+}
+
 void
 free_expression(void *e)
 {
@@ -807,6 +855,9 @@ free_expression(void *e)
             break;
         case STRING_EXPRESSION:
             free_string((string_t *) exp);
+            break;
+        case ARRAY_LITERAL:
+            free_array_literal((array_literal_t *) exp);
             break;
         default:
             break;
@@ -1273,6 +1324,32 @@ parse_boolean_expression(parser_t *parser)
     return (expression_t *) bool_exp;
 }
 
+static cm_array_list *
+parse_expression_list(parser_t *parser, token_type stop_token_type)
+{
+    cm_array_list *expression_list = cm_array_list_init(4, free_expression);
+    if (parser->peek_tok->type == stop_token_type) {
+        parser_next_token(parser);
+        return expression_list;
+    }
+
+    parser_next_token(parser);
+    expression_t *exp = parse_expression(parser, LOWEST);
+    cm_array_list_add(expression_list, exp);
+    while (parser->peek_tok->type == COMMA) {
+        parser_next_token(parser);
+        parser_next_token(parser);
+        exp = parse_expression(parser, LOWEST);
+        cm_array_list_add(expression_list, exp);
+    }
+
+    if (!expect_peek(parser, stop_token_type)) {
+        cm_array_list_free(expression_list);
+        return NULL;
+    }
+    return expression_list;
+}
+
 static expression_t *
 parse_grouped_expression(parser_t *parser)
 {
@@ -1290,6 +1367,23 @@ parse_grouped_expression(parser_t *parser)
         untrace("parse_grouped_expression");
     #endif
     return exp;
+}
+
+static expression_t *
+parse_array_literal(parser_t *parser)
+{
+    array_literal_t *array;
+    array = malloc(sizeof(*array));
+    if (array == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    array->elements = parse_expression_list(parser, RBRACKET);
+    array->token = token_copy(parser->cur_tok);
+    array->expression.node.string = array_literal_string;
+    array->expression.node.token_literal = array_literal_token_literal;
+    array->expression.node.type = EXPRESSION;
+    array->expression.expression_type = ARRAY_LITERAL;
+    array->expression.expression_node = NULL;
+    return (expression_t *) array;
 }
 
 static block_statement_t *

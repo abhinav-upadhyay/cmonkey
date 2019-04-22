@@ -938,6 +938,32 @@ test_string_literal(void)
     parser_free(parser);
 }
 
+static void
+test_parse_array_literal(void)
+{
+    const char *input = "[1, 2 * 2,  3 + 3]";
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    print_test_separator_line();
+    printf("Testing array literal expression\n");
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, found %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == ARRAY_LITERAL,
+        "Expected ARRAY_LITERAL, found %s\n", get_expression_type_name(exp_stmt->expression->expression_type));
+    array_literal_t *array = (array_literal_t *) exp_stmt->expression;
+    test(array->elements->length == 3, "Expected 3 elements in array, found %zu\n",
+        array->elements->length);
+    test_integer_literal_value((expression_t *) array->elements->array[0], 1);
+    test_infix_expression((expression_t *) array->elements->array[1], "*", "2", "2");
+    test_infix_expression((expression_t *) array->elements->array[2], "+", "3", "3");
+    program_free(program);
+    parser_free(parser);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -957,6 +983,7 @@ main(int argc, char **argv)
     test_call_expression_parsing();
     test_call_expression_argument_parsing();
     test_string_literal();
+    test_parse_array_literal();
     printf("All tests passed\n");
 
 }

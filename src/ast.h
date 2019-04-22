@@ -65,7 +65,8 @@ typedef enum expression_type_t {
     BOOLEAN_EXPRESSION,
     IF_EXPRESSION,
     FUNCTION_LITERAL,
-    CALL_EXPRESSION
+    CALL_EXPRESSION,
+    ARRAY_LITERAL
 } expression_type_t;
 
 static const char *expression_type_values[] = {
@@ -77,7 +78,8 @@ static const char *expression_type_values[] = {
     "BOOLEAN_EXPRESSION",
     "IF_EXPRESSION",
     "FUNCTION_LITERAL",
-    "CALL_EXPRESSION"
+    "CALL_EXPRESSION",
+    "ARRAY_LITERAL"
 };
 
 typedef struct node_t {
@@ -192,6 +194,12 @@ typedef struct call_expression_t {
     expression_t *function;
     cm_list *arguments;
 } call_expression_t;
+
+typedef struct array_literal_t {
+    expression_t expression;
+    token_t *token;
+    cm_array_list *elements;
+} array_literal_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
 #define get_expression_type_name(type) expression_type_values[type]
