@@ -1746,6 +1746,26 @@ copy_string_expression(expression_t *exp)
     return (expression_t *) copy;
 }
 
+static expression_t *
+copy_array_literal(expression_t *exp)
+{
+    array_literal_t *array = (array_literal_t *) exp;
+    array_literal_t *copy = malloc(sizeof(*copy));
+    if (copy == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    copy->token = token_copy(array->token);
+    copy->expression.node.string = array_literal_string;
+    copy->expression.node.token_literal = array_literal_token_literal;
+    copy->expression.node.type = EXPRESSION;
+    copy->expression.expression_type = ARRAY_LITERAL;
+    copy->expression.expression_node = NULL;
+    copy->elements = cm_array_list_init(array->elements->length, free_expression);
+    for (size_t i = 0; i < array->elements->length; i++) {
+        cm_array_list_add(copy->elements, copy_expression(array->elements->array[i]));
+    }
+    return copy;
+}
+
 expression_t *
 copy_expression(expression_t *exp)
 {
