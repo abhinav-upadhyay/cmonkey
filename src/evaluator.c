@@ -260,6 +260,30 @@ apply_function(monkey_object_t *function_obj, cm_list *arguments_list)
 }
 
 static monkey_object_t *
+eval_array_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
+{
+    monkey_array_t *array_obj = (monkey_array_t *) left_value;
+    monkey_int_t *index_obj = (monkey_int_t *) index_value;
+    if (index_obj->value < 0 || index_obj->value > array_obj->elements->length - 1) {
+        return (monkey_object_t *) create_monkey_null();
+    }
+
+    /* we need to copy the return value because the left_value and index_value objects need to be freed */
+    return (monkey_object_t *) copy_monkey_object(array_obj->elements->array[index_obj->value]);
+}
+
+static monkey_object_t *
+eval_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
+{
+    if (left_value->type == MONKEY_ARRAY && index_value->type == MONKEY_INT) {
+        return eval_array_index_expression(left_value, index_value);
+    } else {
+        return (monkey_object_t *) create_monkey_error("index operator not supported: %s",
+            get_type_name(left_value->type));
+    }
+}
+
+static monkey_object_t *
 eval_expression(expression_t *exp, environment_t *env)
 {
     integer_t *int_exp;
@@ -271,11 +295,13 @@ eval_expression(expression_t *exp, environment_t *env)
     monkey_object_t *exp_value;
     monkey_object_t *function_value;
     monkey_object_t *call_exp_value;
+    monkey_object_t *index_exp_value;
     cm_list *arguments_value;
     function_literal_t *function_exp;
     call_expression_t *call_exp;
     string_t *string_exp;
     array_literal_t *array_exp;
+    index_expression_t *index_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -347,6 +373,20 @@ eval_expression(expression_t *exp, environment_t *env)
                 return exp_value;
             }
             return (monkey_object_t *) create_monkey_array(elements);
+        case INDEX_EXPRESSION:
+            index_exp = (index_expression_t *) exp;
+            left_value = monkey_eval((node_t *) index_exp->left, env);
+            if (is_error(left_value))
+                return left_value;
+            exp_value = monkey_eval((node_t *) index_exp->index, env);
+            if (is_error(exp_value)) {
+                free_monkey_object(left_value);
+                return exp_value;
+            }
+            index_exp_value = eval_index_expression(left_value, exp_value);
+            free_monkey_object(left_value);
+            free_monkey_object(exp_value);
+            return index_exp_value;
         default:
             break;
     }

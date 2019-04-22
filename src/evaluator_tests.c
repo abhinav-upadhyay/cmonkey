@@ -537,6 +537,48 @@ test_array_literals(void)
     env_free(env);
 }
 
+static void
+test_array_index_expressions(void)
+{
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {"[1, 2, 3][0]", (monkey_object_t *) create_monkey_int(1)},
+        {"[1, 2, 3][1]", (monkey_object_t *) create_monkey_int(2)},
+        {"[1, 2, 3][2]", (monkey_object_t *) create_monkey_int(3)},
+        {"let i = 0; [1][i]", (monkey_object_t *) create_monkey_int(1)},
+        {"[1, 2, 3][1 + 1]", (monkey_object_t *) create_monkey_int(3)},
+        {"let my_array = [1, 2, 3]; my_array[2];", (monkey_object_t *) create_monkey_int(3)},
+        {"let my_array = [1, 2, 3]; my_array[0] + my_array[1] + my_array[2]",
+            (monkey_object_t *) create_monkey_int(6)},
+        {"let my_array = [1, 2, 3]; let i = my_array[0]; my_array[i]",
+            (monkey_object_t *) create_monkey_int(2)},
+        {"[1, 2, 3][3]", (monkey_object_t *) create_monkey_null()},
+        {"[1, 2, 3][-1]", (monkey_object_t *) create_monkey_null()}
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing index expression evaluation for %s\n", test.input);
+        environment_t *env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        test(evaluated->type == test.expected->type, "Expected object %s, got %s\n",
+            get_type_name(test.expected->type), get_type_name(evaluated->type));
+        if (test.expected->type == MONKEY_INT) {
+            test_integer_object(evaluated, ((monkey_int_t *) test.expected)->value);
+            free_monkey_object(test.expected);
+        } else {
+            test_null_object(evaluated);
+        }
+        env_free(env);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -553,5 +595,6 @@ main(int argc, char **argv)
     test_string_concatenation();
     test_builtins();
     test_array_literals();
+    test_array_index_expressions();
     return 0;
 }
