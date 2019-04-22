@@ -517,6 +517,26 @@ test_builtins(void)
     }
 }
 
+static void
+test_array_literals(void)
+{
+    const char *input = "[1, 2 * 2, 3 + 3]";
+    print_test_separator_line();
+    printf("Testing array literal evaluation\n");
+    environment_t *env = create_env();
+    monkey_object_t *evaluated = test_eval(input, env);
+    test(evaluated->type == MONKEY_ARRAY, "Expected MONKEY_ARRAY, got %s\n",
+        get_type_name(evaluated->type));
+    monkey_array_t *array = (monkey_array_t *) evaluated;
+    test(array->elements->length == 3, "Expected 3 elements in array object, got %zu\n",
+        array->elements->length);
+    test_integer_object(copy_monkey_object(array->elements->array[0]), 1);
+    test_integer_object(copy_monkey_object(array->elements->array[1]), 4);
+    test_integer_object(copy_monkey_object(array->elements->array[2]), 6);
+    free_monkey_object(evaluated);
+    env_free(env);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -532,5 +552,6 @@ main(int argc, char **argv)
     test_string_literal();
     test_string_concatenation();
     test_builtins();
+    test_array_literals();
     return 0;
 }

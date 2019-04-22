@@ -29,6 +29,7 @@
 
 #include <err.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -344,11 +345,7 @@ cm_array_list_remove(cm_array_list *list, size_t index)
         }
         cm_array_list_add(copy, list->array[i]);
     }
-    // if (list->free_func != NULL) {
-    //     for (size_t i = 0; i < list->length; i++) {
-    //         list->free_func(list->array[i]);
-    //     }
-    // }
+
     free(list->array);
     list->array = copy->array;
     list->length = copy->length;
@@ -366,4 +363,40 @@ cm_array_list_free(cm_array_list *list)
     }
     free(list->array);
     free(list);
+}
+
+char *
+cm_array_string_list_join(cm_array_list *list, const char *delim)
+{
+    char *string = NULL;
+    char *temp = NULL;
+    int ret;
+    if (list == NULL)
+        return NULL;
+
+    for (size_t i = 0; i < list->length; i++) {
+        if (string == NULL) {
+            ret = asprintf(&temp, "%s", (char *) list->array[i]);
+            if (ret == -1)
+                errx(EXIT_FAILURE, "malloc failed");
+        } else {
+            ret = asprintf(&temp, "%s%s%s", string, delim, list->array[i]);
+            if (ret == -1)
+                errx(EXIT_FAILURE, "malloc failed");
+            free(string);
+        }
+        string = temp;
+        temp = NULL;
+    }
+    return string;
+}
+
+cm_array_list *
+cm_array_list_copy(cm_array_list *list, void * (*copy_func) (void *))
+{
+    cm_array_list *copy = cm_array_list_init(list->length, list->free_func);
+    for (size_t i = 0; i < list->length; i++) {
+        cm_array_list_add(copy, copy_func(list->array[i]));
+    }
+    return copy;
 }

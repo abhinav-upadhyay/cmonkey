@@ -31,12 +31,41 @@ monkey_function_inspect(monkey_object_t *obj)
 }
 
 static char *
+join_expressions_list(cm_array_list *list)
+{
+    char *string = NULL;
+    char *temp = NULL;
+    char *elem_string;
+    monkey_object_t *elem;
+    int ret;
+    for (size_t i = 0; i < list->length; i++) {
+        elem = (monkey_object_t *) list->array[i];
+        elem_string = elem->inspect(elem);
+        if (string == NULL) {
+            ret = asprintf(&temp, "%s", elem_string);
+        } else {
+            ret = asprintf(&temp, "%s, %s", string, elem_string);
+            free(string);
+        }
+        free(elem_string);
+        if (ret == -1)
+            errx(EXIT_FAILURE, "malloc failed");
+        string = temp;
+        temp = NULL;
+    }
+    return string;
+}
+
+static char *
 inspect(monkey_object_t *obj)
 {
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
     monkey_return_value_t *ret_obj;
     monkey_error_t *err_obj;
+    monkey_array_t *array;
+    char *string = NULL;
+    int ret;
 
     switch (obj->type)
     {
@@ -60,6 +89,14 @@ inspect(monkey_object_t *obj)
             return ((monkey_string_t *) obj)->value;
         case MONKEY_BUILTIN:
             return strdup("builtin function");
+        case MONKEY_ARRAY:
+            array = (monkey_array_t *) obj;
+            char *elements_string = join_expressions_list(array->elements);
+            ret = asprintf(&string, "[%s]", elements_string);
+            free(elements_string);
+            if (ret == -1)
+                errx(EXIT_FAILURE, "malloc failed");
+            return string;
     }
 }
 
@@ -141,6 +178,7 @@ free_monkey_object(void *v)
     monkey_error_t *err_obj;
     monkey_return_value_t *return_value;
     monkey_string_t *str_obj;
+    monkey_array_t *array;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -166,9 +204,20 @@ free_monkey_object(void *v)
             free(str_obj->value);
             free(str_obj);
             break;
+        case MONKEY_ARRAY:
+            array = (monkey_array_t *) object;
+            cm_array_list_free(array->elements);
+            free(array);
+            break;
         default:
             free(object);
     }
+}
+
+static void *
+_copy_monkey_object(void *v)
+{
+    return (void *) copy_monkey_object((monkey_object_t *) v);
 }
 
 monkey_object_t *
@@ -178,6 +227,7 @@ copy_monkey_object(monkey_object_t *object)
     monkey_function_t *function_obj;
     monkey_string_t *str_obj;
     monkey_builtin_t *builtin;
+    monkey_array_t *array_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -195,6 +245,9 @@ copy_monkey_object(monkey_object_t *object)
         case MONKEY_BUILTIN:
             builtin = (monkey_builtin_t *) object;
             return (monkey_object_t *) create_monkey_builtin(builtin->function);
+        case MONKEY_ARRAY:
+            array_obj = (monkey_array_t *) object;
+            return (monkey_object_t *) create_monkey_array(cm_array_list_copy(array_obj->elements, _copy_monkey_object));
         default:
             return NULL;
     }
@@ -242,4 +295,16 @@ create_monkey_builtin(builtin_fn function)
     builtin->object.inspect = inspect;
     builtin->function = function;
     return builtin;
+}
+
+monkey_array_t *
+create_monkey_array(cm_array_list *elements)
+{
+    monkey_array_t *array = malloc(sizeof(*array));
+    if (array == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    array->object.type = MONKEY_ARRAY;
+    array->object.inspect = inspect;
+    array->elements = elements;
+    return array;
 }

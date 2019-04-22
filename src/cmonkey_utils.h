@@ -82,6 +82,8 @@ void *cm_array_list_last(cm_array_list *);
 void *cm_array_list_first(cm_array_list *);
 void cm_array_list_remove(cm_array_list *, size_t);
 void cm_array_list_free(cm_array_list *);
+char *cm_array_string_list_join(cm_array_list *, const char *);
+cm_array_list *cm_array_list_copy(cm_array_list *, void * (*copy_func) (void *));
 
 char *long_to_string(long);
 const char *bool_to_string(_Bool);

@@ -177,8 +177,26 @@ eval_identifier_expression(expression_t *exp, environment_t *env)
     return copy_monkey_object((monkey_object_t *) value_obj);
 }
 
+static cm_array_list *
+eval_expressions_to_array_list(cm_array_list *expression_list, environment_t *env)
+{
+    cm_array_list *values = cm_array_list_init(expression_list->length, free_monkey_object);
+    monkey_object_t *value;
+    for (size_t i = 0; i < expression_list->length; i++) {
+        value = monkey_eval((node_t *) expression_list->array[i], env);
+        if (is_error(value)) {
+            cm_array_list_free(values);
+            values = cm_array_list_init(1, free_monkey_object);
+            cm_array_list_add(values, value);
+            return values;
+        }
+        cm_array_list_add(values, value);
+    }
+    return values;
+}
+
 static cm_list *
-eval_expressions(cm_list *expression_list, environment_t *env)
+eval_expressions_to_linked_list(cm_list *expression_list, environment_t *env)
 {
     cm_list *values = cm_list_init();
     monkey_object_t *value;
@@ -257,6 +275,7 @@ eval_expression(expression_t *exp, environment_t *env)
     function_literal_t *function_exp;
     call_expression_t *call_exp;
     string_t *string_exp;
+    array_literal_t *array_exp;
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -303,7 +322,7 @@ eval_expression(expression_t *exp, environment_t *env)
             if (is_error(function_value)) {
                 return function_value;
             }
-            arguments_value = eval_expressions(call_exp->arguments, env);
+            arguments_value = eval_expressions_to_linked_list(call_exp->arguments, env);
             if (arguments_value->length == 1 &&
                 is_error((monkey_object_t *) arguments_value->head->data)) {
                     free_monkey_object(function_value);
@@ -318,6 +337,16 @@ eval_expression(expression_t *exp, environment_t *env)
         case STRING_EXPRESSION:
             string_exp = (string_t *) exp;
             return (monkey_object_t *) create_monkey_string(string_exp->value, string_exp->length);
+        case ARRAY_LITERAL:
+            array_exp = (array_literal_t *) exp;
+            cm_array_list *elements = eval_expressions_to_array_list(array_exp->elements, env);
+            if (elements->length == 1 && is_error(elements->array[0])) {
+                free_monkey_object(array_exp);
+                exp_value = copy_monkey_object((monkey_object_t *) elements->array[0]);
+                cm_array_list_free(elements);
+                return exp_value;
+            }
+            return (monkey_object_t *) create_monkey_array(elements);
         default:
             break;
     }
