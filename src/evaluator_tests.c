@@ -482,7 +482,9 @@ test_builtins(void)
         {"len(\"four\")", (monkey_object_t *) create_monkey_int(4)},
         {"len(\"hello world\")", (monkey_object_t *) create_monkey_int(11)},
         {"len(1)", (monkey_object_t *) create_monkey_error("argument to len not supported, got INTEGER")},
-        {"len(\"one\", \"two\")", (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")}
+        {"len(\"one\", \"two\")", (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")},
+        {"len([1, 2, 3])", (monkey_object_t *) create_monkey_int(3)},
+        {"len([])", (monkey_object_t *) create_monkey_int(0)},
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
