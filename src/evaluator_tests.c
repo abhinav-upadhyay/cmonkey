@@ -485,6 +485,8 @@ test_builtins(void)
         {"len(\"one\", \"two\")", (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")},
         {"len([1, 2, 3])", (monkey_object_t *) create_monkey_int(3)},
         {"len([])", (monkey_object_t *) create_monkey_int(0)},
+        {"first([1, 2, 3])", (monkey_object_t *) create_monkey_int(1)},
+        {"first([])", (monkey_object_t *) create_monkey_null()}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
