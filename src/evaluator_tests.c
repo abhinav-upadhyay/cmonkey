@@ -579,6 +579,26 @@ test_array_index_expressions(void)
     }
 }
 
+static void
+test_enclosing_env(void)
+{
+    const char *input = "let first = 10;\n"\
+        "let second = 10;\n"\
+        "let third = 10;\n\n"\
+        "let ourfunction = fn(first) {\n"\
+        "   let second = 20;\n"\
+        "   first + second + third;\n"\
+        "};\n"\
+        "ourfunction(20) + first + second;";
+    print_test_separator_line();
+    printf("Testing enclosed environment\n");
+    environment_t *env = create_env();
+    monkey_object_t *evaluated = test_eval(input, env);
+    printf("Enclosed environment test passed\n");
+    test_integer_object(evaluated, 70);
+    env_free(env);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -596,5 +616,6 @@ main(int argc, char **argv)
     test_builtins();
     test_array_literals();
     test_array_index_expressions();
+    test_enclosing_env();
     return 0;
 }

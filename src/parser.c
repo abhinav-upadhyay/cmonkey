@@ -1906,13 +1906,13 @@ copy_letstatement(statement_t *stmt)
     copy_stmt->name->value = strdup(let_stmt->name->value);
     if (copy_stmt->name->value == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    copy_stmt->value = copy_expression(let_stmt->value);
+    copy_stmt->token = token_copy(let_stmt->token);
     copy_stmt->value = copy_expression(let_stmt->value);
     copy_stmt->statement.node.string = letstatement_string;
     copy_stmt->statement.node.token_literal = letstatement_token_literal;
     copy_stmt->statement.node.type = STATEMENT;
     copy_stmt->statement.statement_type = LET_STATEMENT;
-    return (statement_t *)copy_statement;
+    return (statement_t *)copy_stmt;
 }
 
 static statement_t *
