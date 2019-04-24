@@ -65,6 +65,7 @@ inspect(monkey_object_t *obj)
     monkey_error_t *err_obj;
     monkey_array_t *array;
     char *string = NULL;
+    char *elements_string = NULL;
     int ret;
 
     switch (obj->type)
@@ -91,9 +92,11 @@ inspect(monkey_object_t *obj)
             return strdup("builtin function");
         case MONKEY_ARRAY:
             array = (monkey_array_t *) obj;
-            char *elements_string = join_expressions_list(array->elements);
-            ret = asprintf(&string, "[%s]", elements_string);
-            free(elements_string);
+            if (array->elements->length > 0)
+                elements_string = join_expressions_list(array->elements);
+            ret = asprintf(&string, "[%s]", elements_string? elements_string: "");
+            if (elements_string != NULL)
+                free(elements_string);
             if (ret == -1)
                 errx(EXIT_FAILURE, "malloc failed");
             return string;

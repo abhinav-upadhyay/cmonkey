@@ -470,6 +470,35 @@ test_string_concatenation(void)
 }
 
 static void
+test_int_array(monkey_array_t *actual, monkey_array_t *expected)
+{
+    test(expected->elements->length == actual->elements->length,
+        "Expected length of array %zu, got %zu\n", expected->elements->length,
+        actual->elements->length);
+    for (size_t i = 0; i < expected->elements->length; i++) {
+        monkey_object_t *obj = (monkey_object_t *) expected->elements->array[i];
+        test(obj->type == MONKEY_INT,
+            "Expected element at %zu index to be INTEGER, got %s\n", i,
+            get_type_name(obj->type));
+        monkey_int_t *act_int = (monkey_int_t *) obj;
+        monkey_int_t *exp_int = (monkey_int_t *) expected->elements->array[i];
+        test(act_int->value == exp_int->value,
+            "Expected value %ld at index %zu, got %ld\n", exp_int->value, i, act_int->value);
+    }
+    free_monkey_object(actual);
+}
+
+static monkey_array_t *
+create_int_array(int *int_arr, size_t length)
+{
+    cm_array_list *array_list = cm_array_list_init(length, free_monkey_object);
+    for (size_t i = 0; i < length; i++) {
+        cm_array_list_add(array_list, (void *) create_monkey_int(int_arr[i]));
+    }
+    return create_monkey_array(array_list);
+}
+
+static void
 test_builtins(void)
 {
     typedef struct {
@@ -490,12 +519,16 @@ test_builtins(void)
         {"first(1)", (monkey_object_t *) create_monkey_error("argument to first must be ARRAY, got INTEGER")},
         {"last([1, 2, 3])", (monkey_object_t *) create_monkey_int(3)},
         {"last([])", (monkey_object_t *) create_monkey_null()},
-        {"last(1)", (monkey_object_t *) create_monkey_error("argument to last must be ARRAY, got INTEGER")}
+        {"last(1)", (monkey_object_t *) create_monkey_error("argument to last must be ARRAY, got INTEGER")},
+        {"rest([1, 2, 3])", (monkey_object_t *) create_int_array((int[]) {2, 3}, 2)},
+        {"rest([])", (monkey_object_t *) create_monkey_null()}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     print_test_separator_line();
     monkey_int_t *actual_int;
+    monkey_array_t *actual_array;
+    monkey_array_t *expected_array;
     monkey_error_t *actual_err;
     monkey_error_t *expected_err;
     for (size_t i = 0; i < ntests; i++) {
@@ -516,6 +549,12 @@ test_builtins(void)
                     "Expected error message %s, got %s\n", expected_err->message,
                     actual_err->message);
                 free_monkey_object(evaluated);
+                free_monkey_object(test.expected);
+                break;
+            case MONKEY_ARRAY:
+                actual_array = (monkey_array_t *) evaluated;
+                expected_array = (monkey_array_t *) test.expected;
+                test_int_array(actual_array, expected_array);
                 free_monkey_object(test.expected);
                 break;
             default:
