@@ -5,6 +5,7 @@
 
 static monkey_object_t *len(cm_list *);
 static monkey_object_t *array_first(cm_list *);
+static monkey_object_t *array_last(cm_list *);
 
 static char *
 builtin_inspect(monkey_object_t *object)
@@ -14,6 +15,7 @@ builtin_inspect(monkey_object_t *object)
 
 monkey_builtin_t LEN_BUILTIN = {{MONKEY_BUILTIN, builtin_inspect}, len};
 monkey_builtin_t FIRST_ARRAY_BUILTIN = {{MONKEY_BUILTIN, builtin_inspect}, array_first};
+monkey_builtin_t LAST_ARRAY_BUILTIN = {{MONKEY_BUILTIN, builtin_inspect}, array_last};
 
 static monkey_object_t *
 len(cm_list *arguments)
@@ -61,6 +63,31 @@ array_first(cm_list *arguments)
         return (monkey_object_t *) create_monkey_null();
 }
 
+static monkey_object_t *
+array_last(cm_list *arguments)
+{
+    monkey_array_t *array;
+    if (arguments->length != 1) {
+        return (monkey_object_t *)
+            create_monkey_error("wrong number of arguments. got=%zu, want=1",
+            arguments->length);
+    }
+
+    monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
+    if (arg->type != MONKEY_ARRAY) {
+        return (monkey_object_t *) create_monkey_error(
+            "argument to last must be ARRAY, got %s", get_type_name(arg->type)
+        );
+    }
+
+    array = (monkey_array_t *) arg;
+    if (array->elements->length > 0)
+        return (monkey_object_t *) copy_monkey_object(cm_array_list_last(array->elements));
+    else
+        return (monkey_object_t *) create_monkey_null();
+
+}
+
 
 monkey_builtin_t *
 get_builtins(const char *name)
@@ -69,6 +96,8 @@ get_builtins(const char *name)
         return &LEN_BUILTIN;
     else if (strcmp(name, "first") == 0)
         return &FIRST_ARRAY_BUILTIN;
+    else if (strcmp(name, "last") == 0)
+        return &LAST_ARRAY_BUILTIN;
     else
         return NULL;
 }

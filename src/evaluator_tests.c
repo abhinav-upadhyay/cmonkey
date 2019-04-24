@@ -486,7 +486,11 @@ test_builtins(void)
         {"len([1, 2, 3])", (monkey_object_t *) create_monkey_int(3)},
         {"len([])", (monkey_object_t *) create_monkey_int(0)},
         {"first([1, 2, 3])", (monkey_object_t *) create_monkey_int(1)},
-        {"first([])", (monkey_object_t *) create_monkey_null()}
+        {"first([])", (monkey_object_t *) create_monkey_null()},
+        {"first(1)", (monkey_object_t *) create_monkey_error("argument to first must be ARRAY, got INTEGER")},
+        {"last([1, 2, 3])", (monkey_object_t *) create_monkey_int(3)},
+        {"last([])", (monkey_object_t *) create_monkey_null()},
+        {"last(1)", (monkey_object_t *) create_monkey_error("argument to last must be ARRAY, got INTEGER")}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
