@@ -531,6 +531,7 @@ test_builtins(void)
     monkey_array_t *expected_array;
     monkey_error_t *actual_err;
     monkey_error_t *expected_err;
+    monkey_object_t *obj;
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
         printf("Testing builtin function %s\n", test.input);
@@ -556,6 +557,11 @@ test_builtins(void)
                 expected_array = (monkey_array_t *) test.expected;
                 test_int_array(actual_array, expected_array);
                 free_monkey_object(test.expected);
+                break;
+            case MONKEY_NULL:
+                obj = (monkey_object_t *) evaluated;
+                test(obj->type == MONKEY_NULL,
+                    "Expected null object, got %s\n", get_type_name(obj->type));
                 break;
             default:
                 break;
