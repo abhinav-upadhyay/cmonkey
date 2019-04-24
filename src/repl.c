@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "cmonkey_utils.h"
 #include "environment.h"
 #include "evaluator.h"
 #include "object.h"
@@ -67,12 +68,22 @@ print_parse_errors(parser_t *parser)
 	}
 }
 
+static void
+free_lines(cm_array_list *lines)
+{
+	for (size_t i = 0; i < lines->length; i++) {
+		free(lines->array[i]);
+	}
+	lines->length = 0;
+}
+
 int
 main(int argc, char **argv)
 {
 	ssize_t bytes_read;
 	size_t linesize = 0;
 	char *line = NULL;
+	char *program_string;
 	lexer_t *l;
 	parser_t *parser = NULL;
 	program_t *program = NULL;
@@ -80,10 +91,25 @@ main(int argc, char **argv)
 	printf("%s\n", MONKEY_FACE);
 	printf("Welcome to the monkey programming language\n");
 	printf("%s", PROMPT);
+	cm_array_list *lines = cm_array_list_init(4, free);
 	while ((bytes_read = getline(&line, &linesize, stdin)) != -1) {
 		if (strcmp(line, "quit\n") == 0)
 			break;
-		l = lexer_init(line);
+
+		if (line[bytes_read - 2] == '\\') {
+			line[bytes_read - 2] = 0;
+			cm_array_list_add(lines, line);
+			line = NULL;
+			linesize = 0;
+			continue;
+		} else {
+			cm_array_list_add(lines, line);
+			line = NULL;
+			linesize = 0;
+		}
+
+		program_string = cm_array_string_list_join(lines, "\n");
+		l = lexer_init(program_string);
 		parser = parser_init(l);
 		program = parse_program(parser);
 
@@ -103,7 +129,8 @@ main(int argc, char **argv)
 CONTINUE:
 		program_free(program);
 		parser_free(parser);
-		free(line);
+		free_lines(lines);
+		free(program_string);
 		line = NULL;
 		program = NULL;
 		parser = NULL;
@@ -116,5 +143,6 @@ CONTINUE:
 		parser_free(parser);
 	if (line)
 		free(line);
+	cm_array_list_free(lines);
 	env_free(env);
 }
