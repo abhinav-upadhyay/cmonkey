@@ -521,7 +521,9 @@ test_builtins(void)
         {"last([])", (monkey_object_t *) create_monkey_null()},
         {"last(1)", (monkey_object_t *) create_monkey_error("argument to last must be ARRAY, got INTEGER")},
         {"rest([1, 2, 3])", (monkey_object_t *) create_int_array((int[]) {2, 3}, 2)},
-        {"rest([])", (monkey_object_t *) create_monkey_null()}
+        {"rest([])", (monkey_object_t *) create_monkey_null()},
+        {"push([], 1)", (monkey_object_t *) create_int_array((int[]){1}, 1)},
+        {"push(1, 1)", (monkey_object_t *) create_monkey_error("argument to push must be ARRAY, got INTEGER")}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
@@ -564,7 +566,7 @@ test_builtins(void)
                     "Expected null object, got %s\n", get_type_name(obj->type));
                 break;
             default:
-                break;
+                err(EXIT_FAILURE, "Unknown type for expected");
         }
         env_free(env);
     }

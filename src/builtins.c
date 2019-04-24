@@ -7,6 +7,7 @@ static monkey_object_t *len(cm_list *);
 static monkey_object_t *first(cm_list *);
 static monkey_object_t *last(cm_list *);
 static monkey_object_t *rest(cm_list *);
+static monkey_object_t *push(cm_list *);
 
 static char *
 builtin_inspect(monkey_object_t *object)
@@ -18,6 +19,7 @@ monkey_builtin_t BUILTIN_LEN = {{MONKEY_BUILTIN, builtin_inspect}, len};
 monkey_builtin_t BUILTIN_FIRST = {{MONKEY_BUILTIN, builtin_inspect}, first};
 monkey_builtin_t BUILTIN_LAST = {{MONKEY_BUILTIN, builtin_inspect}, last};
 monkey_builtin_t BUILTIN_REST = {{MONKEY_BUILTIN, builtin_inspect}, rest};
+monkey_builtin_t BUILTIN_PUSH = {{MONKEY_BUILTIN, builtin_inspect}, push};
 
 static monkey_object_t *
 len(cm_list *arguments)
@@ -123,6 +125,40 @@ rest(cm_list *arguments)
     return (monkey_object_t *) rest_array;
 }
 
+static monkey_object_t *
+push(cm_list *arguments)
+{
+    monkey_array_t *array;
+    monkey_array_t *new_array;
+    cm_array_list *new_list_elements;
+    monkey_object_t *obj;
+
+    if (arguments->length != 2) {
+        return (monkey_object_t *)
+            create_monkey_error("wrong number of arguments. got=%zu, want=2",
+            arguments->length);
+    }
+
+    monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
+    if (arg->type != MONKEY_ARRAY) {
+        return (monkey_object_t *)
+            create_monkey_error("argument to push must be ARRAY, got %s",
+            get_type_name(arg->type));
+    }
+
+    array = (monkey_array_t *) arg;
+    new_list_elements = cm_array_list_init(arguments->length + 1, free_monkey_object);
+    for (size_t i = 0; i < array->elements->length; i++) {
+        obj = copy_monkey_object(array->elements->array[i]);
+        cm_array_list_add(new_list_elements, obj);
+    }
+
+    obj = (monkey_object_t *) arguments->head->next->data;
+    cm_array_list_add(new_list_elements, copy_monkey_object(obj));
+    new_array = create_monkey_array(new_list_elements);
+    return (monkey_object_t *) new_array;
+}
+
 monkey_builtin_t *
 get_builtins(const char *name)
 {
@@ -134,6 +170,8 @@ get_builtins(const char *name)
         return &BUILTIN_LAST;
     else if (strcmp(name, "rest") == 0)
         return &BUILTIN_REST;
+    else if (strcmp(name, "push") == 0)
+        return &BUILTIN_PUSH;
     else
         return NULL;
 }
