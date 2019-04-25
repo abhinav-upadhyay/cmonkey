@@ -61,7 +61,8 @@ main(int argc, char **argv)
 			 "return 10; 10;\n"\
 			 "\"foobar\"\n"\
 			 "\"foo bar\"\n"\
-			 "[1, 2];";
+			 "[1, 2];\n"\
+			 "{\"foo\": \"bar\"};";;
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -152,6 +153,12 @@ main(int argc, char **argv)
 		{COMMA, ","},
 		{INT, "2"},
 		{RBRACKET, "]"},
+		{SEMICOLON, ";"},
+		{LBRACE, "{"},
+		{STRING, "foo"},
+		{COLON, ":"},
+		{STRING, "bar"},
+		{RBRACE, "}"},
 		{SEMICOLON, ";"},
 		{ END_OF_FILE, "" }
 	};

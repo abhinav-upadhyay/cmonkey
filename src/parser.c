@@ -75,6 +75,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //RBRACE
      parse_array_literal, //LBRACKET
      NULL, //RBRACKET
+     NULL, //COLON
      parse_function_literal, //FUNCTION
      NULL, //LET
      parse_if_expression, //IF
@@ -108,6 +109,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //RBRACE
      parse_index_expression, //LBRACKET
      NULL, //RBRACKET
+     NULL, //COLON
      NULL, //FUNCTION
      NULL, //LET
      NULL, //IF

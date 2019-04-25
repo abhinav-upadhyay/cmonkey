@@ -60,6 +60,7 @@ typedef enum token_type {
 	RBRACE,
 	LBRACKET,
 	RBRACKET,
+	COLON,
 
 	//keywords
 	FUNCTION,
@@ -101,6 +102,7 @@ static const char *token_names[] = {
 	"RBRACE",
 	"LBRACKET",
 	"RBRACKET",
+	"COLON",
 
 	//keywords
 	"FUNCTION",
