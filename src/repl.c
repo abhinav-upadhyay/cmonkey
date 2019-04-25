@@ -101,6 +101,7 @@ main(int argc, char **argv)
 			cm_array_list_add(lines, line);
 			line = NULL;
 			linesize = 0;
+			printf("%s", "    ");
 			continue;
 		} else {
 			cm_array_list_add(lines, line);
