@@ -46,6 +46,13 @@ typedef struct cm_list {
     size_t length;
 } cm_list;
 
+typedef struct cm_array_list {
+    void **array;
+    size_t length;
+    size_t array_size;
+    void (*free_func) (void *);
+} cm_array_list;
+
 typedef struct cm_hash_entry {
     void *key;
     void *value;
@@ -53,8 +60,8 @@ typedef struct cm_hash_entry {
 
 typedef struct cm_hash_table {
     cm_list **table;
+    cm_array_list *used_slots;
     size_t table_size;
-    size_t nentries; // number of slots used in the table
     size_t nkeys; // actual number of keys stored
     size_t (*hash_func) (void *);
     _Bool (*keycmp) (void *, void *);
@@ -62,12 +69,6 @@ typedef struct cm_hash_table {
     void (*free_value) (void *);
 } cm_hash_table;
 
-typedef struct cm_array_list {
-    void **array;
-    size_t length;
-    size_t array_size;
-    void (*free_func) (void *);
-} cm_array_list;
 
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
@@ -98,5 +99,8 @@ void *cm_hash_table_get(cm_hash_table *, void *);
 void cm_hash_table_free(cm_hash_table *);
 size_t string_hash_function(void *);
 _Bool string_keycmp(void *, void *);
-
+size_t int_hash_function(void *);
+_Bool int_keycmp(void *, void *);
+size_t pointer_hash_function(void *);
+_Bool pointer_keycmp(void *, void*);
 #endif

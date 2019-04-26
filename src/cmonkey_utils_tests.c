@@ -17,8 +17,8 @@ test_hash_table_init(void)
         test(table->table[i] == NULL,
             "Expected all entries of the table to be NULL, %zu entry is not null\n",
             i);
-    test(table->nentries == 0, "Expected nentries field to be 0, found %zu\n",
-        table->nentries);
+    test(table->used_slots->length == 0, "Expected nentries field to be 0, found %zu\n",
+        table->used_slots->length);
     test(table->nkeys == 0, "Expected nkeys to be 0, found %zu\n", table->nkeys);
     cm_hash_table_free(table);
 }

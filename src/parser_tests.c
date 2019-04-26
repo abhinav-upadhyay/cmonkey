@@ -990,6 +990,201 @@ test_parse_index_expression(void)
     printf("Index expression parsing test passed\n");
 }
 
+static void
+test_parse_hash_literals(void)
+{
+    const char *input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, NULL);
+    int one = 1;
+    int two = 2;
+    int three = 3;
+    cm_hash_table_put(expected, "one", &one);
+    cm_hash_table_put(expected, "two", &two);
+    cm_hash_table_put(expected, "three", &three);
+    print_test_separator_line();
+    printf("Testing hash literal parsing: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, got %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == HASH_LITERAL,
+        "Expected HASH_LITERAL, got %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    hash_literal_t *hash_exp = (hash_literal_t *) exp_stmt->expression;
+    test(hash_exp->pairs->nkeys == 3,
+        "Expected 3 entries in the hash pairs, got %zu\n",
+        hash_exp->pairs->nkeys);
+    for (size_t i = 0; i < hash_exp->pairs->used_slots->length; i++) {
+        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
+        cm_list *entry_list = hash_exp->pairs->table[*index];
+        test(entry_list != NULL, "No entry found at index %zu in the pairs table\n", *index);
+        cm_list_node *node = entry_list->head;
+        while (node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) node->data;
+            expression_t *key = (expression_t *) entry->key;
+            int *expected_value = cm_hash_table_get(expected, ((string_t *)key)->value);
+            test(expected_value != NULL, "unknown key %s found in pairs\n", ((string_t *) key)->value);
+            integer_t *actual_value = (integer_t *) entry->value;
+            test_integer_literal_value((expression_t *) actual_value, *expected_value);
+            node = node->next;
+        }
+    }
+    program_free(program);
+    parser_free(parser);
+    cm_hash_table_free(expected);
+}
+
+static void
+test_parsing_empty_hash_literal(void)
+{
+    const char *input = "{}";
+    print_test_separator_line();
+    printf("Testing parsing of empty hash literal\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == HASH_LITERAL,
+        "Expected HASH_LITERAL expression, found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    hash_literal_t *hash_exp = (hash_literal_t *) exp_stmt->expression;
+    test(hash_exp->pairs->nkeys == 0,
+        "Expected 0 entries in hash literal, found %zu\n",
+        hash_exp->pairs->nkeys);
+    program_free(program);
+    parser_free(parser);
+}
+
+static void
+test_parsing_hash_literal_bool_keys(void)
+{
+    const char *input = "{true: 1, false: 2}";
+    print_test_separator_line();
+    printf("Testing parsing of hash literals with boolean keys\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == HASH_LITERAL,
+        "Expected HASH_LITERAL expression, found %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    hash_literal_t *hash_exp = (hash_literal_t *) exp_stmt->expression;
+    for(size_t i = 0; i < hash_exp->pairs->nkeys; i++) {
+        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
+        cm_hash_entry *entry = (cm_hash_entry *) hash_exp->pairs->table[*index]->head->data;
+        expression_t *key_exp = (expression_t *) entry->key;
+        test(key_exp->expression_type == BOOLEAN_EXPRESSION,
+            "Expected BOOLEAN_EXPRESSION as key, found %s\n",
+            get_expression_type_name(key_exp->expression_type));
+        expression_t *value_exp = (expression_t *) entry->value;
+        test(value_exp->expression_type == INTEGER_EXPRESSION,
+            "Expected INTEGER_EXPRESSION as value, found %s\n",
+            get_expression_type_name(value_exp->expression_type));
+        boolean_expression_t *bool_key = (boolean_expression_t *) key_exp;
+        integer_t *int_value = (integer_t *) value_exp;
+        if (bool_key->value) {
+            test(int_value->value == 1,
+                "Expected value for key true to be 1, found %ld\n",
+                int_value->value);
+        } else {
+            test(int_value->value == 2,
+                "Expected value for key false to be 2, found %ld\n",
+                int_value->value);
+        }
+    }
+    parser_free(parser);
+    program_free(program);
+}
+
+static void
+test_parsing_hash_literal_with_expression_values(void)
+{
+    typedef struct {
+        const char *operator;
+        const char *left;
+        const char *right;
+    } expected_value;
+
+    const char *input = "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
+    print_test_separator_line();
+    printf("Testing parsing of hash literal with expressions in values\n");
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, free_expression);
+    cm_hash_table_put(expected, "one", &((expected_value ) {"+", "0", "1"}));
+    cm_hash_table_put(expected, "two", &((expected_value) {"-", "10", "8"}));
+    cm_hash_table_put(expected, "three", &((expected_value) {"/", "15", "5"}));
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == HASH_LITERAL,
+        "Expected HASH_LITERAL expression, got %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    hash_literal_t *hash_exp = (hash_literal_t *) exp_stmt->expression;
+    test(hash_exp->pairs->nkeys == 3,
+        "Expected 3 entries in hash literal, found %zu\n",
+        hash_exp->pairs->nkeys);
+    for (size_t i = 0; i < hash_exp->pairs->used_slots->length; i++) {
+        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
+        cm_hash_entry *entry = (cm_hash_entry *) hash_exp->pairs->table[*index]->head->data;
+        expression_t *key = (expression_t *) entry->key;
+        test(key->expression_type == STRING_EXPRESSION,
+            "Expected STRING_EXPRESSION as key, found %s\n",
+            get_expression_type_name(key->expression_type));
+        string_t *string_exp = (string_t *) key;
+        expression_t *value_exp = (expression_t *) entry->value;
+        expected_value *exp_value = (expected_value *) cm_hash_table_get(expected, string_exp->value);
+        test(exp_value != NULL, "Found an invalid key: %s in the pairs\n", string_exp->value);
+        test_infix_expression(value_exp, exp_value->operator, exp_value->left, exp_value->right);
+    }
+    program_free(program);
+    parser_free(parser);
+    cm_hash_table_free(expected);
+}
+
+static void
+test_parsing_hash_literal_with_integer_keys(void)
+{
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, NULL);
+    cm_hash_table_put(expected, "1", ((long []) {1}));
+    cm_hash_table_put(expected, "2", ((long []) {2}));
+    cm_hash_table_put(expected, "3", ((long []) {3}));
+    const char *input = "{1: 1, 2: 2, 3:3}";
+    print_test_separator_line();
+    printf("Testing hash literal parsing with integer keys\n");
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == HASH_LITERAL,
+        "Expected a HASH_LITERAL expression, got %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    hash_literal_t *hash_exp = (hash_literal_t *) exp_stmt->expression;
+    test(hash_exp->pairs->nkeys == 3,
+        "Expected 3 entries in pairs, found %zu\n", hash_exp->pairs->nkeys);
+    for (size_t i = 0; i < hash_exp->pairs->used_slots->length; i++) {
+        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
+        cm_hash_entry *entry = (cm_hash_entry *) hash_exp->pairs->table[*index]->head->data;
+        test(entry != NULL, "No entry found at slot %zu\n", *index);
+        expression_t *key_exp = (expression_t *) entry->key;
+        char *string_key = key_exp->node.string(key_exp);
+        long *expected_value = cm_hash_table_get(expected, string_key);
+        test_integer_literal_value(key_exp, expected_value[0]);
+        free(string_key);
+    }
+    parser_free(parser);
+    program_free(program);
+    cm_hash_table_free(expected);
+
+}
+
 int
 main(int argc, char **argv)
 {
@@ -1011,6 +1206,11 @@ main(int argc, char **argv)
     test_string_literal();
     test_parse_array_literal();
     test_parse_index_expression();
+    test_parse_hash_literals();
+    test_parsing_empty_hash_literal();
+    test_parsing_hash_literal_with_expression_values();
+    test_parsing_hash_literal_with_integer_keys();
+    test_parsing_hash_literal_bool_keys();
     printf("All tests passed\n");
 
 }

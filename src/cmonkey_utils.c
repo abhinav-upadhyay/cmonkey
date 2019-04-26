@@ -161,9 +161,9 @@ cm_hash_table_init(size_t (*hash_func)(void *),
     table->free_value = free_value;
     table->table_size = INITIAL_HASHTABLE_SIZE;
     table->table = calloc(table->table_size, sizeof(*table->table));
+    table->used_slots = cm_array_list_init(table->table_size, free);
     if (table->table == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    table->nentries = 0;
     table->nkeys = 0;
     return table;
 }
@@ -176,6 +176,20 @@ entry_cmp(void *e1, void *e2)
     return string_keycmp(entry1->key, entry2->key);
 }
 
+static cm_hash_entry *
+find_entry(cm_list *list, cm_hash_entry *other_entry, _Bool (*keycmp) (void *, void *))
+{
+    cm_list_node *node = list->head;
+    while (node) {
+        cm_hash_entry *entry = (node->data);
+        if (keycmp(entry->key, other_entry->key))
+            return entry;
+        node = node->next;
+    }
+    return NULL;
+}
+
+
 void
 cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
 {
@@ -185,11 +199,15 @@ cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
     if (entry_list == NULL) {
         entry_list = cm_list_init();
         hash_table->table[index] = entry_list;
-        hash_table->nentries++;
+        size_t *used_slot = malloc(sizeof(*used_slot));
+        if (used_slot == NULL)
+            errx(EXIT_FAILURE, "malloc failed");
+        *used_slot = index;
+        cm_array_list_add(hash_table->used_slots, used_slot);
         //TODO: resize when nentries == table size
     } else {
         cm_hash_entry temp_entry = {key, NULL};
-        entry = cm_list_get(entry_list, &temp_entry, entry_cmp);
+        entry = find_entry(entry_list, &temp_entry, hash_table->keycmp);
     }
 
     if (entry == NULL) {
@@ -278,6 +296,7 @@ cm_hash_table_free(cm_hash_table *table)
         }
     }
     free(table->table);
+    cm_array_list_free(table->used_slots);
     free(table);
 }
 
@@ -406,4 +425,35 @@ cm_array_list_copy(cm_array_list *list, void * (*copy_func) (void *))
         cm_array_list_add(copy, copy_func(list->array[i]));
     }
     return copy;
+}
+
+size_t
+int_hash_function(void *data)
+{
+    long *key = (long *) data;
+    unsigned long hash = 5381;
+    hash = ((hash << 5) + hash) + *key;
+    return hash;
+}
+
+_Bool
+int_keycmp(void *key1, void *key2)
+{
+    long *lkey1 = (long *) key1;
+    long *lkey2 = (long*) key2;
+    return *lkey1 == *lkey2;
+}
+
+size_t
+pointer_hash_function(void *data)
+{
+    unsigned long hash = 5381;
+    hash = ((hash << 5) + hash) + data;
+    return hash;
+}
+
+_Bool
+pointer_keycmp(void *key1, void*key2)
+{
+    return key1 == key2;
 }

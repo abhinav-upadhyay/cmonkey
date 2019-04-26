@@ -67,7 +67,8 @@ typedef enum expression_type_t {
     FUNCTION_LITERAL,
     CALL_EXPRESSION,
     ARRAY_LITERAL,
-    INDEX_EXPRESSION
+    INDEX_EXPRESSION,
+    HASH_LITERAL
 } expression_type_t;
 
 static const char *expression_type_values[] = {
@@ -81,7 +82,8 @@ static const char *expression_type_values[] = {
     "FUNCTION_LITERAL",
     "CALL_EXPRESSION",
     "ARRAY_LITERAL",
-    "INDEX_EXPRESSION"
+    "INDEX_EXPRESSION",
+    "HASH_LITERAL"
 };
 
 typedef struct node_t {
@@ -209,6 +211,12 @@ typedef struct index_expression_t {
     expression_t *left;
     expression_t *index;
 } index_expression_t;
+
+typedef struct hash_literal_t {
+    expression_t expression;
+    token_t *token;
+    cm_hash_table *pairs;
+} hash_literal_t;
 
 #define get_statement_type_name(type) statement_type_values[type]
 #define get_expression_type_name(type) expression_type_values[type]

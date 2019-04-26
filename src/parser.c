@@ -46,6 +46,7 @@ static expression_t * parse_grouped_expression(parser_t *);
 static expression_t * parse_if_expression(parser_t *);
 static expression_t * parse_function_literal(parser_t *);
 static expression_t * parse_array_literal(parser_t *);
+static expression_t * parse_hash_literal(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 static expression_t * parse_call_expression(parser_t *, expression_t *);
@@ -71,7 +72,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //SEMICOLON
      parse_grouped_expression, //LPAREN
      NULL, //RPAREN
-     NULL, //LBRACE
+     parse_hash_literal, //LBRACE
      NULL, //RBRACE
      parse_array_literal, //LBRACKET
      NULL, //RBRACKET
@@ -118,7 +119,6 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //TRUE
      NULL, //FALSE
  };
-
 
 static void
 add_parse_error(parser_t *parser, char *errmsg)
@@ -187,6 +187,13 @@ program_token_literal(void *prog_obj)
     
     node_t head_node = program->statements[0]->node;
     return head_node.token_literal(&head_node);
+}
+
+static char *
+hash_literal_token_literal(void *exp)
+{
+    hash_literal_t *hash_exp = (hash_literal_t *) exp;
+    return hash_exp->token->literal;
 }
 
 static char *
@@ -390,6 +397,42 @@ boolean_expression_string(void *exp)
         return strdup("true");
     else
         return strdup("false");
+}
+
+static char *
+hash_literal_string(void *exp)
+{
+    hash_literal_t *hash_exp = (hash_literal_t *) exp;
+    char *string = NULL;
+    char *temp = NULL;
+    int ret;
+    for (size_t i = 0; i < hash_exp->pairs->table_size; i++) {
+        void *obj = hash_exp->pairs->table[i];
+        if (obj == NULL)
+            continue;
+        cm_hash_entry *entry = (cm_hash_entry *) obj;
+        expression_t *keyexp = (expression_t *) entry->key;
+        expression_t *valuexp = (expression_t *) entry->value;
+        char *keystring = keyexp->node.string(keyexp);
+        char *valuestring = valuexp->node.string(valuexp);
+        if (string == NULL) {
+            ret = asprintf(&temp, "%s:%s", keystring, valuestring);
+        } else {
+            ret = asprintf(&temp, "%s, %s:%s", string, keystring, valuestring);
+            free(string);
+        }
+        free(keystring);
+        free(valuestring);
+        if (ret == -1)
+            errx(EXIT_FAILURE, "malloc failed");
+        string = temp;
+        temp = NULL;
+    }
+    ret = asprintf(&temp, "{%s}", string);
+    free(string);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    return temp;
 }
 
 static char *
@@ -826,6 +869,14 @@ free_function_literal(function_literal_t *function)
 }
 
 static void
+free_hash_literal(hash_literal_t *hash_exp)
+{
+    token_free(hash_exp->token);
+    cm_hash_table_free(hash_exp->pairs);
+    free(hash_exp);
+}
+
+static void
 free_call_expression(call_expression_t *call_exp)
 {
     if (call_exp->function)
@@ -894,6 +945,9 @@ free_expression(void *e)
             break;
         case INDEX_EXPRESSION:
             free_index_expression((index_expression_t *) exp);
+            break;
+        case HASH_LITERAL:
+            free_hash_literal((hash_literal_t *) exp);
             break;
         default:
             break;
@@ -1338,6 +1392,48 @@ parse_infix_expression(parser_t *parser, expression_t *left)
         untrace("parse_infix_expression");
     #endif
     return (expression_t *) infix_exp;
+}
+
+static expression_t *
+parse_hash_literal(parser_t *parser)
+{
+    hash_literal_t *hash_exp;
+    hash_exp = malloc(sizeof(*hash_exp));
+    if (hash_exp == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    hash_exp->token = token_copy(parser->cur_tok);
+    hash_exp->expression.node.string = hash_literal_string;
+    hash_exp->expression.node.token_literal = hash_literal_token_literal;
+    hash_exp->expression.node.type = EXPRESSION;
+    hash_exp->expression.expression_node = NULL;
+    hash_exp->expression.expression_type = HASH_LITERAL;
+    hash_exp->pairs = cm_hash_table_init(pointer_hash_function, pointer_keycmp, free_expression, free_expression);
+    while (parser->peek_tok->type != RBRACE) {
+        parser_next_token(parser);
+        expression_t *key = parse_expression(parser, LOWEST);
+        if (!expect_peek(parser, COLON)) {
+            cm_hash_table_free(hash_exp->pairs);
+            token_free(hash_exp->token);
+            free(hash_exp);
+            return NULL;
+        }
+
+        parser_next_token(parser);
+        expression_t *value = parse_expression(parser, LOWEST);
+        cm_hash_table_put(hash_exp->pairs, key, value);
+        if (parser->peek_tok->type != RBRACE && !expect_peek(parser, COMMA)) {
+            cm_hash_table_free(hash_exp->pairs);
+            token_free(hash_exp->token);
+            free(hash_exp);
+            return NULL;
+        }
+    }
+
+    if (!expect_peek(parser, RBRACE)) {
+        free_hash_literal(hash_exp);
+        return NULL;
+    }
+    return (expression_t *) hash_exp;
 }
 
 static expression_t *
