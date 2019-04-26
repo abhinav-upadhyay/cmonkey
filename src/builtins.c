@@ -26,6 +26,7 @@ len(cm_list *arguments)
 {
     monkey_string_t *str;
     monkey_array_t *array;
+    monkey_hash_t *hash_obj;
     if (arguments->length != 1) {
         return (monkey_object_t *) create_monkey_error(
             "wrong number of arguments. got=%zu, want=1", arguments->length);
@@ -39,6 +40,9 @@ len(cm_list *arguments)
         case MONKEY_ARRAY:
             array = (monkey_array_t *) arg;
             return (monkey_object_t *) create_monkey_int(array->elements->length);
+        case MONKEY_HASH:
+            hash_obj = (monkey_hash_t *) arg;
+            return (monkey_object_t *) create_monkey_int(hash_obj->pairs->nkeys);
         default:
             return (monkey_object_t *) create_monkey_error(
                 "argument to len not supported, got %s", get_type_name(arg->type));
