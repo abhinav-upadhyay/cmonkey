@@ -8,6 +8,7 @@ static monkey_object_t *first(cm_list *);
 static monkey_object_t *last(cm_list *);
 static monkey_object_t *rest(cm_list *);
 static monkey_object_t *push(cm_list *);
+static monkey_object_t *monkey_puts(cm_list *); //puts is a C function
 
 static char *
 builtin_inspect(monkey_object_t *object)
@@ -20,6 +21,23 @@ monkey_builtin_t BUILTIN_FIRST = {{MONKEY_BUILTIN, builtin_inspect}, first};
 monkey_builtin_t BUILTIN_LAST = {{MONKEY_BUILTIN, builtin_inspect}, last};
 monkey_builtin_t BUILTIN_REST = {{MONKEY_BUILTIN, builtin_inspect}, rest};
 monkey_builtin_t BUILTIN_PUSH = {{MONKEY_BUILTIN, builtin_inspect}, push};
+monkey_builtin_t BUILTIN_PUTS = {{MONKEY_BUILTIN, builtin_inspect}, monkey_puts};
+
+static monkey_object_t *
+monkey_puts(cm_list *arguments)
+{
+    monkey_object_t *arg;
+    char *s;
+    cm_list_node *node = arguments->head;
+    while (node != NULL) {
+        arg = (monkey_object_t *) node->data;
+        node = node->next;
+        s = arg->inspect(arg);
+        printf("%s\n", s);
+        free(s);
+    }
+    return (monkey_object_t *) create_monkey_null();
+}
 
 static monkey_object_t *
 len(cm_list *arguments)
@@ -176,6 +194,8 @@ get_builtins(const char *name)
         return &BUILTIN_REST;
     else if (strcmp(name, "push") == 0)
         return &BUILTIN_PUSH;
+    else if (strcmp(name, "puts") == 0)
+        return &BUILTIN_PUTS;
     else
         return NULL;
 }
