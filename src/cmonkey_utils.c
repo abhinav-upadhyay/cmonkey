@@ -147,7 +147,7 @@ bool_to_string(_Bool value)
 
 cm_hash_table *
 cm_hash_table_init(size_t (*hash_func)(void *),
-    _Bool (*keycmp) (void *, void *),
+    _Bool (*keyequals) (void *, void *),
     void (*free_key) (void *),
     void (*free_value) (void *))
 {
@@ -156,7 +156,7 @@ cm_hash_table_init(size_t (*hash_func)(void *),
     if (table == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     table->hash_func = hash_func;
-    table->keycmp = keycmp;
+    table->keyequals = keyequals;
     table->free_key = free_key;
     table->free_value = free_value;
     table->table_size = INITIAL_HASHTABLE_SIZE;
@@ -168,21 +168,13 @@ cm_hash_table_init(size_t (*hash_func)(void *),
     return table;
 }
 
-static _Bool
-entry_cmp(void *e1, void *e2)
-{
-    cm_hash_entry *entry1 = (cm_hash_entry *) e1;
-    cm_hash_entry *entry2 = (cm_hash_entry *) e2;
-    return string_keycmp(entry1->key, entry2->key);
-}
-
 static cm_hash_entry *
-find_entry(cm_list *list, cm_hash_entry *other_entry, _Bool (*keycmp) (void *, void *))
+find_entry(cm_list *list, cm_hash_entry *other_entry, _Bool (*keyequals) (void *, void *))
 {
     cm_list_node *node = list->head;
     while (node) {
         cm_hash_entry *entry = (node->data);
-        if (keycmp(entry->key, other_entry->key))
+        if (keyequals(entry->key, other_entry->key))
             return entry;
         node = node->next;
     }
@@ -207,7 +199,7 @@ cm_hash_table_put(cm_hash_table *hash_table, void *key, void *value)
         //TODO: resize when nentries == table size
     } else {
         cm_hash_entry temp_entry = {key, NULL};
-        entry = find_entry(entry_list, &temp_entry, hash_table->keycmp);
+        entry = find_entry(entry_list, &temp_entry, hash_table->keyequals);
     }
 
     if (entry == NULL) {
@@ -239,11 +231,31 @@ cm_hash_table_get(cm_hash_table *hash_table, void *key)
     cm_list_node *list_node = entry_list->head;
     while (list_node) {
         entry = (cm_hash_entry *) list_node->data;
-        if (hash_table->keycmp(entry->key, key))
+        if (hash_table->keyequals(entry->key, key))
             return entry->value;
         list_node = list_node->next;
     }
     return NULL;
+}
+
+cm_hash_table *
+cm_hash_table_copy(cm_hash_table *src, void * (*key_copy) (void *), void * (*value_copy) (void *))
+{
+    cm_hash_table *copy = cm_hash_table_init(src->hash_func,
+        src->keyequals, src->free_key, src->free_value);
+    for (size_t i = 0; i < src->used_slots->length; i++) {
+        size_t *index = (size_t *) src->used_slots->array[i];
+        cm_list *entry_list = src->table[*index];
+        cm_list_node *entry_node = entry_list->head;
+        while (entry_node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) entry_node->data;
+            void *key = entry->key;
+            void *value = entry->value;
+            cm_hash_table_put(copy, key_copy(key), value_copy(value));
+            entry_node = entry_node->next;
+        }
+    }
+    return copy;
 }
 
 size_t
@@ -258,7 +270,7 @@ string_hash_function(void *key)
 }
 
 _Bool
-string_keycmp(void *key1, void *key2)
+string_equals(void *key1, void *key2)
 {
     char *strkey1 = (char *) key1;
     char *strkey2 = (char *) key2;
@@ -431,13 +443,11 @@ size_t
 int_hash_function(void *data)
 {
     long *key = (long *) data;
-    unsigned long hash = 5381;
-    hash = ((hash << 5) + hash) + *key;
-    return hash;
+    return *key * 2654435761 % (4294967296);
 }
 
 _Bool
-int_keycmp(void *key1, void *key2)
+int_equals(void *key1, void *key2)
 {
     long *lkey1 = (long *) key1;
     long *lkey2 = (long*) key2;
@@ -447,13 +457,12 @@ int_keycmp(void *key1, void *key2)
 size_t
 pointer_hash_function(void *data)
 {
-    unsigned long hash = 5381;
-    hash = ((hash << 5) + hash) + data;
-    return hash;
+    int key = (int) data;
+    return key * 2654435761 % (4294967296);
 }
 
 _Bool
-pointer_keycmp(void *key1, void*key2)
+pointer_equals(void *key1, void*key2)
 {
     return key1 == key2;
 }

@@ -284,6 +284,37 @@ eval_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
 }
 
 static monkey_object_t *
+eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
+{
+    cm_hash_table *pairs = cm_hash_table_init(monkey_object_hash,
+    monkey_object_equals, free_monkey_object, free_monkey_object);
+    for (size_t i = 0; i < hash_exp->pairs->used_slots->length; i++) {
+        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
+        cm_list *entry_list = hash_exp->pairs->table[*index];
+        cm_list_node *entry_node = entry_list->head;
+        while (entry_node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) entry_node->data;
+            expression_t *exp_key = (expression_t *) entry->key;
+            expression_t *exp_value = (expression_t *) entry->value;
+            monkey_object_t *key = monkey_eval((node_t *) exp_key, env);
+            if (is_error(key)) {
+                cm_hash_table_free(pairs);
+                return key;
+            }
+            monkey_object_t *value = monkey_eval((node_t *) exp_value, env);
+            if (is_error(value)) {
+                free_monkey_object(key);
+                cm_hash_table_free(pairs);
+                return value;
+            }
+            cm_hash_table_put(pairs, key, value);
+            entry_node = entry_node->next;
+        }
+    }
+    return (monkey_object_t *) create_monkey_hash(pairs);
+}
+
+static monkey_object_t *
 eval_expression(expression_t *exp, environment_t *env)
 {
     integer_t *int_exp;
@@ -302,6 +333,8 @@ eval_expression(expression_t *exp, environment_t *env)
     string_t *string_exp;
     array_literal_t *array_exp;
     index_expression_t *index_exp;
+    hash_literal_t *hash_exp;
+
     switch (exp->expression_type)
     {
         case INTEGER_EXPRESSION:
@@ -387,6 +420,9 @@ eval_expression(expression_t *exp, environment_t *env)
             free_monkey_object(left_value);
             free_monkey_object(exp_value);
             return index_exp_value;
+        case HASH_LITERAL:
+            hash_exp = (hash_literal_t *) exp;
+            return eval_hash_literal(hash_exp, env);
         default:
             break;
     }

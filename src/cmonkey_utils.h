@@ -64,7 +64,7 @@ typedef struct cm_hash_table {
     size_t table_size;
     size_t nkeys; // actual number of keys stored
     size_t (*hash_func) (void *);
-    _Bool (*keycmp) (void *, void *);
+    _Bool (*keyequals) (void *, void *);
     void (*free_key) (void *);
     void (*free_value) (void *);
 } cm_hash_table;
@@ -91,16 +91,17 @@ const char *bool_to_string(_Bool);
 
 cm_hash_table *cm_hash_table_init(
     size_t (*hash_func)(void *),
-    _Bool (*keycmp) (void *, void *),
+    _Bool (*keyequals) (void *, void *),
     void (*free_key) (void *),
     void (*free_value) (void *));
 void cm_hash_table_put(cm_hash_table *, void *, void *);
 void *cm_hash_table_get(cm_hash_table *, void *);
 void cm_hash_table_free(cm_hash_table *);
+cm_hash_table *cm_hash_table_copy(cm_hash_table *, void * (*key_copy) (void *), void * (*value_copy) (void *));
 size_t string_hash_function(void *);
-_Bool string_keycmp(void *, void *);
+_Bool string_equals(void *, void *);
 size_t int_hash_function(void *);
-_Bool int_keycmp(void *, void *);
+_Bool int_equals(void *, void *);
 size_t pointer_hash_function(void *);
-_Bool pointer_keycmp(void *, void*);
+_Bool pointer_equals(void *, void*);
 #endif

@@ -994,7 +994,8 @@ static void
 test_parse_hash_literals(void)
 {
     const char *input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
-    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, NULL);
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function,
+        string_equals, NULL, NULL);
     int one = 1;
     int two = 2;
     int three = 3;
@@ -1114,7 +1115,8 @@ test_parsing_hash_literal_with_expression_values(void)
     const char *input = "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
     print_test_separator_line();
     printf("Testing parsing of hash literal with expressions in values\n");
-    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, free_expression);
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function,
+        string_equals, NULL, free_expression);
     cm_hash_table_put(expected, "one", &((expected_value ) {"+", "0", "1"}));
     cm_hash_table_put(expected, "two", &((expected_value) {"-", "10", "8"}));
     cm_hash_table_put(expected, "three", &((expected_value) {"/", "15", "5"}));
@@ -1151,7 +1153,8 @@ test_parsing_hash_literal_with_expression_values(void)
 static void
 test_parsing_hash_literal_with_integer_keys(void)
 {
-    cm_hash_table *expected = cm_hash_table_init(string_hash_function, string_keycmp, NULL, NULL);
+    cm_hash_table *expected = cm_hash_table_init(string_hash_function,
+        string_equals, NULL, NULL);
     cm_hash_table_put(expected, "1", ((long []) {1}));
     cm_hash_table_put(expected, "2", ((long []) {2}));
     cm_hash_table_put(expected, "3", ((long []) {3}));

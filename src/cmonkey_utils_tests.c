@@ -8,7 +8,8 @@ test_hash_table_init(void)
 {
     print_test_separator_line();
     printf("Testing hash table init\n");
-    cm_hash_table *table = cm_hash_table_init(string_hash_function, string_keycmp, NULL, NULL);
+    cm_hash_table *table = cm_hash_table_init(string_hash_function,
+        string_equals, NULL, NULL);
     test(table != NULL, "Failed to allocate hash table\n");
     test(table->table_size == INITIAL_HASHTABLE_SIZE,
         "Expected hash table to initialize to size %d, found size %zu\n",
@@ -38,7 +39,8 @@ test_hash_table_put(void)
     };
     print_test_separator_line();
     printf("Testing hash table get and put\n");
-    cm_hash_table *table = cm_hash_table_init(string_hash_function, string_keycmp, free, free);
+    cm_hash_table *table = cm_hash_table_init(string_hash_function,
+        string_equals, free, free);
     size_t ndatapoints = sizeof(data) / sizeof(data[0]);
     for (size_t i = 0; i < ndatapoints; i++) {
         test_data d = data[i];

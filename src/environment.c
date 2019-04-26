@@ -18,7 +18,7 @@ create_env(void)
 {
     cm_hash_table *table = cm_hash_table_init(
         string_hash_function,
-        string_keycmp,
+        string_equals,
         free,
         free_value);
     environment_t *env;

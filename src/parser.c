@@ -1407,7 +1407,7 @@ create_hash_literal(token_t *cur_tok)
     hash_exp->expression.expression_node = NULL;
     hash_exp->expression.expression_type = HASH_LITERAL;
     hash_exp->pairs = cm_hash_table_init(pointer_hash_function,
-        pointer_keycmp, free_expression, free_expression);
+        pointer_equals, free_expression, free_expression);
     return hash_exp;
 }
 

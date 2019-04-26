@@ -37,7 +37,8 @@ static const char *type_names[] = {
 typedef struct monkey_object_t {
     monkey_object_type type;
     char * (*inspect) (struct monkey_object_t *);
-    size_t (*hash) (struct monkey_object_t *);
+    size_t (*hash) (void *);
+    _Bool (*equals) (void *, void *);
 } monkey_object_t;
 
 typedef struct monkey_int_t {
@@ -107,6 +108,8 @@ monkey_string_t *create_monkey_string(const char *, size_t);
 monkey_builtin_t *create_monkey_builtin(builtin_fn);
 monkey_array_t *create_monkey_array(cm_array_list *);
 monkey_hash_t *create_monkey_hash(cm_hash_table *);
+size_t monkey_object_hash(void *); // non-static for tests
+_Bool monkey_object_equals(void *, void *);
 void free_monkey_object(void *);
 
 #endif

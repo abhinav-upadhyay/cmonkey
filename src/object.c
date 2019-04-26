@@ -10,10 +10,9 @@
 #include "object.h"
 
 static char *inspect(monkey_object_t *);
-static size_t monkey_hash(monkey_object_t *);
 
-monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_hash}, true};
-monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_hash}, false};
+monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
+monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
 monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL}};
 
 static char *
@@ -67,25 +66,30 @@ join_expressions_table(cm_hash_table *table)
     monkey_object_t *key_obj;
     monkey_object_t *value_obj;
     int ret;
-    for (size_t i = 0; i < table->nkeys; i++) {
+    for (size_t i = 0; i < table->used_slots->length; i++) {
         size_t *index = (size_t *) table->used_slots->array[i];
-        cm_hash_entry *entry = (cm_hash_entry *) table->table[*index];
-        key_obj = (monkey_object_t *) entry->key;
-        value_obj = (monkey_object_t *) entry->value;
-        key_string = key_obj->inspect(key_obj);
-        value_string = value_obj->inspect(value_obj);
-        if (string == NULL)
-            ret = asprintf(&temp, "%s:%s", key_string, value_string);
-        else {
-            ret = asprintf(&temp, "%s, %s:%s", string, key_string, value_string);
-            free(string);
+        cm_list *entry_list = table->table[*index];
+        cm_list_node *entry_node = entry_list->head;
+        while (entry_node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) entry_node->data;
+            entry_node = entry_node->next;
+            key_obj = (monkey_object_t *) entry->key;
+            value_obj = (monkey_object_t *) entry->value;
+            key_string = key_obj->inspect(key_obj);
+            value_string = value_obj->inspect(value_obj);
+            if (string == NULL)
+                ret = asprintf(&temp, "%s:%s", key_string, value_string);
+            else {
+                ret = asprintf(&temp, "%s, %s:%s", string, key_string, value_string);
+                free(string);
+            }
+            free(key_string);
+            free(value_string);
+            if (ret == -1)
+                errx(EXIT_FAILURE, "malloc failed");
+            string = temp;
+            temp = NULL;
         }
-        free(key_string);
-        free(value_string);
-        if (ret == -1)
-            errx(EXIT_FAILURE, "malloc failed");
-        string = temp;
-        temp = NULL;
     }
     ret = asprintf(&temp, "{%s}", string);
     free(string);
@@ -126,7 +130,7 @@ inspect(monkey_object_t *obj)
         case MONKEY_FUNCTION:
             return monkey_function_inspect(obj);
         case MONKEY_STRING:
-            return ((monkey_string_t *) obj)->value;
+            return strdup(((monkey_string_t *) obj)->value);
         case MONKEY_BUILTIN:
             return strdup("builtin function");
         case MONKEY_ARRAY:
@@ -145,13 +149,109 @@ inspect(monkey_object_t *obj)
     }
 }
 
-static size_t
-monkey_hash(monkey_object_t *object)
+static _Bool
+array_equals(monkey_array_t *arr1, monkey_array_t *arr2)
 {
+    if (arr1->elements->length != arr2->elements->length)
+        return false;
+    for (size_t i = 0; i < arr1->elements->length; i++) {
+        if (!monkey_object_equals(arr1->elements->array[i], arr2->elements->array[i]))
+            return false;
+    }
+    return true;
+}
+
+static _Bool
+hash_equals(monkey_hash_t *hash1, monkey_hash_t *hash2)
+{
+    if (hash1->pairs->nkeys != hash2->pairs->nkeys)
+        return false;
+    for (size_t i = 0; i < hash1->pairs->nkeys; i++) {
+        size_t *index1 = (size_t *) hash1->pairs->used_slots->array[i];
+        size_t *index2 = (size_t *) hash2->pairs->used_slots->array[i];
+        if (*index1 != *index2) {
+            /** since we are using same hash functions, and both tables
+             *  are supposed to have equal length, they must have same
+             *  objects at same indices
+             */
+            return false;
+        }
+    }
+    return true;
+}
+
+_Bool
+monkey_object_equals(void *o1, void *o2)
+{
+    monkey_object_t *obj1 = (monkey_object_t *) o1;
+    monkey_object_t *obj2 = (monkey_object_t *) o2;
+    if (obj1->type != obj2->type)
+        return false;
+
+    monkey_array_t *array1;
+    monkey_array_t *array2;
+    monkey_builtin_t *builtin1;
+    monkey_builtin_t *builtin2;
+    monkey_error_t *err1;
+    monkey_error_t *err2;
+    monkey_function_t *function1;
+    monkey_function_t *function2;
+    monkey_hash_t *hash1;
+    monkey_hash_t *hash2;
+    monkey_int_t *int1;
+    monkey_int_t *int2;
+    monkey_string_t *str1;
+    monkey_string_t *str2;
+    monkey_return_value_t *ret1;
+    monkey_return_value_t *ret2;
+    switch (obj1->type) {
+        case MONKEY_ARRAY:
+            array1 = (monkey_array_t *) obj1;
+            array2 = (monkey_array_t *) obj2;
+            return array_equals(array1, array2);
+        case MONKEY_BOOL:
+            return ((monkey_bool_t *) obj1)->value == ((monkey_bool_t *) obj2)->value;
+        case MONKEY_BUILTIN:
+            builtin1 = (monkey_builtin_t *) obj1;
+            builtin2 = (monkey_builtin_t *) obj2;
+            return builtin1 == builtin2; // these are static pointers
+        case MONKEY_ERROR:
+            err1 = (monkey_error_t *) obj1;
+            err2 = (monkey_error_t *) obj2;
+            return strcmp(err1->message, err2->message) == 0;
+        case MONKEY_FUNCTION:
+            function1 = (monkey_function_t *) obj1;
+            function2 = (monkey_function_t *) obj2;
+            return function1 == function2; //should we bother about this?
+        case MONKEY_HASH:
+            hash1 = (monkey_hash_t *) obj1;
+            hash2 = (monkey_hash_t *) obj2;
+            return hash_equals(hash1, hash2);
+        case MONKEY_INT:
+            int1 = (monkey_int_t *) obj1;
+            int2 = (monkey_int_t *) obj2;
+            return int1->value == int2->value;
+        case MONKEY_STRING:
+            str1 = (monkey_string_t *) obj1;
+            str2 = (monkey_string_t *) obj2;
+            return strcmp(str1->value, str2->value) == 0;
+        case MONKEY_RETURN_VALUE:
+            ret1 = (monkey_return_value_t *) obj1;
+            ret2 = (monkey_return_value_t *) obj2;
+            return monkey_object_equals(ret1->value, ret2->value);
+        case MONKEY_NULL:
+            return obj1 == obj2;
+    }
+}
+
+size_t
+monkey_object_hash(void *object)
+{
+    monkey_object_t *monkey_object = (monkey_object_t *) object;
     monkey_string_t *str_obj;
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
-    switch (object->type) {
+    switch (monkey_object->type) {
         case MONKEY_STRING:
             str_obj = (monkey_string_t *) object;
             return string_hash_function(str_obj->value);
@@ -177,7 +277,8 @@ create_monkey_int(long value)
         errx(EXIT_FAILURE, "malloc failed");
     int_obj->object.inspect = inspect;
     int_obj->object.type = MONKEY_INT;
-    int_obj->object.hash = monkey_hash;
+    int_obj->object.hash = monkey_object_hash;
+    int_obj->object.equals = monkey_object_equals;
     int_obj->value = value;
     return int_obj;
 }
@@ -208,6 +309,7 @@ create_monkey_return_value(monkey_object_t *value)
     ret->value = value;
     ret->object.type = MONKEY_RETURN_VALUE;
     ret->object.inspect = inspect;
+    ret->object.equals = monkey_object_equals;
     ret->object.hash = NULL;
     return ret;
 }
@@ -223,6 +325,7 @@ create_monkey_error(const char *fmt, ...)
     error->object.type = MONKEY_ERROR;
     error->object.inspect = inspect;
     error->object.hash = NULL;
+    error->object.equals = monkey_object_equals;
     va_list args;
     va_start(args, fmt);
     int ret = vasprintf(&message, fmt, args);
@@ -250,6 +353,7 @@ free_monkey_object(void *v)
     monkey_return_value_t *return_value;
     monkey_string_t *str_obj;
     monkey_array_t *array;
+    monkey_hash_t *hash_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -280,6 +384,11 @@ free_monkey_object(void *v)
             cm_array_list_free(array->elements);
             free(array);
             break;
+        case MONKEY_HASH:
+            hash_obj = (monkey_hash_t *) object;
+            cm_hash_table_free(hash_obj->pairs);
+            free(hash_obj);
+            break;
         default:
             free(object);
     }
@@ -299,6 +408,7 @@ copy_monkey_object(monkey_object_t *object)
     monkey_string_t *str_obj;
     monkey_builtin_t *builtin;
     monkey_array_t *array_obj;
+    monkey_hash_t *hash_obj;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -319,6 +429,10 @@ copy_monkey_object(monkey_object_t *object)
         case MONKEY_ARRAY:
             array_obj = (monkey_array_t *) object;
             return (monkey_object_t *) create_monkey_array(cm_array_list_copy(array_obj->elements, _copy_monkey_object));
+        case MONKEY_HASH:
+            hash_obj = (monkey_hash_t *) object;
+            return (monkey_object_t *) create_monkey_hash(cm_hash_table_copy(hash_obj->pairs,
+                _copy_monkey_object, _copy_monkey_object));
         default:
             return NULL;
     }
@@ -338,6 +452,7 @@ create_monkey_function(cm_list *parameters, block_statement_t *body, environment
     function->object.type = MONKEY_FUNCTION;
     function->object.inspect = inspect;
     function->object.hash = NULL;
+    function->object.equals = monkey_object_equals;
     return function;
 }
 
@@ -353,8 +468,9 @@ create_monkey_string(const char *value, size_t length)
         errx(EXIT_FAILURE, "malloc failed");
     string_obj->length = length;
     string_obj->object.type = MONKEY_STRING;
-    string_obj->object.hash = monkey_hash;
+    string_obj->object.hash = monkey_object_hash;
     string_obj->object.inspect = inspect;
+    string_obj->object.equals = monkey_object_equals;
     return string_obj;
 }
 
@@ -381,5 +497,20 @@ create_monkey_array(cm_array_list *elements)
     array->object.inspect = inspect;
     array->object.hash = NULL;
     array->elements = elements;
+    array->object.equals = monkey_object_equals;
     return array;
+}
+
+monkey_hash_t *
+create_monkey_hash(cm_hash_table *pairs)
+{
+    monkey_hash_t *hash_obj = malloc(sizeof(*hash_obj));
+    if (hash_obj == NULL)
+        errx(EXIT_FAILURE, "malloc failed");
+    hash_obj->object.type = MONKEY_HASH;
+    hash_obj->object.inspect = inspect;
+    hash_obj->object.hash = NULL;
+    hash_obj->object.equals = monkey_object_equals;
+    hash_obj->pairs = pairs;
+    return hash_obj;
 }
