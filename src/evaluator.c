@@ -301,6 +301,12 @@ eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
                 cm_hash_table_free(pairs);
                 return key;
             }
+            if (key->hash == NULL) {
+                cm_hash_table_free(pairs);
+                return (monkey_object_t *)
+                    create_monkey_error("unusable as a hash key: %s",
+                    get_type_name(key->type));
+            }
             monkey_object_t *value = monkey_eval((node_t *) exp_value, env);
             if (is_error(value)) {
                 free_monkey_object(key);
