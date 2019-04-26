@@ -1394,20 +1394,27 @@ parse_infix_expression(parser_t *parser, expression_t *left)
     return (expression_t *) infix_exp;
 }
 
-static expression_t *
-parse_hash_literal(parser_t *parser)
+static hash_literal_t *
+create_hash_literal(token_t *cur_tok)
 {
-    hash_literal_t *hash_exp;
-    hash_exp = malloc(sizeof(*hash_exp));
+    hash_literal_t *hash_exp = malloc(sizeof(*hash_exp));
     if (hash_exp == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    hash_exp->token = token_copy(parser->cur_tok);
+    hash_exp->token = token_copy(cur_tok);
     hash_exp->expression.node.string = hash_literal_string;
     hash_exp->expression.node.token_literal = hash_literal_token_literal;
     hash_exp->expression.node.type = EXPRESSION;
     hash_exp->expression.expression_node = NULL;
     hash_exp->expression.expression_type = HASH_LITERAL;
-    hash_exp->pairs = cm_hash_table_init(pointer_hash_function, pointer_keycmp, free_expression, free_expression);
+    hash_exp->pairs = cm_hash_table_init(pointer_hash_function,
+        pointer_keycmp, free_expression, free_expression);
+    return hash_exp;
+}
+
+static expression_t *
+parse_hash_literal(parser_t *parser)
+{
+    hash_literal_t *hash_exp = create_hash_literal(parser->cur_tok);
     while (parser->peek_tok->type != RBRACE) {
         parser_next_token(parser);
         expression_t *key = parse_expression(parser, LOWEST);
@@ -1921,6 +1928,21 @@ copy_string_expression(expression_t *exp)
     return (expression_t *) copy;
 }
 
+
+static expression_t *
+copy_hash_literal(expression_t *exp)
+{
+    hash_literal_t *hash_exp = (hash_literal_t *) exp;
+    hash_literal_t *copy = create_hash_literal(hash_exp->token);
+    for (size_t i = 0; i < hash_exp->pairs->nkeys; i++) {
+        cm_hash_entry *entry = (cm_hash_entry *) hash_exp->pairs->table[i];
+        expression_t *key_exp = (expression_t *) entry->key;
+        expression_t *value_exp = (expression_t *) entry->value;
+        cm_hash_table_put(copy->pairs, copy_expression(key_exp), copy_expression(value_exp));
+    }
+    return (expression_t *) copy;
+}
+
 static expression_t *
 copy_array_literal(expression_t *exp)
 {
@@ -1985,6 +2007,8 @@ copy_expression(expression_t *exp)
             return copy_array_literal(exp);
         case INDEX_EXPRESSION:
             return copy_index_expression(exp);
+        case HASH_LITERAL:
+            return copy_hash_literal(exp);
         default:
             return NULL;
     }
