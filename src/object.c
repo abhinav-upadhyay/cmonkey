@@ -78,9 +78,9 @@ join_expressions_table(cm_hash_table *table)
             key_string = key_obj->inspect(key_obj);
             value_string = value_obj->inspect(value_obj);
             if (string == NULL)
-                ret = asprintf(&temp, "%s:%s", key_string, value_string);
+                ret = asprintf(&temp, "%s: %s", key_string, value_string);
             else {
-                ret = asprintf(&temp, "%s, %s:%s", string, key_string, value_string);
+                ret = asprintf(&temp, "%s, %s: %s", string, key_string, value_string);
                 free(string);
             }
             free(key_string);
