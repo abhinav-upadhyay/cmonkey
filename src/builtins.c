@@ -9,6 +9,7 @@ static monkey_object_t *last(cm_list *);
 static monkey_object_t *rest(cm_list *);
 static monkey_object_t *push(cm_list *);
 static monkey_object_t *monkey_puts(cm_list *); //puts is a C function
+static monkey_object_t *type(cm_list *);
 
 static char *
 builtin_inspect(monkey_object_t *object)
@@ -22,6 +23,7 @@ monkey_builtin_t BUILTIN_LAST = {{MONKEY_BUILTIN, builtin_inspect}, last};
 monkey_builtin_t BUILTIN_REST = {{MONKEY_BUILTIN, builtin_inspect}, rest};
 monkey_builtin_t BUILTIN_PUSH = {{MONKEY_BUILTIN, builtin_inspect}, push};
 monkey_builtin_t BUILTIN_PUTS = {{MONKEY_BUILTIN, builtin_inspect}, monkey_puts};
+monkey_builtin_t BUILTIN_TYPE = {{MONKEY_BUILTIN, builtin_inspect}, type};
 
 static monkey_object_t *
 monkey_puts(cm_list *arguments)
@@ -37,6 +39,21 @@ monkey_puts(cm_list *arguments)
         free(s);
     }
     return (monkey_object_t *) create_monkey_null();
+}
+
+static monkey_object_t *
+type(cm_list *arguments)
+{
+    monkey_object_t *arg;
+    if (arguments->length != 1) {
+        return (monkey_object_t *)
+            create_monkey_error("wrong number of arguments. got=%zu, want=1",
+            arguments->length);
+    }
+
+    arg = (monkey_object_t *) arguments->head->data;
+    const char *typename = get_type_name(arg->type);
+    return (monkey_object_t *) create_monkey_string(typename, strlen(typename));
 }
 
 static monkey_object_t *
@@ -196,6 +213,8 @@ get_builtins(const char *name)
         return &BUILTIN_PUSH;
     else if (strcmp(name, "puts") == 0)
         return &BUILTIN_PUTS;
+    else if (strcmp(name, "type") == 0)
+        return &BUILTIN_TYPE;
     else
         return NULL;
 }

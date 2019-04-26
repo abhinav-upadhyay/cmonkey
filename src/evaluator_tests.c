@@ -528,7 +528,9 @@ test_builtins(void)
         {"rest([1, 2, 3])", (monkey_object_t *) create_int_array((int[]) {2, 3}, 2)},
         {"rest([])", (monkey_object_t *) create_monkey_null()},
         {"push([], 1)", (monkey_object_t *) create_int_array((int[]){1}, 1)},
-        {"push(1, 1)", (monkey_object_t *) create_monkey_error("argument to push must be ARRAY, got INTEGER")}
+        {"push(1, 1)", (monkey_object_t *) create_monkey_error("argument to push must be ARRAY, got INTEGER")},
+        {"type(10)", (monkey_object_t *) create_monkey_string("INTEGER", 7)},
+        {"type(10, 1)", (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")}
     };
 
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
@@ -538,6 +540,8 @@ test_builtins(void)
     monkey_array_t *expected_array;
     monkey_error_t *actual_err;
     monkey_error_t *expected_err;
+    monkey_string_t *expected_str;
+    monkey_string_t *actual_str;
     monkey_object_t *obj;
     for (size_t i = 0; i < ntests; i++) {
         test_input test = tests[i];
@@ -569,6 +573,14 @@ test_builtins(void)
                 obj = (monkey_object_t *) evaluated;
                 test(obj->type == MONKEY_NULL,
                     "Expected null object, got %s\n", get_type_name(obj->type));
+                break;
+            case MONKEY_STRING:
+                expected_str = (monkey_string_t *) test.expected;
+                actual_str = (monkey_string_t *) evaluated;
+                test(strcmp(expected_str->value, actual_str->value) == 0,
+                    "Expected value %s, got %s\n", expected_str->value, actual_str->value);
+                free_monkey_object(test.expected);
+                free_monkey_object(evaluated);
                 break;
             default:
                 err(EXIT_FAILURE, "Unknown type for expected");
