@@ -15,7 +15,8 @@ typedef enum monkey_object_type {
     MONKEY_FUNCTION,
     MONKEY_STRING,
     MONKEY_BUILTIN,
-    MONKEY_ARRAY
+    MONKEY_ARRAY,
+    MONKEY_HASH
 } monkey_object_type;
 
 static const char *type_names[] = {
@@ -27,7 +28,8 @@ static const char *type_names[] = {
     "FUNCTION",
     "STRING",
     "BUILTIN",
-    "ARRAY"
+    "ARRAY",
+    "HASH"
 };
 
 #define get_type_name(type) type_names[type]
@@ -35,6 +37,7 @@ static const char *type_names[] = {
 typedef struct monkey_object_t {
     monkey_object_type type;
     char * (*inspect) (struct monkey_object_t *);
+    size_t (*hash) (struct monkey_object_t *);
 } monkey_object_t;
 
 typedef struct monkey_int_t {
@@ -86,6 +89,11 @@ typedef struct monkey_array_t {
     cm_array_list *elements;
 } monkey_array_t;
 
+typedef struct monkey_hash_t {
+    monkey_object_t object;
+    cm_hash_table *pairs;
+} monkey_hash_t;
+
 
 monkey_int_t * create_monkey_int(long);
 monkey_bool_t * create_monkey_bool(_Bool);
@@ -98,6 +106,7 @@ monkey_function_t *create_monkey_function(cm_list *, block_statement_t *, enviro
 monkey_string_t *create_monkey_string(const char *, size_t);
 monkey_builtin_t *create_monkey_builtin(builtin_fn);
 monkey_array_t *create_monkey_array(cm_array_list *);
+monkey_hash_t *create_monkey_hash(cm_hash_table *);
 void free_monkey_object(void *);
 
 #endif

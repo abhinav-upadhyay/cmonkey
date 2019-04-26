@@ -10,10 +10,11 @@
 #include "object.h"
 
 static char *inspect(monkey_object_t *);
+static size_t monkey_hash(monkey_object_t *);
 
-monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect}, true};
-monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect}, false};
-monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect}};
+monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_hash}, true};
+monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_hash}, false};
+monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL}};
 
 static char *
 monkey_function_inspect(monkey_object_t *obj)
@@ -57,6 +58,43 @@ join_expressions_list(cm_array_list *list)
 }
 
 static char *
+join_expressions_table(cm_hash_table *table)
+{
+    char *string = NULL;
+    char *temp = NULL;
+    char *key_string;
+    char *value_string;
+    monkey_object_t *key_obj;
+    monkey_object_t *value_obj;
+    int ret;
+    for (size_t i = 0; i < table->nkeys; i++) {
+        size_t *index = (size_t *) table->used_slots->array[i];
+        cm_hash_entry *entry = (cm_hash_entry *) table->table[*index];
+        key_obj = (monkey_object_t *) entry->key;
+        value_obj = (monkey_object_t *) entry->value;
+        key_string = key_obj->inspect(key_obj);
+        value_string = value_obj->inspect(value_obj);
+        if (string == NULL)
+            ret = asprintf(&temp, "%s:%s", key_string, value_string);
+        else {
+            ret = asprintf(&temp, "%s, %s:%s", string, key_string, value_string);
+            free(string);
+        }
+        free(key_string);
+        free(value_string);
+        if (ret == -1)
+            errx(EXIT_FAILURE, "malloc failed");
+        string = temp;
+        temp = NULL;
+    }
+    ret = asprintf(&temp, "{%s}", string);
+    free(string);
+    if (ret == -1)
+        errx(EXIT_FAILURE, "malloc failed");
+    return temp;
+}
+
+static char *
 inspect(monkey_object_t *obj)
 {
     monkey_int_t *int_obj;
@@ -64,6 +102,7 @@ inspect(monkey_object_t *obj)
     monkey_return_value_t *ret_obj;
     monkey_error_t *err_obj;
     monkey_array_t *array;
+    monkey_hash_t *hash_obj;
     char *string = NULL;
     char *elements_string = NULL;
     int ret;
@@ -100,6 +139,32 @@ inspect(monkey_object_t *obj)
             if (ret == -1)
                 errx(EXIT_FAILURE, "malloc failed");
             return string;
+        case MONKEY_HASH:
+            hash_obj = (monkey_hash_t *) obj;
+            return join_expressions_table(hash_obj->pairs);
+    }
+}
+
+static size_t
+monkey_hash(monkey_object_t *object)
+{
+    monkey_string_t *str_obj;
+    monkey_int_t *int_obj;
+    monkey_bool_t *bool_obj;
+    switch (object->type) {
+        case MONKEY_STRING:
+            str_obj = (monkey_string_t *) object;
+            return string_hash_function(str_obj->value);
+        case MONKEY_INT:
+            int_obj = (monkey_int_t *) object;
+            return int_hash_function(&int_obj->value);
+        case MONKEY_BOOL:
+            bool_obj = (monkey_bool_t *) object;
+            return pointer_hash_function(bool_obj);
+        default:
+            // We don't expect to come here, since the hash field is set to
+            // NULL for other object types
+            return 0;
     }
 }
 
@@ -112,6 +177,7 @@ create_monkey_int(long value)
         errx(EXIT_FAILURE, "malloc failed");
     int_obj->object.inspect = inspect;
     int_obj->object.type = MONKEY_INT;
+    int_obj->object.hash = monkey_hash;
     int_obj->value = value;
     return int_obj;
 }
@@ -142,6 +208,7 @@ create_monkey_return_value(monkey_object_t *value)
     ret->value = value;
     ret->object.type = MONKEY_RETURN_VALUE;
     ret->object.inspect = inspect;
+    ret->object.hash = NULL;
     return ret;
 }
 
@@ -155,6 +222,7 @@ create_monkey_error(const char *fmt, ...)
         errx(EXIT_FAILURE, "malloc failed");
     error->object.type = MONKEY_ERROR;
     error->object.inspect = inspect;
+    error->object.hash = NULL;
     va_list args;
     va_start(args, fmt);
     int ret = vasprintf(&message, fmt, args);
@@ -269,6 +337,7 @@ create_monkey_function(cm_list *parameters, block_statement_t *body, environment
     function->env = env;
     function->object.type = MONKEY_FUNCTION;
     function->object.inspect = inspect;
+    function->object.hash = NULL;
     return function;
 }
 
@@ -284,6 +353,7 @@ create_monkey_string(const char *value, size_t length)
         errx(EXIT_FAILURE, "malloc failed");
     string_obj->length = length;
     string_obj->object.type = MONKEY_STRING;
+    string_obj->object.hash = monkey_hash;
     string_obj->object.inspect = inspect;
     return string_obj;
 }
@@ -296,6 +366,7 @@ create_monkey_builtin(builtin_fn function)
         errx(EXIT_FAILURE, "malloc failed");
     builtin->object.type = MONKEY_BUILTIN;
     builtin->object.inspect = inspect;
+    builtin->object.hash = NULL;
     builtin->function = function;
     return builtin;
 }
@@ -308,6 +379,7 @@ create_monkey_array(cm_array_list *elements)
         errx(EXIT_FAILURE, "malloc failed");
     array->object.type = MONKEY_ARRAY;
     array->object.inspect = inspect;
+    array->object.hash = NULL;
     array->elements = elements;
     return array;
 }
