@@ -304,6 +304,10 @@ test_error_handling(void)
         {
             "\"Hello\" - \"World\"",
             "unknown operator: STRING - STRING"
+        },
+        {
+            "{\"name\": \"Monkey\"}[fn(x) {x}]",
+            "unusable as a hash key: FUNCTION"
         }
     };
 
@@ -706,6 +710,70 @@ test_hash_literals(void)
     env_free(env);
 }
 
+static void
+test_hash_index_expressions(void)
+{
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {
+            "{\"foo\": 5}[\"foo\"]",
+            (monkey_object_t *) create_monkey_int(5)
+        },
+        {
+            "{\"foo\": 5}[\"bar\"]",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "let key = \"foo\"; {\"foo\": 5}[key]",
+            (monkey_object_t *) create_monkey_int(5)
+        },
+        {
+            "{}[\"foo\"]",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "{5: 5}[5]",
+            (monkey_object_t *) create_monkey_int(5)
+        },
+        {
+            "{true: 5}[true]",
+            (monkey_object_t *) create_monkey_int(5)
+        },
+        {
+            "{false: 5}[false]",
+            (monkey_object_t *) create_monkey_int(5)
+        }
+    };
+
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    monkey_int_t *expected_int;
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing hash index expression for %s\n", test.input);
+        environment_t *env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        switch (test.expected->type) {
+            case MONKEY_INT:
+                expected_int = (monkey_int_t *) test.expected;
+                test_integer_object(evaluated, expected_int->value);
+                break;
+            case MONKEY_NULL:
+                test(evaluated->type == MONKEY_NULL, "Expected null value got %s\n",
+                    get_type_name(evaluated->type));
+                break;
+            default:
+                err(EXIT_FAILURE, "Unknown type: %s", get_type_name(test.expected->type));
+        }
+        free_monkey_object(test.expected);
+        env_free(env);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -725,5 +793,6 @@ main(int argc, char **argv)
     test_array_index_expressions();
     test_enclosing_env();
     test_hash_literals();
+    test_hash_index_expressions();
     return 0;
 }

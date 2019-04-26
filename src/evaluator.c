@@ -273,10 +273,23 @@ eval_array_index_expression(monkey_object_t *left_value, monkey_object_t *index_
 }
 
 static monkey_object_t *
+eval_hash_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
+{
+    monkey_hash_t *hash_obj = (monkey_hash_t *) left_value;
+    if (index_value->hash == NULL) {
+        return (monkey_object_t *) create_monkey_error("unusable as a hash key: %s",
+            get_type_name(index_value->type));
+    }
+    return copy_monkey_object(cm_hash_table_get(hash_obj->pairs, index_value));
+}
+
+static monkey_object_t *
 eval_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
 {
     if (left_value->type == MONKEY_ARRAY && index_value->type == MONKEY_INT) {
         return eval_array_index_expression(left_value, index_value);
+    } else if (left_value->type == MONKEY_HASH) {
+        return eval_hash_index_expression(left_value, index_value);
     } else {
         return (monkey_object_t *) create_monkey_error("index operator not supported: %s",
             get_type_name(left_value->type));

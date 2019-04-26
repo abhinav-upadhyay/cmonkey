@@ -409,6 +409,9 @@ copy_monkey_object(monkey_object_t *object)
     monkey_builtin_t *builtin;
     monkey_array_t *array_obj;
     monkey_hash_t *hash_obj;
+    if (object == NULL)
+        return (monkey_object_t *) create_monkey_null();
+
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
