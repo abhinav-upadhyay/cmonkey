@@ -4,3 +4,5 @@ repl
 *.core
 *.swp
 *.tmp
+bin/
+.vscode/
