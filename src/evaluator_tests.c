@@ -341,6 +341,16 @@ test_error_handling(void)
         {
             "{\"name\": \"Monkey\"}[fn(x) {x}]",
             "unusable as a hash key: FUNCTION"
+        },
+        {
+            "let x = 10;\n"\
+            "let y = if (x == 10) {\n"\
+            "   let x = x + 1;\n"\
+            "} else {\n"\
+            "   let x = x * 2;\n"\
+            "};\n"\
+            "y + 1",
+            "identifier not found: y"
         }
     };
 
