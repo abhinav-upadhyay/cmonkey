@@ -15,6 +15,8 @@ To execute a monkey program saved in a file `hello_world.mnk`
 
 `bin/monkey hello_world.mnk`
 
+![demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/repl.png)
+
 ## Language Features
 
 ### Supported data types
