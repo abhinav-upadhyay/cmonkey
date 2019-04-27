@@ -399,7 +399,7 @@ test_error_handling(void)
             "   let x = x * 2;\n"\
             "};\n"\
             "y + 1",
-            "identifier not found: y"
+            "type mismatch: NULL + INTEGER"
         }
     };
 

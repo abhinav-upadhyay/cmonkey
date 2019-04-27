@@ -594,8 +594,9 @@ eval_statement(statement_t *statement, environment_t *env)
             evaluated = monkey_eval((node_t *) let_stmt->value, env);
             if (is_error(evaluated))
                 return evaluated;
-            if (evaluated != NULL)
-                env_put(env, strdup(let_stmt->name->value), evaluated);
+            if (evaluated == NULL)
+                evaluated = (monkey_object_t *) create_monkey_null();
+            env_put(env, strdup(let_stmt->name->value), evaluated);
         default:
             break;
     }
