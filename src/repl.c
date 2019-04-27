@@ -27,9 +27,12 @@
  * SUCH DAMAGE.
  */
 
+#include <err.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "ast.h"
 #include "cmonkey_utils.h"
@@ -77,8 +80,76 @@ free_lines(cm_array_list *lines)
 	lines->length = 0;
 }
 
-int
-main(int argc, char **argv)
+static int
+execute_file(const char *filename)
+{
+	ssize_t bytes_read;
+	size_t linesize = 0;
+	char *line = NULL;
+	char *program_string;
+	lexer_t *l;
+	parser_t *parser = NULL;
+	program_t *program = NULL;
+
+	FILE *file = fopen(filename, "r");
+	if (file == NULL) {
+		switch (errno) {
+			case EINVAL:
+			case ENOMEM:
+			case EACCES:
+			case EINTR:
+			case ELOOP:
+			case EMFILE:
+			case ENAMETOOLONG:
+			case ENOENT:
+			case EPERM:
+			case EBADF:
+				err(EXIT_FAILURE, "Failed to open file %s", filename);
+			default:
+				errx(EXIT_FAILURE, "Failed to open file %s", filename);
+		}
+	}
+
+	environment_t *env = create_env();
+	cm_array_list *lines = cm_array_list_init(4, free);
+	while ((bytes_read = getline(&line, &linesize, file)) != -1) {
+		cm_array_list_add(lines, line);
+		line = NULL;
+		linesize = 0;
+	}
+	program_string = cm_array_string_list_join(lines, "\n");
+	l = lexer_init(program_string);
+	parser = parser_init(l);
+	program = parse_program(parser);
+	free(program_string);
+
+	if (parser->errors) {
+		print_parse_errors(parser);
+		goto EXIT;
+	}
+	monkey_object_t *evaluated = monkey_eval((node_t *) program, env);
+	env_free(env);
+	if (evaluated != NULL) {
+		if (evaluated->type != MONKEY_NULL) {
+			char *s = evaluated->inspect(evaluated);
+			printf("%s\n", s);
+			free(s);
+		}
+		free_monkey_object(evaluated);
+	}
+
+EXIT:
+	cm_array_list_free(lines);
+	program_free(program);
+	parser_free(parser);
+	fclose(file);
+	if (line)
+		free(line);
+	return 0;
+}
+
+static int
+repl(void)
 {
 	ssize_t bytes_read;
 	size_t linesize = 0;
@@ -146,4 +217,15 @@ CONTINUE:
 		free(line);
 	cm_array_list_free(lines);
 	env_free(env);
+	return 0;
+}
+
+int
+main(int argc, char **argv)
+{
+	if (argc == 1)
+		return repl();
+	if (argc == 2)
+		return execute_file(argv[1]);
+	errx(EXIT_FAILURE, "Unsupported numberof arguments %d", argc);
 }
