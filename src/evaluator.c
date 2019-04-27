@@ -349,6 +349,23 @@ eval_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
 }
 
 static monkey_object_t *
+eval_while_expression(while_expression_t *while_exp, environment_t *env)
+{
+    monkey_object_t *result = NULL;
+    monkey_object_t *condition = monkey_eval((node_t *) while_exp->condition, env);
+    if (is_error(condition))
+        return condition;
+    while (is_truthy(condition)) {
+        result = monkey_eval((node_t *) while_exp->body, env);
+        free_monkey_object(condition);
+        condition = monkey_eval((node_t *) while_exp->condition, env);
+    }
+    if (result == NULL)
+        return (monkey_object_t *) create_monkey_null();
+    return result;
+}
+
+static monkey_object_t *
 eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
 {
     cm_hash_table *pairs = cm_hash_table_init(monkey_object_hash,
@@ -405,6 +422,7 @@ eval_expression(expression_t *exp, environment_t *env)
     array_literal_t *array_exp;
     index_expression_t *index_exp;
     hash_literal_t *hash_exp;
+    while_expression_t *while_exp;
 
     switch (exp->expression_type)
     {
@@ -494,6 +512,9 @@ eval_expression(expression_t *exp, environment_t *env)
         case HASH_LITERAL:
             hash_exp = (hash_literal_t *) exp;
             return eval_hash_literal(hash_exp, env);
+        case WHILE_EXPRESSION:
+            while_exp = (while_expression_t *) exp;
+            return eval_while_expression(while_exp, env);
         default:
             break;
     }

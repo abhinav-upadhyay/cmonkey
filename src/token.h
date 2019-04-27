@@ -71,7 +71,8 @@ typedef enum token_type {
 	ELSE,
 	RETURN,
 	TRUE,
-	FALSE
+	FALSE,
+	WHILE
 } token_type;
 
 static const char *token_names[] = {
@@ -94,6 +95,8 @@ static const char *token_names[] = {
 	"GT",
 	"EQ",
 	"NOT_EQ",
+	"AND",
+	"OR",
 
 	//delimiters
 	"COMMA",
@@ -113,7 +116,8 @@ static const char *token_names[] = {
 	"ELSE",
 	"RETURN",
 	"TRUE",
-	"FALSE"
+	"FALSE",
+	"WHILE"
 };
 
 #define get_token_name(tok) token_names[tok->type]

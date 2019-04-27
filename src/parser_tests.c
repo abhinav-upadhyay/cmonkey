@@ -1188,7 +1188,44 @@ test_parsing_hash_literal_with_integer_keys(void)
     parser_free(parser);
     program_free(program);
     cm_hash_table_free(expected);
+}
 
+static void
+test_parsing_while_expression(void)
+{
+    const char *input = "while (x > 2) {\n"\
+        "   let x = x - 1;\n"\
+        "   x;\n"\
+        "}";
+    print_test_separator_line();
+    printf("Testing while expression parsing for: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+
+    test(program->nstatements == 1, "Expected 1 statement in program, found %zu\n",
+        program->nstatements);
+    test(program->statements[0]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, got %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    expression_statement_t *exp_stmt = (expression_statement_t *) program->statements[0];
+    test(exp_stmt->expression->expression_type == WHILE_EXPRESSION,
+        "Expected a WHILE_EXPRESSION, got %s\n",
+        get_expression_type_name(exp_stmt->expression->expression_type));
+    while_expression_t *while_exp = (while_expression_t *) exp_stmt->expression;
+    test_infix_expression(while_exp->condition, ">", "x", "2");
+    test(while_exp->body->nstatements == 2,
+        "Expected 1 statement in while expression body, got %zu\n",
+        while_exp->body->nstatements);
+    test(while_exp->body->statements[0]->statement_type == LET_STATEMENT,
+        "Expected LET_STATEMENT, got %s\n",
+        get_statement_type_name(while_exp->body->statements[0]->statement_type));
+    test(while_exp->body->statements[1]->statement_type == EXPRESSION_STATEMENT,
+        "Expected EXPRESSION_STATEMENT, got %s\n",
+        get_statement_type_name(while_exp->body->statements[0]->statement_type));
+    program_free(program);
+    parser_free(parser);
 }
 
 int
@@ -1217,6 +1254,7 @@ main(int argc, char **argv)
     test_parsing_hash_literal_with_expression_values();
     test_parsing_hash_literal_with_integer_keys();
     test_parsing_hash_literal_bool_keys();
+    test_parsing_while_expression();
     printf("All tests passed\n");
 
 }

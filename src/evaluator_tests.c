@@ -220,6 +220,54 @@ _test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
 }
 
 static void
+test_while_expressions(void)
+{
+    environment_t *env;
+    typedef struct {
+        const char *input;
+        monkey_object_t *expected;
+    } test_input;
+
+    test_input tests[] = {
+        {
+            "let x = 10;\n"\
+            "while (x > 1) {\n"\
+            "   let x = x -1;\n"\
+            "   x;\n"\
+            "};",
+            (monkey_object_t *) create_monkey_int(1)
+        },
+        {
+            "let x = 10;\n"\
+            "while (x > 10) {\n"\
+            "   let x = x -1;\n"\
+            "   x;\n"\
+            "};",
+            (monkey_object_t *) create_monkey_null()
+        }
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing while expression evaluation for %s\n", test.input);
+        env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        test(evaluated->type == test.expected->type,
+            "Expected %s, got %s\n",
+            get_type_name(test.expected->type), get_type_name(evaluated->type));
+        if (evaluated->type == MONKEY_INT) {
+            monkey_int_t *actual = (monkey_int_t *) evaluated;
+            monkey_int_t *expected_int = (monkey_int_t *) test.expected;
+            test(actual->value == expected_int->value, "Expected value %ld got %ld\n",
+                expected_int->value, actual->value);
+        }
+        env_free(env);
+        free_monkey_object(evaluated);
+    }
+}
+
+static void
 test_if_else_expressions(void)
 {
     environment_t *env;
@@ -849,5 +897,6 @@ main(int argc, char **argv)
     test_enclosing_env();
     test_hash_literals();
     test_hash_index_expressions();
+    test_while_expressions();
     return 0;
 }

@@ -80,6 +80,9 @@ get_token_type(char *literal)
 	if (strcmp(literal, "false") == 0)
 		return FALSE;
 
+	if (strcmp(literal, "while") == 0)
+		return WHILE;
+
 	if (is_number(literal))
 		return INT;
 

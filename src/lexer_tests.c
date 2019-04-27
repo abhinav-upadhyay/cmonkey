@@ -65,7 +65,10 @@ main(int argc, char **argv)
 			 "{\"foo\": \"bar\"};\n"\
 			 "true && false;\n"\
 			 "!true;\n"\
-			 "x == y || x > z;\n";
+			 "x == y || x > z;\n"\
+			 "while (x > 10) {\n"\
+			 "let x = x - 1;\n"\
+			 "}\n";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -178,6 +181,21 @@ main(int argc, char **argv)
 		{GT, ">"},
 		{IDENT, "z"},
 		{SEMICOLON, ";"},
+		{WHILE, "while"},
+		{LPAREN, "("},
+		{IDENT, "x"},
+		{GT, ">"},
+		{INT, "10"},
+		{RPAREN, ")"},
+		{LBRACE, "{"},
+		{LET, "let"},
+		{IDENT, "x"},
+		{ASSIGN, "="},
+		{IDENT, "x"},
+		{MINUS, "-"},
+		{INT, "1"},
+		{SEMICOLON, ";"},
+		{RBRACE, "}"},
 		{ END_OF_FILE, "" }
 	};
 

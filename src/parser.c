@@ -47,6 +47,7 @@ static expression_t * parse_if_expression(parser_t *);
 static expression_t * parse_function_literal(parser_t *);
 static expression_t * parse_array_literal(parser_t *);
 static expression_t * parse_hash_literal(parser_t *);
+static expression_t * parse_while_expression(parser_t *);
 
 static expression_t * parse_infix_expression(parser_t *, expression_t *);
 static expression_t * parse_call_expression(parser_t *, expression_t *);
@@ -86,6 +87,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //RETURN
      parse_boolean_expression, //TRUE
      parse_boolean_expression, //FALSE
+     parse_while_expression // WHILE
  };
 
  static infix_parse_fn infix_fns [] = {
@@ -122,6 +124,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //RETURN
      NULL, //TRUE
      NULL, //FALSE
+     NULL // WHILE
  };
 
 static void
@@ -440,6 +443,28 @@ hash_literal_string(void *exp)
     if (ret == -1)
         errx(EXIT_FAILURE, "malloc failed");
     return temp;
+}
+
+static char *
+while_expression_token_literal(void *exp)
+{
+    while_expression_t *while_exp = (while_expression_t *) exp;
+    return while_exp->token->literal;
+}
+
+static char *
+while_expression_string(void *exp)
+{
+    while_expression_t *while_exp = (while_expression_t *) exp;
+    char *string = NULL;
+    char *condition_string = while_exp->condition->node.string(while_exp->condition);
+    char *body_string = while_exp->body->statement.node.string(while_exp->body);
+    int ret = asprintf(&string, "while%s %s", condition_string, body_string);
+    free(condition_string);
+    free(body_string);
+    if (ret == -1)
+        err(EXIT_FAILURE, "malloc failed");
+    return string;
 }
 
 static char *
@@ -852,6 +877,17 @@ free_letstatement(letstatement_t *let_stmt)
 }
 
 static void
+free_while_expression(while_expression_t *while_exp)
+{
+    token_free(while_exp->token);
+    if (while_exp->condition)
+        free_expression(while_exp->condition);
+    if (while_exp->body)
+        free_statement((statement_t *) while_exp->body);
+    free(while_exp);
+}
+
+static void
 free_if_expression(if_expression_t *if_exp)
 {
     token_free(if_exp->token);
@@ -955,6 +991,9 @@ free_expression(void *e)
             break;
         case HASH_LITERAL:
             free_hash_literal((hash_literal_t *) exp);
+            break;
+        case WHILE_EXPRESSION:
+            free_while_expression((while_expression_t *) exp);
             break;
         default:
             break;
@@ -1593,6 +1632,47 @@ parse_block_statement(parser_t *parser)
         untrace("parse_block_statement");
     #endif
     return block_stmt;
+}
+
+static expression_t *
+parse_while_expression(parser_t *parser)
+{
+    #ifdef TRACE
+        trace("parse_while_expression");
+    #endif
+    while_expression_t *while_exp;
+    while_exp = malloc(sizeof(*while_exp));
+    if (while_exp == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    while_exp->expression.node.string = while_expression_string;
+    while_exp->expression.node.token_literal = while_expression_token_literal;
+    while_exp->expression.node.type = EXPRESSION;
+    while_exp->expression.expression_type = WHILE_EXPRESSION;
+    while_exp->token = token_copy(parser->cur_tok);
+    while_exp->condition = NULL;
+    while_exp->body = NULL;
+
+    if (!expect_peek(parser, LPAREN)) {
+        token_free(while_exp->token);
+        free(while_exp);
+        return NULL;
+    }
+    parser_next_token(parser);
+    while_exp->condition = parse_expression(parser, LOWEST);
+    if (!expect_peek(parser, RPAREN)) {
+        free_while_expression(while_exp);
+        return NULL;
+    }
+    if (!expect_peek(parser, LBRACE)) {
+        free_while_expression(while_exp);
+        return NULL;
+    }
+
+    while_exp->body = parse_block_statement(parser);
+    #ifdef TRACE
+        untrace("parse_while_expression");
+    #endif
+    return (expression_t *) while_exp;
 }
 
 static expression_t *
