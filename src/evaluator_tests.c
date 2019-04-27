@@ -155,7 +155,11 @@ test_eval_bool_expression(void)
         {"(1 < 2) == true", true},
         {"(1 < 2) == false", false},
         {"(1 > 2) == true", false},
-        {"(1 > 2) == false", true}
+        {"(1 > 2) == false", true},
+        {"5 > 10 || 5 > 1", true},
+        {"2 + 1 > 1 && 3 - 1 != 3", true},
+        {"2 != 1 && false", false},
+        {"2 != 1 || false", true}
     };
 
     print_test_separator_line();

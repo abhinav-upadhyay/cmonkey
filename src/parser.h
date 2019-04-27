@@ -43,6 +43,7 @@ typedef struct parser_t {
 
  typedef enum operator_precedence_t {
      LOWEST=1,
+     LOGICAL_AND,
      EQUALS,
      LESSGREATER,
      SUM,

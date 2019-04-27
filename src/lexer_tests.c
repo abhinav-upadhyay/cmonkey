@@ -62,7 +62,10 @@ main(int argc, char **argv)
 			 "\"foobar\"\n"\
 			 "\"foo bar\"\n"\
 			 "[1, 2];\n"\
-			 "{\"foo\": \"bar\"};";;
+			 "{\"foo\": \"bar\"};\n"\
+			 "true && false;\n"\
+			 "!true;\n"\
+			 "x == y || x > z;\n";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -159,6 +162,21 @@ main(int argc, char **argv)
 		{COLON, ":"},
 		{STRING, "bar"},
 		{RBRACE, "}"},
+		{SEMICOLON, ";"},
+		{TRUE, "true"},
+		{AND, "&&"},
+		{FALSE, "false"},
+		{SEMICOLON, ";"},
+		{BANG, "!"},
+		{TRUE, "true"},
+		{SEMICOLON, ";"},
+		{IDENT, "x"},
+		{EQ, "=="},
+		{IDENT, "y"},
+		{OR, "||"},
+		{IDENT, "x"},
+		{GT, ">"},
+		{IDENT, "z"},
 		{SEMICOLON, ";"},
 		{ END_OF_FILE, "" }
 	};

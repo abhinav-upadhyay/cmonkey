@@ -44,6 +44,26 @@ is_error(monkey_object_t *obj)
 }
 
 static monkey_object_t *
+eval_boolean_infix_expression(const char *operator,
+    monkey_bool_t *left_value, monkey_bool_t *right_value)
+{
+    _Bool result;
+    if (strcmp(operator, "&&") == 0)
+        result = left_value->value && right_value->value;
+    else if (strcmp(operator, "||") == 0)
+        result = left_value->value || right_value->value;
+    else if (strcmp(operator, "==") == 0)
+        result = left_value->value == right_value->value;
+    else if (strcmp(operator, "!=") == 0)
+        result = left_value->value != right_value->value;
+    else
+        return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
+            get_type_name(left_value->object.type), operator,
+            get_type_name(right_value->object.type));
+    return (monkey_object_t *) create_monkey_bool(result);
+}
+
+static monkey_object_t *
 eval_integer_infix_expression(const char *operator,
     monkey_int_t *left_value,
     monkey_int_t *right_value)
@@ -147,19 +167,22 @@ eval_infix_expression(const char *operator,
         return eval_string_infix_expression(operator,
             (monkey_string_t *) left_value,
             (monkey_string_t *) right_value);
-    else if (strcmp(operator, "==") == 0)
+    if (left_value->type == MONKEY_BOOL && right_value->type == MONKEY_BOOL)
+        return eval_boolean_infix_expression(operator,
+            (monkey_bool_t *) left_value,
+            (monkey_bool_t *) right_value);
+    if (strcmp(operator, "==") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value == right_value);
-    else if (strcmp(operator, "!=") == 0)
+    if (strcmp(operator, "!=") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value != right_value);
-    else if (left_value->type != right_value->type)
+    if (left_value->type != right_value->type)
         return (monkey_object_t *) create_monkey_error("type mismatch: %s %s %s",
             get_type_name(left_value->type), operator, get_type_name(right_value->type));
     else
         return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
             get_type_name(left_value->type), operator, get_type_name(right_value->type));
-    return (monkey_object_t *) create_monkey_null();
 }
 
 static _Bool

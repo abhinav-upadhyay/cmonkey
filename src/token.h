@@ -50,6 +50,8 @@ typedef enum token_type {
 	GT,
 	EQ,
 	NOT_EQ,
+	AND,
+	OR,
 
 	//delimiters
 	COMMA,

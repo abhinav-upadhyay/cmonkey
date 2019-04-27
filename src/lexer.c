@@ -227,6 +227,30 @@ lexer_next_token(lexer_t *l)
 		t->type = COLON;
 		read_char(l);
 		break;
+	case '&':
+		if (l->input[l->read_offset] == '&') {
+			t->literal = strdup("&&");
+			t->type = AND;
+			read_char(l);
+			read_char(l);
+		} else {
+			t->literal = NULL;
+			t->type = ILLEGAL;
+			read_char(l);
+		}
+		break;
+	case '|':
+		if (l->input[l->read_offset] == '|') {
+			t->literal = strdup("||");
+			t->type = OR;
+			read_char(l);
+			read_char(l);
+		} else {
+			t->literal = NULL;
+			t->type = ILLEGAL;
+			read_char(l);
+		}
+		break;
 	default:
 		if (is_character(l->ch)) {
 			t->literal = read_identifier(l);

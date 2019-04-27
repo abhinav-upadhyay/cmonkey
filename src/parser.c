@@ -68,6 +68,8 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //GT
      NULL, //EQ
      NULL, //NOT_EQ
+     NULL, // AND
+     NULL, // OR
      NULL, //COMMA
      NULL, //SEMICOLON
      parse_grouped_expression, //LPAREN
@@ -102,6 +104,8 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      parse_infix_expression, //GT
      parse_infix_expression, //EQ
      parse_infix_expression, //NOT_EQ
+     parse_infix_expression, //AND
+     parse_infix_expression, //OR
      NULL, //COMMA
      NULL, //SEMICOLON
      parse_call_expression, //LPAREN
@@ -161,6 +165,9 @@ precedence(token_type tok_type)
             return CALL;
         case LBRACKET:
             return INDEX;
+        case AND:
+        case OR:
+            return LOGICAL_AND;
         default:
             return LOWEST;
     }
