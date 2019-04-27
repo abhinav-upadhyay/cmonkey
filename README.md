@@ -1,8 +1,12 @@
 # cmonkey
-C Implementation of the monkey language based on the excellent book
-[Writing an interpreter in go](https://interpreterbook.com/) by Thorsten Ball (@mrnugget)
+This is an implementation of the monkey language in C.
+Monkey is a programming language created by Thorsten Ball in the book
+[Writing an interpreter in go](https://interpreterbook.com/).
 
-### BUILDING
+## BUILDING
 - clone or download the code from github
 - run `make` to build the code
-- run `bin/repl` to start the REPL
+
+## Running as REPL
+execute `bin/monkey`
+![](demo.gif)
