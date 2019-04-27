@@ -6,12 +6,12 @@ BINDIR := bin
 
 OBJS := $(addprefix $(OBJDIR)/, lexer_tests.o lexer.o token.o repl.o cmonkey_utils.o parser_tracing.o \
 	parser_tests.o evaluator_tests.o object.o cmonkey_utils_tests.o environment.o builtins.o object_tests.o)
-BINS := $(addprefix $(BINDIR)/, lexer_tests parser_tests evaluator_tests cmonkey_utils_tests object_tests repl)
+BINS := $(addprefix $(BINDIR)/, lexer_tests parser_tests evaluator_tests cmonkey_utils_tests object_tests monkey)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	${COMPILE.c} ${OUTPUT_OPTION}  $<
 
-all: $(OBJS) $(BINS) lexer_tests parser_tests evaluator_tests cmonkey_utils_tests object_tests repl
+all: $(OBJS) $(BINS) lexer_tests parser_tests evaluator_tests cmonkey_utils_tests object_tests monkey
 
 $(OBJS): | $(OBJDIR)
 
@@ -47,9 +47,9 @@ object_tests: $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/object_tests.o $(OBJDIR)/objec
 	$(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o
 
 
-repl:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o \
+monkey:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o \
 	$(OBJDIR)/evaluator.o ${OBJDIR}/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o
-	${CC} ${CFLAGS} -o ${BINDIR}/repl ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
+	${CC} ${CFLAGS} -o ${BINDIR}/monkey ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
 		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o
 
 clean:
