@@ -7,6 +7,13 @@ Monkey is a programming language created by Thorsten Ball in the book
 - clone or download the code from github
 - run `make` to build the code
 
+## TESTS
+Tests are implemented in files ending with \_tests.c. No frameworks are used to write tests. Tests
+are built with the normal build and can be executed by running each of the test programs one by one.
+For example:
+
+`bin/parser_tests` - will execute the parser tests
+
 ## Running as REPL
 execute `bin/monkey`
 
