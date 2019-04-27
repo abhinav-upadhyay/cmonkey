@@ -264,6 +264,7 @@ test_while_expressions(void)
         }
         env_free(env);
         free_monkey_object(evaluated);
+        free_monkey_object(test.expected);
     }
 }
 

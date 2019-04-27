@@ -357,8 +357,14 @@ eval_while_expression(while_expression_t *while_exp, environment_t *env)
         return condition;
     while (is_truthy(condition)) {
         result = monkey_eval((node_t *) while_exp->body, env);
+        if (is_error(result)) {
+            free_monkey_object(condition);
+            return result;
+        }
         free_monkey_object(condition);
         condition = monkey_eval((node_t *) while_exp->condition, env);
+        if (is_truthy(condition))
+            free_monkey_object(result);
     }
     if (result == NULL)
         return (monkey_object_t *) create_monkey_null();
