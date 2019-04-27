@@ -12,6 +12,14 @@ execute `bin/monkey`
 
 ![demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/repl.png)
 
+**Multiline expressions in the REPL**
+
+It's straightforward to run single line code in the REPL. For more
+complex code which requires multiple lines, `\` can be used at the
+end of the line to indicate continuation so that the REPL waits for
+you to finish the code. The last line not containing `\` at the end
+will be treated as the end of the code after which the evaluation will be performed.
+
 ## Running monkey programs
 To execute a monkey program saved in a file `hello_world.mnk`
 
