@@ -89,10 +89,10 @@ The above would if expression would produce the value 10
 ### Arithmetic operators
 Monkey supports following arithmetic operators which are similar to other programming languages:
 
-- + (addition) 
-- - (subtraction)
-- * (multiplication)
-- / (division)
+- \+ (addition) 
+- \- (subtraction)
+- \* (multiplication)
+- \/ (division)
 
 ### Comparision operators
 Monkey supports following comparison operators
