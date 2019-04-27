@@ -161,21 +161,26 @@ let five = d[1];
 ```
 
 **first**
+
 `first` returns the first element from an array, it's not supported for other types
 
 ```
 >> let arr = [1, 2, 3]
 >> first(arr)
 1
+```
 
 **last**
+
 `last` returns the last element from an array, it's not supported for other types
 ```
 >> let arr = [1, 2, 3]
 >> last(arr)
 3
+```
 
 **rest**
+
 `rest` returns a new array which is a copy of the given array except its first element
 
 ```
@@ -185,8 +190,10 @@ let five = d[1];
 
 >> rest(arr(arr))
 [3, 4]
+```
 
 **push**
+
 `push` returns a new array by copying the old array and adds new element at its end
 
 ```
@@ -196,6 +203,7 @@ let five = d[1];
 ```
 
 **puts**
+
 `puts` prints the value of a monkey object on stdout
 
 ```
@@ -211,6 +219,7 @@ null
 ```
 
 **type**
+
 `type` prints the type of the monkey object
 
 ```
