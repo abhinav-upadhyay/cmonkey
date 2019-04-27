@@ -96,10 +96,10 @@ Monkey supports following arithmetic operators which are similar to other progra
 
 ### Comparision operators
 Monkey supports following comparison operators
-- `==` (equals)
-- `!=` (not equals)
-- `>` (greater than)
-- `<` (less than)
+- == (equals)
+- != (not equals)
+- \> (greater than)
+- < (less than)
 
 ### Logical operators
 Monkey supports following logical operators
