@@ -36,58 +36,6 @@ let str = "hello, world!";
 let bool = x == 10;
 ```
 
-### Functions
-```
-let factorial = fn(n) {
-    if (n == 0) {
-        return 1;
-    }
-    return n * factorial(n - 1);
-}
-```
-
-Calling functions
-```
->> factorial(3)
-6
-```
-
-### Higher order functions
-
-```
-let map = fn(arr, f) {
-    let iter = fn(arr, accumulated) {
-        if (len(arr) == 0) {
-            accumulated
-        } else {
-            iter(rest(arr), push(accumulated, f(first(arr))))
-        }
-    };
-    iter(arr, []);
-};
-```
-
-```
->> let a = [1, 2, 3, 4];
->> let double = fn(x) { x * 2 };
->> map(a, double);
-[2, 4, 6, 8]
-```
-
-### if expressions
-`if` statements can produce values in monkey and thus called expressions.
-```
-let x = 10;
-let y = 0;
-if (x == 10) {
-    x
-} else {
-    y
-}
-```
-
-The above would if expression would produce the value 10
-
 ### Arithmetic operators
 Monkey supports following arithmetic operators which are similar to other programming languages:
 
@@ -141,6 +89,68 @@ let one = d["foo"];
 let two = d["bar"];
 let three = d[true];
 let five = d[1];
+```
+
+### Functions
+```
+let factorial = fn(n) {
+    if (n == 0) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+```
+
+Calling functions
+```
+>> factorial(3)
+6
+```
+
+### Higher order functions
+
+```
+let map = fn(arr, f) {
+    let iter = fn(arr, accumulated) {
+        if (len(arr) == 0) {
+            accumulated
+        } else {
+            iter(rest(arr), push(accumulated, f(first(arr))))
+        }
+    };
+    iter(arr, []);
+};
+```
+
+```
+>> let a = [1, 2, 3, 4];
+>> let double = fn(x) { x * 2 };
+>> map(a, double);
+[2, 4, 6, 8]
+```
+
+### if expressions
+`if` statements can produce values in monkey and thus called expressions.
+```
+let x = 10;
+let y = 0;
+if (x == 10) {
+    x
+} else {
+    y
+}
+```
+
+The above would if expression would produce the value 10
+
+### While expressions
+Similar to `if` expressions, while loops can also be used as expressions in monkey.
+```
+let x = 10;
+while (x < 100) {
+    let x = x * 2;
+    x;
+}
 ```
 
 ### Builtin functions
