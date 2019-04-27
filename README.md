@@ -9,4 +9,6 @@ Monkey is a programming language created by Thorsten Ball in the book
 
 ## Running as REPL
 execute `bin/monkey`
-![Demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/demo.gif)
+
+
+![demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/demo.gif)
