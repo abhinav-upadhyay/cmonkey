@@ -102,7 +102,6 @@ typedef struct statement_t {
 typedef struct expression_t {
     node_t node;
     expression_type_t expression_type;
-    void (*expression_node) (void); // TODO: do we need this?
 } expression_t;
 
 typedef struct program_t {

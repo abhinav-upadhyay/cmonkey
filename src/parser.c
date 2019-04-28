@@ -276,11 +276,6 @@ if_expression_token_literal(void *exp)
     return if_exp->token->literal;
 }
 
-void
-_expression_node(void)
-{
-}
-
 static char *
 string_string(void *exp)
 {
@@ -731,7 +726,6 @@ create_function_literal(parser_t *parser)
     func->expression.node.token_literal = function_literal_token_literal;
     func->expression.node.type = EXPRESSION;
     func->expression.expression_type = FUNCTION_LITERAL;
-    func->expression.expression_node = NULL;
     func->parameters = cm_list_init();
     func->token = token_copy(parser->cur_tok);
     func->body = NULL;
@@ -750,7 +744,6 @@ create_call_expression(parser_t *parser)
     call_exp->expression.node.string = call_expression_string;
     call_exp->expression.node.type = EXPRESSION;
     call_exp->expression.expression_type = CALL_EXPRESSION;
-    call_exp->expression.expression_node = NULL;
     call_exp->arguments = cm_list_init();
     if (call_exp->arguments == NULL)
         errx(EXIT_FAILURE, "malloc failed");
@@ -1338,7 +1331,6 @@ parse_integer_expression(parser_t *parser)
     int_exp->expression.node.string = integer_string;
     int_exp->expression.node.type = EXPRESSION;
     int_exp->expression.expression_type = INTEGER_EXPRESSION;
-    int_exp->expression.expression_node = NULL;
     int_exp->token = token_copy(parser->cur_tok);
     errno = 0;
     char *ep;
@@ -1372,7 +1364,6 @@ parse_string_expression(parser_t *parser)
     string->expression.node.token_literal = string_token_literal;
     string->expression.node.type = EXPRESSION;
     string->expression.expression_type = STRING_EXPRESSION;
-    string->expression.expression_node = NULL;
     string->token = token_copy(parser->cur_tok);
     string->value = strdup(parser->cur_tok->literal);
     string->length = strlen(parser->cur_tok->literal);
@@ -1395,7 +1386,6 @@ parse_prefix_expression(parser_t *parser)
     if (prefix_exp == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     prefix_exp->expression.expression_type = PREFIX_EXPRESSION;
-    prefix_exp->expression.expression_node = NULL;
     prefix_exp->expression.node.string = prefix_expression_string;
     prefix_exp->expression.node.token_literal = prefix_expression_token_literal;
     prefix_exp->expression.node.type = EXPRESSION;
@@ -1422,7 +1412,6 @@ parse_infix_expression(parser_t *parser, expression_t *left)
     infix_exp = malloc(sizeof(*infix_exp));
     if (infix_exp == NULL)
         errx(EXIT_FAILURE, "malloc failed");
-    infix_exp->expression.expression_node = NULL;
     infix_exp->expression.expression_type = INFIX_EXPRESSION;
     infix_exp->expression.node.string = infix_expression_string;
     infix_exp->expression.node.token_literal = infix_expression_token_literal;
@@ -1450,7 +1439,6 @@ create_hash_literal(token_t *cur_tok)
     hash_exp->expression.node.string = hash_literal_string;
     hash_exp->expression.node.token_literal = hash_literal_token_literal;
     hash_exp->expression.node.type = EXPRESSION;
-    hash_exp->expression.expression_node = NULL;
     hash_exp->expression.expression_type = HASH_LITERAL;
     hash_exp->pairs = cm_hash_table_init(pointer_hash_function,
         pointer_equals, free_expression, free_expression);
@@ -1500,7 +1488,6 @@ parse_boolean_expression(parser_t *parser)
     if (bool_exp == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     bool_exp->token = token_copy(parser->cur_tok);
-    bool_exp->expression.expression_node = NULL;
     bool_exp->expression.expression_type = BOOLEAN_EXPRESSION;
     bool_exp->expression.node.token_literal = boolean_expression_token_literal;
     bool_exp->expression.node.string = boolean_expression_string;
@@ -1577,7 +1564,6 @@ parse_array_literal(parser_t *parser)
     array->expression.node.token_literal = array_literal_token_literal;
     array->expression.node.type = EXPRESSION;
     array->expression.expression_type = ARRAY_LITERAL;
-    array->expression.expression_node = NULL;
     #ifdef TRACE
         untrace("parse_array_literal");
     #endif
@@ -1598,7 +1584,6 @@ parse_index_expression(parser_t *parser, expression_t *left)
     index_exp->expression.node.token_literal = index_exp_token_literal;
     index_exp->expression.node.type = EXPRESSION;
     index_exp->expression.expression_type = INDEX_EXPRESSION;
-    index_exp->expression.expression_node = NULL;
     index_exp->left = left;
     index_exp->index = NULL;
     index_exp->token = token_copy(parser->cur_tok);
@@ -1691,7 +1676,6 @@ parse_if_expression(parser_t *parser)
     if_exp->expression.node.type = EXPRESSION;
     if_exp->expression.expression_type = IF_EXPRESSION;
     if_exp->token = token_copy(parser->cur_tok);
-    if_exp->expression.expression_node = NULL;
     if_exp->condition = NULL;
     if_exp->alternative = NULL;
     if_exp->consequence = NULL;
@@ -1841,7 +1825,6 @@ copy_identifier_expression(expression_t *exp)
     copy->expression.node.token_literal = ident_token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = IDENTIFIER_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(ident_exp->token);
     copy->value = strdup(ident_exp->value);
     if (copy->value == NULL)
@@ -1857,7 +1840,6 @@ copy_integer_expression(expression_t *exp)
     if (copy == NULL)
         errx(EXIT_FAILURE, "malloc failed");
     copy->token = token_copy(int_exp->token);
-    copy->expression.expression_node = NULL;
     copy->expression.node.string = integer_string;
     copy->expression.node.token_literal = int_exp_token_literal;
     copy->expression.node.type = EXPRESSION;
@@ -1877,7 +1859,6 @@ copy_prefix_expression(expression_t *exp)
     copy->expression.node.token_literal = prefix_exp->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = PREFIX_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(prefix_exp->token);
     copy->operator = strdup(prefix_exp->operator);
     if (copy->operator == NULL)
@@ -1897,7 +1878,6 @@ copy_infix_expression(expression_t *exp)
     copy->expression.node.token_literal = infix_exp->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = INFIX_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(infix_exp->token);
     copy->operator = strdup(infix_exp->operator);
     if (copy->operator == NULL)
@@ -1918,7 +1898,6 @@ copy_boolean_expression(expression_t *exp)
     copy->expression.node.token_literal = bool_exp->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = BOOLEAN_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(bool_exp->token);
     copy->value = bool_exp->value;
     return (expression_t *) copy;
@@ -1935,7 +1914,6 @@ copy_if_expression(expression_t *exp)
     copy->expression.node.token_literal = if_exp->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = IF_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(if_exp->token);
     copy->condition = copy_expression(if_exp->condition);
     copy->consequence = (block_statement_t *) copy_statement((statement_t *) if_exp->consequence);
@@ -1969,7 +1947,6 @@ copy_function_literal(expression_t *exp)
     copy->expression.node.string = func->expression.node.string;
     copy->expression.node.token_literal = func->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->expression.expression_type = FUNCTION_LITERAL;
     copy->body = (block_statement_t *) copy_statement((statement_t *) func->body);
     copy->token = token_copy(func->token);
@@ -1987,7 +1964,6 @@ copy_call_expression(expression_t *exp)
     copy->expression.node.string = call_exp->expression.node.string;
     copy->expression.node.token_literal = call_exp->expression.node.token_literal;
     copy->expression.node.type = EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->expression.expression_type = CALL_EXPRESSION;
     copy->token = token_copy(call_exp->token);
     copy->arguments = copy_parameters(call_exp->arguments);
@@ -2008,7 +1984,6 @@ copy_string_expression(expression_t *exp)
     copy->expression.node.token_literal = string_token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = STRING_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->value = strdup(string->value);
     if (copy->value == NULL)
         errx(EXIT_FAILURE, "malloc failed");
@@ -2042,7 +2017,6 @@ copy_array_literal(expression_t *exp)
     copy->expression.node.token_literal = array_literal_token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = ARRAY_LITERAL;
-    copy->expression.expression_node = NULL;
     copy->elements = cm_array_list_init(array->elements->length, free_expression);
     for (size_t i = 0; i < array->elements->length; i++) {
         cm_array_list_add(copy->elements, copy_expression(array->elements->array[i]));
@@ -2061,7 +2035,6 @@ copy_index_expression(expression_t *exp)
     copy->expression.node.token_literal = index_exp_token_literal;
     copy->expression.node.type = EXPRESSION;
     copy->expression.expression_type = INDEX_EXPRESSION;
-    copy->expression.expression_node = NULL;
     copy->token = token_copy(index_exp->token);
     copy->left = copy_expression(index_exp->left);
     copy->index = copy_expression(index_exp->index);
