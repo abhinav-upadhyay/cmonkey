@@ -44,7 +44,7 @@ check_parser_errors(parser_t *parser)
         return;
     cm_list_node *errors_head = parser->errors->head;
     while (errors_head) {
-        printf("parser error: %s\n", errors_head->data);
+        printf("parser error: %s\n", (char *) errors_head->data);
         errors_head = errors_head->next;
     }
     exit(1);

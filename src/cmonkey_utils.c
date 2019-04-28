@@ -418,7 +418,7 @@ cm_array_string_list_join(cm_array_list *list, const char *delim)
             if (ret == -1)
                 errx(EXIT_FAILURE, "malloc failed");
         } else {
-            ret = asprintf(&temp, "%s%s%s", string, delim, list->array[i]);
+            ret = asprintf(&temp, "%s%s%s", string, delim, (char *) list->array[i]);
             if (ret == -1)
                 errx(EXIT_FAILURE, "malloc failed");
             free(string);
@@ -457,7 +457,7 @@ int_equals(void *key1, void *key2)
 size_t
 pointer_hash_function(void *data)
 {
-    int key = (int) data;
+    long key = (long) data;
     return key * 2654435761 % (4294967296);
 }
 

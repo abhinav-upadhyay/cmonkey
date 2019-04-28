@@ -1,5 +1,5 @@
-CC=clang
-CFLAGS+=-g -D_GNU_SOURCE -Wall
+CC=gcc
+CFLAGS+=-g -D_GNU_SOURCE -D_OPENBSD_SOURCE -Wall
 SRCDIR := src
 OBJDIR := obj
 BINDIR := bin
