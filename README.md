@@ -77,6 +77,15 @@ Monkey supports following logical operators
 ```
 let s = "hello world";
 ```
+We can also do indexing on string objects, for example:
+```
+>> let s1 = "hello world";
+>> let c0 = s1[0]
+>> c0
+h
+>> s1[2]
+l
+```
 
 ### Creating array literals
 Monkey arrays can contains objects of any type supported by monkey
