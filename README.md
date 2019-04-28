@@ -4,8 +4,14 @@ Monkey is a programming language created by Thorsten Ball in the book
 [Writing an interpreter in go](https://interpreterbook.com/).
 
 ## BUILDING
+Requires GNU make to build the code.
+Tested mostly on Linux and NetBSD, bug reports welcome for other
+operating systems.
+
+To build:
 - clone or download the code from github
-- run `make` to build the code
+- run `make`
+- Binaries are generated in bin/
 
 ## TESTS
 Tests are implemented in files ending with \_tests.c. No frameworks are used to write tests. Tests
