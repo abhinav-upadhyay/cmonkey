@@ -7,15 +7,30 @@ Monkey is a programming language created by Thorsten Ball in the book
 - clone or download the code from github
 - run `make` to build the code
 
+## TESTS
+Tests are implemented in files ending with \_tests.c. No frameworks are used to write tests. Tests
+are built with the normal build and can be executed by running each of the test programs one by one.
+For example:
+
+`bin/parser_tests` - will execute the parser tests
+
 ## Running as REPL
 execute `bin/monkey`
+
+![demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/repl.png)
+
+**Multiline expressions in the REPL**
+
+It's straightforward to run single line code in the REPL. For more
+complex code which requires multiple lines, `\` can be used at the
+end of the line to indicate continuation so that the REPL waits for
+you to finish the code. The last line not containing `\` at the end
+will be treated as the end of the code after which the evaluation will be performed.
 
 ## Running monkey programs
 To execute a monkey program saved in a file `hello_world.mnk`
 
 `bin/monkey hello_world.mnk`
-
-![demo](https://github.com/abhinav-upadhyay/cmonkey/blob/master/repl.png)
 
 ## Language Features
 
@@ -35,58 +50,6 @@ let x = 10;
 let str = "hello, world!";
 let bool = x == 10;
 ```
-
-### Functions
-```
-let factorial = fn(n) {
-    if (n == 0) {
-        return 1;
-    }
-    return n * factorial(n - 1);
-}
-```
-
-Calling functions
-```
->> factorial(3)
-6
-```
-
-### Higher order functions
-
-```
-let map = fn(arr, f) {
-    let iter = fn(arr, accumulated) {
-        if (len(arr) == 0) {
-            accumulated
-        } else {
-            iter(rest(arr), push(accumulated, f(first(arr))))
-        }
-    };
-    iter(arr, []);
-};
-```
-
-```
->> let a = [1, 2, 3, 4];
->> let double = fn(x) { x * 2 };
->> map(a, double);
-[2, 4, 6, 8]
-```
-
-### if expressions
-`if` statements can produce values in monkey and thus called expressions.
-```
-let x = 10;
-let y = 0;
-if (x == 10) {
-    x
-} else {
-    y
-}
-```
-
-The above would if expression would produce the value 10
 
 ### Arithmetic operators
 Monkey supports following arithmetic operators which are similar to other programming languages:
@@ -141,6 +104,68 @@ let one = d["foo"];
 let two = d["bar"];
 let three = d[true];
 let five = d[1];
+```
+
+### Functions
+```
+let factorial = fn(n) {
+    if (n == 0) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+```
+
+Calling functions
+```
+>> factorial(3)
+6
+```
+
+### Higher order functions
+
+```
+let map = fn(arr, f) {
+    let iter = fn(arr, accumulated) {
+        if (len(arr) == 0) {
+            accumulated
+        } else {
+            iter(rest(arr), push(accumulated, f(first(arr))))
+        }
+    };
+    iter(arr, []);
+};
+```
+
+```
+>> let a = [1, 2, 3, 4];
+>> let double = fn(x) { x * 2 };
+>> map(a, double);
+[2, 4, 6, 8]
+```
+
+### if expressions
+`if` statements can produce values in monkey and thus called expressions.
+```
+let x = 10;
+let y = 0;
+if (x == 10) {
+    x
+} else {
+    y
+}
+```
+
+The above would if expression would produce the value 10
+
+### While expressions
+Similar to `if` expressions, while loops can also be used as expressions in monkey.
+```
+let x = 10;
+while (x < 100) {
+    let x = x * 2;
+    x;
+}
 ```
 
 ### Builtin functions
