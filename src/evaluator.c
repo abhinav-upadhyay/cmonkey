@@ -93,7 +93,10 @@ eval_integer_infix_expression(const char *operator,
         return (monkey_object_t *)
             create_monkey_bool(left_value->value != right_value->value);
     else if (strcmp(operator, "%") == 0)
+    if (right_value->value != 0)
         result = left_value->value % right_value->value;
+    else
+        return (monkey_object_t *) create_monkey_error("division by 0 not allowed");
     else
         return (monkey_object_t *) create_monkey_error("unknown operator: %s %s %s",
             get_type_name(left_value->object.type), operator,

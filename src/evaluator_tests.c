@@ -407,6 +407,10 @@ test_error_handling(void)
         {
             "1 / 0",
             "division by 0 not allowed"
+        },
+        {
+            "5 % 0",
+            "division by 0 not allowed"
         }
     };
 
