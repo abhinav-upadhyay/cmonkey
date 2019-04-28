@@ -400,6 +400,10 @@ test_error_handling(void)
             "};\n"\
             "y + 1",
             "type mismatch: NULL + INTEGER"
+        },
+        {
+            "1 / 0",
+            "division by 0 not allowed"
         }
     };
 

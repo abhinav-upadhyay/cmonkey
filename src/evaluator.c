@@ -76,7 +76,10 @@ eval_integer_infix_expression(const char *operator,
     else if (strcmp(operator, "*") == 0)
         result = left_value->value * right_value->value;
     else if (strcmp(operator, "/") == 0)
-        result = left_value->value / right_value->value;
+        if (right_value->value != 0)
+            result = left_value->value / right_value->value;
+        else
+            return (monkey_object_t *) create_monkey_error("division by 0 not allowed");
     else if (strcmp(operator, "<") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value->value < right_value->value);
