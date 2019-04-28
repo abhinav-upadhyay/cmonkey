@@ -58,6 +58,7 @@ Monkey supports following arithmetic operators which are similar to other progra
 - \- (subtraction)
 - \* (multiplication)
 - \/ (division)
+- % (mod)
 
 ### Comparision operators
 Monkey supports following comparison operators

@@ -68,7 +68,8 @@ main(int argc, char **argv)
 			 "x == y || x > z;\n"\
 			 "while (x > 10) {\n"\
 			 "let x = x - 1;\n"\
-			 "}\n";
+			 "}\n"\
+			 "x % y;\n";
 
 	token_t tests[] = {
 		{ LET, "let"},
@@ -196,6 +197,10 @@ main(int argc, char **argv)
 		{INT, "1"},
 		{SEMICOLON, ";"},
 		{RBRACE, "}"},
+		{IDENT, "x"},
+		{PERCENT, "%"},
+		{IDENT, "y"},
+		{SEMICOLON, ";"},
 		{ END_OF_FILE, "" }
 	};
 

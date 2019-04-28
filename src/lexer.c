@@ -251,6 +251,11 @@ lexer_next_token(lexer_t *l)
 			read_char(l);
 		}
 		break;
+	case '%':
+		t->literal = strdup("%");
+		t->type = PERCENT;
+		read_char(l);
+		break;
 	default:
 		if (is_character(l->ch)) {
 			t->literal = read_identifier(l);

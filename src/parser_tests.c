@@ -345,7 +345,8 @@ test_parse_infix_expression()
         {"true != false", "!=", "true", "false"},
         {"false == false", "==", "false", "false"},
         {"true && false", "&&", "true", "false"},
-        {"true || false", "||", "true", "false"}
+        {"true || false", "||", "true", "false"},
+        {"10 % 3", "%", "10", "3"}
     };
     print_test_separator_line();
     printf("Testing infix expressions\n");

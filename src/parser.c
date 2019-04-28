@@ -65,6 +65,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      parse_prefix_expression, //BANG
      NULL, //SLASH
      NULL, //ASTERISK
+     NULL, //PERCENT
      NULL, //LT
      NULL, //GT
      NULL, //EQ
@@ -102,6 +103,7 @@ static expression_t * parse_index_expression(parser_t *, expression_t *);
      NULL, //BANG
      parse_infix_expression, //SLASH
      parse_infix_expression, //ASTERISK
+     parse_infix_expression, // PERCENT
      parse_infix_expression, //LT
      parse_infix_expression, //GT
      parse_infix_expression, //EQ
@@ -163,6 +165,7 @@ precedence(token_type tok_type)
             return SUM;
         case SLASH:
         case ASTERISK:
+        case PERCENT:
             return PRODUCT;
         case LPAREN:
             return CALL;
