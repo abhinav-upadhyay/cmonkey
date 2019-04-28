@@ -348,6 +348,17 @@ eval_array_index_expression(monkey_object_t *left_value, monkey_object_t *index_
 }
 
 static monkey_object_t *
+eval_string_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
+{
+    monkey_string_t *string = (monkey_string_t *) left_value;
+    monkey_int_t *index = (monkey_int_t *) index_value;
+    if (index->value < 0 || index->value > string->length - 1) {
+        return (monkey_object_t *) create_monkey_null();
+    }
+    return (monkey_object_t *) create_monkey_string(&string->value[index->value], 1);
+}
+
+static monkey_object_t *
 eval_hash_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
 {
     monkey_hash_t *hash_obj = (monkey_hash_t *) left_value;
@@ -365,6 +376,8 @@ eval_index_expression(monkey_object_t *left_value, monkey_object_t *index_value)
         return eval_array_index_expression(left_value, index_value);
     } else if (left_value->type == MONKEY_HASH) {
         return eval_hash_index_expression(left_value, index_value);
+    } else if(left_value->type == MONKEY_STRING && index_value->type == MONKEY_INT) {
+        return eval_string_index_expression(left_value, index_value);
     } else {
         return (monkey_object_t *) create_monkey_error("index operator not supported: %s",
             get_type_name(left_value->type));

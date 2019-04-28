@@ -732,7 +732,9 @@ test_array_index_expressions(void)
         {"let my_array = [1, 2, 3]; let i = my_array[0]; my_array[i]",
             (monkey_object_t *) create_monkey_int(2)},
         {"[1, 2, 3][3]", (monkey_object_t *) create_monkey_null()},
-        {"[1, 2, 3][-1]", (monkey_object_t *) create_monkey_null()}
+        {"[1, 2, 3][-1]", (monkey_object_t *) create_monkey_null()},
+        {"\"apple\"[0]", (monkey_object_t *) create_monkey_string("a", 1)},
+        {"\"apple\"[3]", (monkey_object_t *) create_monkey_string("l", 1)}
     };
 
     print_test_separator_line();
@@ -747,6 +749,15 @@ test_array_index_expressions(void)
         if (test.expected->type == MONKEY_INT) {
             test_integer_object(evaluated, ((monkey_int_t *) test.expected)->value);
             free_monkey_object(test.expected);
+        } else if (test.expected->type == MONKEY_STRING) {
+            test(evaluated->type == MONKEY_STRING, "Expected STRING object, got %s\n",
+                get_type_name(evaluated->type));
+            monkey_string_t *actual_string = (monkey_string_t *) evaluated;
+            monkey_string_t *expected_string = (monkey_string_t *) test.expected;
+            test(strcmp(expected_string->value, actual_string->value) == 0,
+                "Expected string %s, got %s\n", expected_string->value, actual_string->value);
+            free_monkey_object(test.expected);
+            free_monkey_object(evaluated);
         } else {
             test_null_object(evaluated);
         }
@@ -789,7 +800,7 @@ test_hash_literals(void)
         monkey_object_equals, free_monkey_object, free_monkey_object);
     cm_hash_table_put(expected, create_monkey_string("one", 3), create_monkey_int(1));
     cm_hash_table_put(expected, create_monkey_string("two", 3), create_monkey_int(2));
-    cm_hash_table_put(expected, create_monkey_string("three", 3), create_monkey_int(3));
+    cm_hash_table_put(expected, create_monkey_string("three", 5), create_monkey_int(3));
     cm_hash_table_put(expected, create_monkey_int(4), create_monkey_int(4));
     cm_hash_table_put(expected, create_monkey_bool(true), create_monkey_int(5));
     cm_hash_table_put(expected, create_monkey_bool(false), create_monkey_int(6));
