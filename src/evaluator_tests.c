@@ -878,6 +878,45 @@ test_hash_index_expressions(void)
     }
 }
 
+static void
+test_string_comparison(void)
+{
+    typedef struct {
+        const char *input;
+        _Bool expected;
+    } test_input;
+
+    test_input tests [] = {
+        {
+            "let s1 = \"apple\";\n"\
+            "let s2 = \"apple\";\n"\
+            "s1 == s2;",
+            true
+        },
+        {
+            "let s1 = \"apple\";\n"\
+            "let s2 = \"apples\";\n"\
+            "s1 == s2;",
+            false
+        }
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        test_input test = tests[i];
+        printf("Testing string comparison for %s\n", test.input);
+        environment_t *env = create_env();
+        monkey_object_t *evaluated = test_eval(test.input, env);
+        test(evaluated->type == MONKEY_BOOL,
+            "Expected a BOOLEAN object, got %s\n", get_type_name(evaluated->type));
+        monkey_bool_t *actual = (monkey_bool_t *) evaluated;
+        test(actual->value == test.expected, "Expected %s, got %s\n",
+            bool_to_string(test.expected), bool_to_string(actual->value));
+        free_monkey_object(evaluated);
+        env_free(env);
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -899,5 +938,6 @@ main(int argc, char **argv)
     test_hash_literals();
     test_hash_index_expressions();
     test_while_expressions();
+    test_string_comparison();
     return 0;
 }
