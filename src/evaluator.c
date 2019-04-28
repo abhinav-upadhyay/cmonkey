@@ -115,8 +115,9 @@ eval_string_infix_expression(const char *operator,
         memcpy(new_string, left_value->value, left_value->length);
         memcpy(new_string + left_value->length, right_value->value, right_value->length);
         new_string[new_len] = 0;
-        monkey_string_t *new_string_obj = create_monkey_string(new_string, new_len);
-        free(new_string);
+        monkey_string_t *new_string_obj = create_monkey_string(NULL, 0);
+        new_string_obj->value = new_string;
+        new_string_obj->length = new_len;
         return (monkey_object_t *) new_string_obj;
     }
 

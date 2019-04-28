@@ -495,14 +495,19 @@ create_monkey_string(const char *value, size_t length)
     string_obj = malloc(sizeof(*string_obj));
     if (string_obj == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    string_obj->value = malloc(sizeof(*value) * (length + 1));
-    if (value == NULL)
-        err(EXIT_FAILURE, "malloc failed");
-    memcpy(string_obj->value, value, length);
-    string_obj->value[length] = 0;
-    if (string_obj->value == NULL)
-        err(EXIT_FAILURE, "malloc failed");
-    string_obj->length = length;
+    if (value != NULL) {
+        string_obj->value = malloc(sizeof(*value) * (length + 1));
+        if (value == NULL)
+            err(EXIT_FAILURE, "malloc failed");
+        memcpy(string_obj->value, value, length);
+        string_obj->value[length] = 0;
+        if (string_obj->value == NULL)
+            err(EXIT_FAILURE, "malloc failed");
+        string_obj->length = length;
+    } else {
+        string_obj->value = NULL;
+        string_obj->length = 0;
+    }
     string_obj->object.type = MONKEY_STRING;
     string_obj->object.hash = monkey_object_hash;
     string_obj->object.inspect = inspect;
