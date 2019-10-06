@@ -28,6 +28,7 @@
  */
 
 #include <err.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -310,6 +311,18 @@ cm_hash_table_free(cm_hash_table *table)
     free(table->table);
     cm_array_list_free(table->used_slots);
     free(table);
+}
+
+cm_array_list *
+cm_array_list_init_size_t(size_t init_size, size_t count, ...)
+{
+    va_list ap;
+    va_start(ap, count);
+    cm_array_list *list = cm_array_list_init(init_size, NULL);
+    for (size_t i = 0; i < count; i++) {
+        cm_array_list_add(list, (void *) va_arg(ap, size_t));
+    }
+    return list;
 }
 
 cm_array_list *

@@ -106,6 +106,22 @@ test_cm_array_list_init(void)
 }
 
 static void
+test_cm_array_list_init_size_t(void)
+{
+    print_test_separator_line();
+    printf("Testing array list init for size_t\n");
+    cm_array_list *list = cm_array_list_init_size_t(2, 2, 0, 1);
+    test(list->array_size == 2, "Expected array list size 2, found %zu\n", list->array_size);
+    test(list->length == 2, "Expected array list length 2, found %zu\n", list->length);
+    size_t value = (size_t) cm_array_list_get(list, 0);
+    test(value == 0, "Expected value at index 0 to be 0, found %zu\n", value);
+    value = (size_t) cm_array_list_get(list, 1);
+    test(value == 1, "Expected value at index 1 to be 1, found %zu\n", value);
+    cm_array_list_free(list);
+    printf("Array list init test passed\n");
+}
+
+static void
 test_cm_array_list(void)
 {
     print_test_separator_line();
@@ -177,4 +193,5 @@ main(int argc, char **argv)
     test_hash_table_put();
     test_cm_array_list_init();
     test_cm_array_list();
+    test_cm_array_list_init_size_t();
 }
