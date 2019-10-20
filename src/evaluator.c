@@ -230,9 +230,9 @@ eval_if_expression(expression_t *exp, environment_t *env)
     if (is_error(condition_value))
         return condition_value;
     monkey_object_t *result;
-    if (is_truthy(condition_value)) {
+    if (is_truthy(condition_value))
         result = monkey_eval((node_t *) if_exp->consequence, env);
-    } else if (if_exp->alternative != NULL)
+    else if (if_exp->alternative != NULL)
         result = monkey_eval((node_t *) if_exp->alternative, env);
     else
         result = (monkey_object_t *) create_monkey_null();
@@ -574,9 +574,8 @@ eval_block_statement(block_statement_t *block_stmt, environment_t *env)
         object = monkey_eval((node_t *) block_stmt->statements[i], env);
         if (object != NULL &&
             (object->type == MONKEY_RETURN_VALUE ||
-            object->type == MONKEY_ERROR)) {
+            object->type == MONKEY_ERROR))
             return object;
-        }
     }
     return object;
 }

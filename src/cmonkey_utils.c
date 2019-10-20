@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <assert.h>
+#include <endian.h>
 #include <err.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -331,10 +333,10 @@ cm_array_list_init(size_t init_size, void (*free_func) (void *))
     cm_array_list *list;
     list = malloc(sizeof(*list));
     if (list == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
+        err(EXIT_FAILURE, "malloc failed");
     list->array = calloc(init_size, sizeof(*list->array));
     if (list->array == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
+        err(EXIT_FAILURE, "malloc failed");
     list->array_size = init_size;
     list->length = 0;
     list->free_func = free_func;
@@ -348,7 +350,7 @@ cm_array_list_add(cm_array_list *list, void *value)
         list->array_size *= 2;
         list->array = reallocarray(list->array, list->array_size, sizeof(*list->array));
         if (list->array == NULL)
-            errx(EXIT_FAILURE, "malloc failed");
+            err(EXIT_FAILURE, "malloc failed");
     }
     list->array[list->length++] = value;
     return 1;
@@ -478,4 +480,81 @@ _Bool
 pointer_equals(void *key1, void*key2)
 {
     return key1 == key2;
+}
+
+size_t *
+create_size_t_array(size_t count, ...)
+{
+    va_list ap;
+    va_start(ap, count);
+    size_t *array;
+    array = malloc(sizeof(*array) * count);
+    if (array == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < count; i++)
+        array[i] = (size_t) va_arg(ap, size_t);
+    va_end(ap);
+    return array;
+}
+
+uint8_t *
+create_uint8_array(size_t count, ...)
+{
+    va_list ap;
+    va_start(ap, count);
+    uint8_t *array;
+    array = malloc(sizeof(*array) * count);
+    if (array == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < count; i++)
+        array[i] = va_arg(ap, int);
+    va_end(ap);
+    return array;
+}
+
+static size_t
+power_ceil(size_t x)
+{
+    size_t power = 1;
+    while (x >>= 1)
+        power++;
+    return power;
+}
+
+uint8_t *
+size_t_to_uint8_be(size_t val, size_t nbytes)
+{
+    size_t next_power = power_ceil(val);
+    uint8_t *array;
+    array = malloc(sizeof(*array) * nbytes);
+    if (array == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    uint64_t newval = htobe64(val); // to make sure we work on both BE and LE archs
+    uint8_t *x = (uint8_t *) &newval;
+    int j = nbytes - 1;
+    int i = sizeof(val) - 1;
+    while (j >= 0)
+        array[j--] = x[i--];
+    return array;
+}
+
+size_t
+be_to_size_t(uint8_t *bytes, size_t bytes_count)
+{
+    assert(bytes_count != 0 && bytes_count <= 8);
+    uint8_t *barray;
+    uint16_t two_bytes = 0;
+    switch (bytes_count) {
+    case 1:
+        return (size_t) bytes[0];
+    case 2:
+        barray = (uint8_t *) &two_bytes;
+        if (bytes[0] == 0)
+            two_bytes = bytes[1] + bytes[0];
+        else
+            two_bytes = (bytes[1] << 8) + bytes[0];
+        return (size_t) two_bytes;
+    default:
+        err(EXIT_FAILURE, "We don't support operands of %zu bytes width", bytes_count);
+    }
 }

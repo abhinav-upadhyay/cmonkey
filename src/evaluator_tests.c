@@ -53,37 +53,6 @@ test_eval(const char *input, environment_t *env)
 }
 
 static void
-test_boolean_object(monkey_object_t *object, _Bool expected_value)
-{
-    test(object->type == MONKEY_BOOL, "Expected object of type %s, got %s\n",
-        get_type_name(MONKEY_BOOL), get_type_name(object->type));
-    monkey_bool_t *bool_obj = (monkey_bool_t *) object;
-    test(bool_obj->value == expected_value, "Expected bool value %s, got %s\n",
-        bool_to_string(expected_value), bool_to_string(bool_obj->value));
-}
-
-static void
-test_integer_object(monkey_object_t *object, long expected_value)
-{
-    test(object->type == MONKEY_INT, "Expected object of type %s, got %s\n",
-        get_type_name(MONKEY_INT), get_type_name(object->type));
-    
-    monkey_int_t *int_obj = (monkey_int_t *) object;
-    test(int_obj->value == expected_value,
-        "Expected integer object value to be %ld, found %ld\n",
-        expected_value, int_obj->value);
-    free_monkey_object(object);
-}
-
-static void
-test_null_object(monkey_object_t *object)
-{
-    test(object->type == MONKEY_NULL, "Expected a MONKEY_NULL object, found %s\n",
-        get_type_name(object->type));
-    test(object == (monkey_object_t *) create_monkey_null(), "object is not NULL\n");
-}
-
-static void
 test_eval_integer_expression(void)
 {
     environment_t *env;
@@ -122,6 +91,7 @@ test_eval_integer_expression(void)
         env = create_env();
         monkey_object_t *obj = test_eval(test.input, env);
         test_integer_object(obj, test.expected_value);
+        free_monkey_object(obj);
         env_free(env);
     }
     printf("integer expression eval test passed\n");
@@ -212,17 +182,6 @@ test_bang_operator(void)
 }
 
 static void
-_test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
-{
-    test(obj->type == expected->type, "Expected object of type %s, got %s\n",
-        get_type_name(expected->type), get_type_name(obj->type));
-    if (expected->type == MONKEY_INT)
-        test_integer_object(obj, ((monkey_int_t *) expected)->value);
-    else if (expected->type == MONKEY_BOOL)
-        test_boolean_object(obj, ((monkey_bool_t *) expected)->value);
-}
-
-static void
 test_while_expressions(void)
 {
     environment_t *env;
@@ -303,6 +262,7 @@ test_if_else_expressions(void)
             test_null_object(evaluated);
         free_monkey_object(test.expected);
         env_free(env);
+        free_monkey_object(evaluated);
     }
 }
 
@@ -335,8 +295,9 @@ test_return_statements(void)
         printf("Testing return statement evaluation for \"%s\"\n", test.input);
         env = create_env();
         monkey_object_t *evaluated = test_eval(test.input, env);
-        _test_monkey_object(evaluated, test.expected);
+        test_monkey_object(evaluated, test.expected);
         free_monkey_object(test.expected);
+        free_monkey_object(evaluated);
         env_free(env);
     }
 }
@@ -464,6 +425,7 @@ test_let_statements(void)
         printf("Testing let statement for %s\n", test.input);
         monkey_object_t *evaluated = test_eval(test.input, env);
         test_integer_object(evaluated, test.expected);
+        free_monkey_object(evaluated);
         env_free(env);
     }
 }
@@ -536,6 +498,7 @@ test_function_application(void)
         monkey_object_t *evaluated = test_eval(test.input, env);
         test_integer_object(evaluated, test.expected);
         env_free(env);
+        free_monkey_object(evaluated);
     }
 }
 
@@ -593,7 +556,6 @@ test_int_array(monkey_array_t *actual, monkey_array_t *expected)
         test(act_int->value == exp_int->value,
             "Expected value %ld at index %zu, got %ld\n", exp_int->value, i, act_int->value);
     }
-    free_monkey_object(actual);
 }
 
 static monkey_array_t *
@@ -656,6 +618,7 @@ test_builtins(void)
                 actual_int = (monkey_int_t *) evaluated;
                 test_integer_object(evaluated, actual_int->value);
                 free_monkey_object(test.expected);
+                free_monkey_object(evaluated);
                 break;
             case MONKEY_ERROR:
                 actual_err = (monkey_error_t *) evaluated;
@@ -663,19 +626,21 @@ test_builtins(void)
                 test(strcmp(actual_err->message, expected_err->message) == 0,
                     "Expected error message %s, got %s\n", expected_err->message,
                     actual_err->message);
-                free_monkey_object(evaluated);
                 free_monkey_object(test.expected);
+                free_monkey_object(evaluated);
                 break;
             case MONKEY_ARRAY:
                 actual_array = (monkey_array_t *) evaluated;
                 expected_array = (monkey_array_t *) test.expected;
                 test_int_array(actual_array, expected_array);
                 free_monkey_object(test.expected);
+                free_monkey_object(evaluated);
                 break;
             case MONKEY_NULL:
                 obj = (monkey_object_t *) evaluated;
                 test(obj->type == MONKEY_NULL,
                     "Expected null object, got %s\n", get_type_name(obj->type));
+                free_monkey_object(evaluated);
                 break;
             case MONKEY_STRING:
                 expected_str = (monkey_string_t *) test.expected;
@@ -686,6 +651,7 @@ test_builtins(void)
                 free_monkey_object(evaluated);
                 break;
             default:
+                free_monkey_object(evaluated);
                 err(EXIT_FAILURE, "Unknown type for expected");
         }
         env_free(env);
@@ -705,9 +671,11 @@ test_array_literals(void)
     monkey_array_t *array = (monkey_array_t *) evaluated;
     test(array->elements->length == 3, "Expected 3 elements in array object, got %zu\n",
         array->elements->length);
-    test_integer_object(copy_monkey_object(array->elements->array[0]), 1);
-    test_integer_object(copy_monkey_object(array->elements->array[1]), 4);
-    test_integer_object(copy_monkey_object(array->elements->array[2]), 6);
+    test_integer_object(array->elements->array[0], 1);
+    test_integer_object(array->elements->array[1], 4);
+    test_integer_object(array->elements->array[2], 6);
+    // for (size_t i = 0; i < 3; i++)
+    //     free_monkey_object(array->elements->array[i]);
     free_monkey_object(evaluated);
     env_free(env);
 }
@@ -749,6 +717,7 @@ test_array_index_expressions(void)
         if (test.expected->type == MONKEY_INT) {
             test_integer_object(evaluated, ((monkey_int_t *) test.expected)->value);
             free_monkey_object(test.expected);
+            free_monkey_object(evaluated);
         } else if (test.expected->type == MONKEY_STRING) {
             test(evaluated->type == MONKEY_STRING, "Expected STRING object, got %s\n",
                 get_type_name(evaluated->type));
@@ -760,6 +729,7 @@ test_array_index_expressions(void)
             free_monkey_object(evaluated);
         } else {
             test_null_object(evaluated);
+            free_monkey_object(evaluated);
         }
         env_free(env);
     }
@@ -782,6 +752,7 @@ test_enclosing_env(void)
     monkey_object_t *evaluated = test_eval(input, env);
     printf("Enclosed environment test passed\n");
     test_integer_object(evaluated, 70);
+    free_monkey_object(evaluated);
     env_free(env);
 }
 
@@ -827,7 +798,7 @@ test_hash_literals(void)
             test(actual_value != NULL,
                 "Key %s not found in hash object\n", key_string);
             free(key_string);
-            test_integer_object(copy_monkey_object(actual_value), ((monkey_int_t *) expected_value)->value);
+            test_integer_object(actual_value, ((monkey_int_t *) expected_value)->value);
             entry_node = entry_node->next;
         }
     }
@@ -896,6 +867,7 @@ test_hash_index_expressions(void)
                 err(EXIT_FAILURE, "Unknown type: %s", get_type_name(test.expected->type));
         }
         free_monkey_object(test.expected);
+        free_monkey_object(evaluated);
         env_free(env);
     }
 }

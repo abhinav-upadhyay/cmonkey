@@ -30,8 +30,11 @@
 #ifndef TEST_UTILS_H
 #define TEST_UTILS_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "object.h"
 
 #define test(expr, ...) if (expr) { \
     ; } else { \
@@ -39,11 +42,13 @@
     abort(); \
     }
 
-void
-print_test_separator_line(void)
-{
-    for (int i = 0; i < 100; i++)
-        printf("-");
+#define print_test_separator_line() \
+    for (int i = 0; i < 100; i++) \
+        printf("-"); \
     printf("\n");
-}
+
+void test_monkey_object(monkey_object_t *, monkey_object_t *);
+void test_null_object(monkey_object_t *);
+void test_integer_object(monkey_object_t *, long);
+void test_boolean_object(monkey_object_t *, _Bool);
 #endif

@@ -31,6 +31,7 @@
 #define CMONKEY_UTILS_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #define INITIAL_HASHTABLE_SIZE 64
@@ -105,4 +106,8 @@ size_t int_hash_function(void *);
 _Bool int_equals(void *, void *);
 size_t pointer_hash_function(void *);
 _Bool pointer_equals(void *, void*);
+size_t *create_size_t_array(size_t, ...);
+uint8_t *create_uint8_array(size_t, ...);
+uint8_t *size_t_to_uint8_be(size_t, size_t);
+size_t be_to_size_t(uint8_t *, size_t);
 #endif
