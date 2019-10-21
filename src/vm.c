@@ -22,8 +22,6 @@ vm_init(bytecode_t *bytecode)
 void
 vm_free(vm_t *vm)
 {
-    instructions_free(vm->instructions);
-    cm_array_list_free(vm->constants);
     for (size_t i = 0; i < vm->sp; i++)
         free_monkey_object(vm->stack[i]);
     free(vm);
@@ -42,7 +40,7 @@ vm_push(vm_t *vm, monkey_object_t *obj)
 {
     if (vm->sp >= STACKSIZE)
         return VM_STACKOVERFLOW;
-    vm->stack[vm->sp++] = obj;
+    vm->stack[vm->sp++] = copy_monkey_object(obj);
     return VM_ERROR_NONE;
 }
 
@@ -88,7 +86,10 @@ vm_run(vm_t *vm)
             right_value = ((monkey_int_t *) right)->value;
             result = left_value + right_value;
             result_obj = create_monkey_int(result);
+            free_monkey_object(left);
+            free_monkey_object(right);
             vm_push(vm, (monkey_object_t *) result_obj);
+            free_monkey_object(result_obj);
             break;
         default:
             break;

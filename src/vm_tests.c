@@ -35,7 +35,11 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
             errx(EXIT_FAILURE, "vm error: %s\n", get_vm_error_desc(vm_error));
         monkey_object_t *top = vm_stack_top(vm);
         test_monkey_object(t.expected, top);
-        free_monkey_object(top);
+        parser_free(parser);
+        program_free(program);
+        compiler_free(compiler);
+        bytecode_free(bytecode);
+        vm_free(vm);
     }
 }
 
@@ -51,6 +55,8 @@ test_integer_aritmetic(void)
     print_test_separator_line();
     printf("Testing vm for integer arithmetic\n");
     run_vm_tests(3, tests);
+    for (size_t i = 0; i < 3; i++)
+        free_monkey_object(tests[i].expected);
 }
 
 int
