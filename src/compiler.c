@@ -91,7 +91,9 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     compiler_error_t none_error = {COMPILER_ERROR_NONE, NULL};
     infix_expression_t *infix_exp;
     integer_t *int_exp;
+    boolean_expression_t *bool_exp;
     monkey_int_t *int_obj;
+    monkey_bool_t *bool_obj;
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
         infix_exp = (infix_expression_t *) expression_node;
@@ -120,6 +122,14 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         int_obj = create_monkey_int(int_exp->value);
         size_t constant_idx = add_constant(compiler, (monkey_object_t *) int_obj);
         emit(compiler, OPCONSTANT, constant_idx);
+        return none_error;
+    case BOOLEAN_EXPRESSION:
+        bool_exp = (boolean_expression_t *) expression_node;
+        bool_obj = create_monkey_bool(bool_exp->value);
+        if (bool_obj->value)
+            emit(compiler, OPTRUE);
+        else
+            emit(compiler, OPFALSE);
         return none_error;
     default:
         return none_error;

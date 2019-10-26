@@ -25,27 +25,13 @@ vinstruction_init(opcode_t op, va_list ap)
         free(boperand);
         return ins;
     case OPADD:
-        ins->bytes = create_uint8_array(1, OPADD);
-        ins->length = 1;
-        ins->size = 1;
-        return ins;
     case OPSUB:
-        ins->bytes = create_uint8_array(1, OPSUB);
-        ins->length = 1;
-        ins->size = 1;
-        return ins;
     case OPMUL:
-        ins->bytes = create_uint8_array(1, OPMUL);
-        ins->length = 1;
-        ins->size = 1;
-        return ins;
     case OPDIV:
-        ins->bytes = create_uint8_array(1, OPDIV);
-        ins->length = 1;
-        ins->size = 1;
-        return ins;
     case OPPOP:
-        ins->bytes = create_uint8_array(1, OPPOP);
+    case OPTRUE:
+    case OPFALSE:
+        ins->bytes = create_uint8_array(1, op);
         ins->length = 1;
         ins->size = 1;
         return ins;
@@ -130,6 +116,8 @@ instructions_to_string(instructions_t *instructions)
         case OPSUB:
         case OPMUL:
         case OPDIV:
+        case OPTRUE:
+        case OPFALSE:
         op_def = opcode_definition_lookup(op);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s", i, op_def.name);
