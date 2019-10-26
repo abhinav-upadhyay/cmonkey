@@ -30,7 +30,7 @@ typedef struct vm_t {
 
 vm_t *vm_init(bytecode_t *);
 void vm_free(vm_t *);
-monkey_object_t *vm_stack_top(vm_t *);
+monkey_object_t *vm_last_popped_stack_elem(vm_t *);
 vm_error_t vm_run(vm_t *);
 
 #endif

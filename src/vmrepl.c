@@ -132,8 +132,9 @@ execute_file(const char *filename)
 
 	compiler_t *compiler = compiler_init();
 	compiler_error_t compile_err = compile(compiler, (node_t *) program);
-	if (compile_err != COMPILER_ERROR_NONE) {
-		printf("Compile error: %s\n", get_compiler_error(compile_err));
+	if (compile_err.code != COMPILER_ERROR_NONE) {
+		printf("Compile error: %s\n", compile_err.msg);
+		free(compile_err.msg);
 		goto EXIT;
 	}
 
@@ -144,7 +145,7 @@ execute_file(const char *filename)
 		printf("VM Error: %s\n", get_vm_error_desc(vm_err));
 		goto EXIT;
 	}
-	monkey_object_t *top = vm_stack_top(machine);
+	monkey_object_t *top = vm_last_popped_stack_elem(machine);
 	if (top != NULL) {
 		if (top->type != MONKEY_NULL) {
 			char *s = top->inspect(top);
@@ -213,8 +214,9 @@ repl(void)
 		}
 		compiler = compiler_init();
 		compiler_error_t compile_err = compile(compiler, (node_t *) program);
-		if (compile_err != COMPILER_ERROR_NONE) {
-			printf("Compiler error: %s\n", get_compiler_error(compile_err));
+		if (compile_err.code != COMPILER_ERROR_NONE) {
+			printf("Compiler error: %s\n", compile_err.msg);
+			free(compile_err.msg);
 			goto CONTINUE;
 		}
 
@@ -225,7 +227,7 @@ repl(void)
 			printf("VM error: %s\n", get_vm_error_desc(vm_err));
 			goto CONTINUE;
 		}
-		monkey_object_t *top = vm_stack_top(machine);
+		monkey_object_t *top = vm_last_popped_stack_elem(machine);
 		if (top != NULL) {
 			char *s = top->inspect(top);
 			printf("%s\n", s);

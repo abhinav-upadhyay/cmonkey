@@ -25,15 +25,15 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
         program_t *program = parse_program(parser);
         compiler_t *compiler = compiler_init();
         compiler_error_t error = compile(compiler, (node_t *) program);
-        if (error != COMPILER_ERROR_NONE)
+        if (error.code != COMPILER_ERROR_NONE)
             errx(EXIT_FAILURE, "compilation failed for input %s with error %s\n",
-                t.input, get_compiler_error(error));
+                t.input, error.msg);
         bytecode_t *bytecode = get_bytecode(compiler);
         vm_t *vm = vm_init(bytecode);
         vm_error_t vm_error = vm_run(vm);
         if (vm_error != VM_ERROR_NONE)
             errx(EXIT_FAILURE, "vm error: %s\n", get_vm_error_desc(vm_error));
-        monkey_object_t *top = vm_stack_top(vm);
+        monkey_object_t *top = vm_last_popped_stack_elem(vm);
         test_monkey_object(t.expected, top);
         parser_free(parser);
         program_free(program);

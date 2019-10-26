@@ -15,7 +15,11 @@ typedef struct instructions_t {
 
 typedef enum opcode_t {
     OPCONSTANT = 1,
-    OPADD
+    OPADD,
+    OPSUB,
+    OPMUL,
+    OPDIV,
+    OPPOP
 } opcode_t;
 
 typedef struct opcode_definition_t {
@@ -26,7 +30,11 @@ typedef struct opcode_definition_t {
 
 static opcode_definition_t opcode_definitions [] = {
     { "OPCONSTANT", {(size_t) 2}},
-    {"OPADD", {(size_t) 0}}
+    {"OPADD", {(size_t) 0}},
+    {"OPSUB", {(size_t) 0}},
+    {"OPMUL", {(size_t) 0}},
+    {"OPDIV", {(size_t) 0}},
+    {"OPPOP", {(size_t) 0}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];

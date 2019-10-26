@@ -70,9 +70,58 @@ test_integer_arithmetic(void)
     compiler_test tests[] = {
         {
             "1 + 2",
-            3,
-            {instruction_init(OPCONSTANT, 0), instruction_init(OPCONSTANT, 1), instruction_init(OPADD)},
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPADD),
+                instruction_init(OPPOP)
+            },
             create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "1; 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPPOP),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "1 - 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPSUB),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "1 * 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPMUL),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+                {
+            "2 / 1",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPDIV),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(2), create_monkey_int(1))
         }
     };
 
@@ -87,9 +136,9 @@ test_integer_arithmetic(void)
         program_t *program = parse_program(parser);
         compiler_t *compiler = compiler_init();
         compiler_error_t e = compile(compiler, (node_t *)program);
-        if (e != COMPILER_ERROR_NONE)
+        if (e.code != COMPILER_ERROR_NONE)
             errx(EXIT_FAILURE, "Compilation failed for input %s with error %s\n",
-                t.input, get_compiler_error(e));
+                t.input, e.msg);
         bytecode_t *bytecode = get_bytecode(compiler);
         instructions_t *flattened_instructions = flatten_instructions(t.instructions_count, t.expected_instructions);
         char *actual_ins_string = instructions_to_string(bytecode->instructions);

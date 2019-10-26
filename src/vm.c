@@ -28,11 +28,9 @@ vm_free(vm_t *vm)
 }
 
 monkey_object_t *
-vm_stack_top(vm_t *vm)
+vm_last_popped_stack_elem(vm_t *vm)
 {
-    if (vm->sp == 0)
-        return NULL;
-    return vm->stack[vm->sp - 1];
+    return vm->stack[vm->sp];
 }
 
 static vm_error_t
@@ -90,6 +88,9 @@ vm_run(vm_t *vm)
             free_monkey_object(right);
             vm_push(vm, (monkey_object_t *) result_obj);
             free_monkey_object(result_obj);
+            break;
+        case OPPOP:
+            vm_pop(vm);
             break;
         default:
             break;

@@ -16,9 +16,14 @@ typedef struct bytecode_t {
     cm_array_list *constants_pool;
 } bytecode_t;
 
-typedef enum compiler_error_t {
+typedef enum compiler_error_code {
     COMPILER_ERROR_NONE,
     COMPILER_UNKNOWN_OPERATOR
+} compiler_error_code;
+
+typedef struct compiler_error_t {
+    compiler_error_code code;
+    char *msg;
 } compiler_error_t;
 
 static const char *compiler_errors[] = {
