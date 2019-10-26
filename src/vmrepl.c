@@ -141,8 +141,9 @@ execute_file(const char *filename)
 	bytecode_t *bytecode = get_bytecode(compiler);
 	vm_t *machine = vm_init(bytecode);
 	vm_error_t vm_err =  vm_run(machine);
-	if (vm_err != VM_ERROR_NONE) {
-		printf("VM Error: %s\n", get_vm_error_desc(vm_err));
+	if (vm_err.code != VM_ERROR_NONE) {
+		printf("VM Error: %s\n", vm_err.msg);
+		free(vm_err.msg);
 		goto EXIT;
 	}
 	monkey_object_t *top = vm_last_popped_stack_elem(machine);
@@ -223,8 +224,9 @@ repl(void)
 		bytecode = get_bytecode(compiler);
 		machine = vm_init(bytecode);
 		vm_error_t vm_err = vm_run(machine);
-		if (vm_err != VM_ERROR_NONE) {
-			printf("VM error: %s\n", get_vm_error_desc(vm_err));
+		if (vm_err.code != VM_ERROR_NONE) {
+			printf("VM error: %s\n", vm_err.msg);
+			free(vm_err.msg);
 			goto CONTINUE;
 		}
 		monkey_object_t *top = vm_last_popped_stack_elem(machine);

@@ -6,6 +6,20 @@
 #include "opcode.h"
 #include "vm.h"
 
+static char *
+get_err_msg(const char *s, ...)
+{
+    char *msg = NULL;
+    va_list ap;
+    va_start(ap, s);
+    int retval = vasprintf(&msg, s, ap);
+    va_end(ap);
+    if (retval == -1)
+        err(EXIT_FAILURE, "malloc failed");
+    return msg;
+}
+
+
 vm_t *
 vm_init(bytecode_t *bytecode)
 {
@@ -36,10 +50,15 @@ vm_last_popped_stack_elem(vm_t *vm)
 static vm_error_t
 vm_push(vm_t *vm, monkey_object_t *obj)
 {
-    if (vm->sp >= STACKSIZE)
-        return VM_STACKOVERFLOW;
+    vm_error_t error = {VM_ERROR_NONE, NULL};
+    if (vm->sp >= STACKSIZE) {
+        error.code = VM_STACKOVERFLOW;
+        error.msg = get_err_msg("Stackoverflow error: execeeded max stack size of %zu",
+            STACKSIZE);
+        return error;
+    }
     vm->stack[vm->sp++] = copy_monkey_object(obj);
-    return VM_ERROR_NONE;
+    return error;
 }
 
 static monkey_object_t *
@@ -60,6 +79,8 @@ static vm_error_t
 execute_binary_int_op(vm_t *vm, opcode_t op, long leftval, long rightval)
 {
     long result;
+    vm_error_t error = {VM_ERROR_NONE, NULL};
+    opcode_definition_t op_def;
     switch (op) {
     case OPADD:
         result = leftval + rightval;
@@ -74,12 +95,15 @@ execute_binary_int_op(vm_t *vm, opcode_t op, long leftval, long rightval)
         result = leftval / rightval;
         break;
     default:
-        return VM_UNSUPPORTED_OPERATOR;
+        op_def = opcode_definition_lookup(op);
+        error.code = VM_UNSUPPORTED_OPERATOR;
+        error.msg = get_err_msg("opcode %s not supported for integer operands", op_def.name);
+        return error;
     }
     monkey_object_t *result_obj = (monkey_object_t *) create_monkey_int(result);
     vm_push(vm, result_obj);
     free_monkey_object(result_obj);
-    return VM_ERROR_NONE;
+    return error;
 }
 
 static vm_error_t
@@ -89,9 +113,15 @@ execute_binary_op(vm_t *vm, opcode_t op)
     monkey_object_t *left = vm_pop(vm);
     long leftval = ((monkey_int_t *) left)->value;
     long rightval = ((monkey_int_t *) right)->value;
-    vm_error_t vm_err = VM_UNSUPPORTED_OPERAND;
+    vm_error_t vm_err;
     if (left->type == MONKEY_INT && right->type == MONKEY_INT)
         vm_err = execute_binary_int_op(vm, op, leftval, rightval);
+    else {
+        vm_err.code = VM_UNSUPPORTED_OPERAND;
+        opcode_definition_t op_def = opcode_definition_lookup(op);
+        vm_err.msg = get_err_msg("Unsupported operand types %s and %s for operator %s",
+            get_type_name(left->type), get_type_name(right->type), op_def.name);
+    }
     free_monkey_object(left);
     free_monkey_object(right);
     return vm_err;
@@ -101,6 +131,8 @@ static vm_error_t
 execute_integer_comparison(vm_t *vm, opcode_t op, long left, long right)
 {
     _Bool result = false;
+    vm_error_t error = {VM_ERROR_NONE, NULL};
+    opcode_definition_t op_def;
     switch (op) {
     case OPGREATERTHAN:
         if (left > right)
@@ -115,16 +147,20 @@ execute_integer_comparison(vm_t *vm, opcode_t op, long left, long right)
             result = true;
         break;
     default:
-        return VM_UNSUPPORTED_OPERATOR;
+        op_def = opcode_definition_lookup(op);
+        error.code = VM_UNSUPPORTED_OPERATOR;
+        error.msg = get_err_msg("Unsupported opcode %s for integer operands", op_def.name);
+        return error;
     }
     vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
-    return VM_ERROR_NONE;
+    return error;
 }
 
 static vm_error_t
 execute_comparison_op(vm_t *vm, opcode_t op)
 {
-    vm_error_t error = VM_ERROR_NONE;
+    vm_error_t error = {VM_ERROR_NONE, NULL};
+    opcode_definition_t op_def;
     monkey_object_t *right = vm_pop(vm);
     monkey_object_t *left = vm_pop(vm);
     if (left->type == MONKEY_INT && right->type == MONKEY_INT) {
@@ -146,11 +182,18 @@ execute_comparison_op(vm_t *vm, opcode_t op)
                 result = true;
             break;
         default:
-            return VM_UNSUPPORTED_OPERATOR;
+            op_def = opcode_definition_lookup(op);
+            error.code = VM_UNSUPPORTED_OPERATOR;
+            error.msg = get_err_msg("Unsupported opcode %s", op_def.name);
+            goto RETURN;
         }
         vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
-    } else
-        error = VM_UNSUPPORTED_OPERAND;
+    } else {
+        error.code = VM_UNSUPPORTED_OPERAND;
+        error.msg = get_err_msg("Unsupported operand types %s and %s",
+            get_type_name(left->type), get_type_name(right->type));
+    }
+RETURN:
     free_monkey_object(left);
     free_monkey_object(right);
     return error;
@@ -161,6 +204,7 @@ vm_run(vm_t *vm)
 {
     size_t const_index;
     vm_error_t vm_err;
+    opcode_definition_t op_def;
     monkey_object_t *top = NULL;
     for (size_t ip = 0; ip < vm->instructions->length; ip++) {
         opcode_t op = vm->instructions->bytes[ip];
@@ -173,7 +217,7 @@ vm_run(vm_t *vm)
             const_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
             ip += 2;
             vm_err = vm_push(vm, get_constant(vm, const_index));
-            if (vm_err != VM_ERROR_NONE)
+            if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
         case OPADD:
@@ -181,7 +225,7 @@ vm_run(vm_t *vm)
         case OPMUL:
         case OPDIV:
             vm_err = execute_binary_op(vm, op);
-            if (vm_err != VM_ERROR_NONE)
+            if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
         case OPPOP:
@@ -197,12 +241,17 @@ vm_run(vm_t *vm)
         case OPEQUAL:
         case OPNOTEQUAL:
             vm_err = execute_comparison_op(vm, op);
-            if (vm_err != VM_ERROR_NONE)
+            if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
         default:
-            return VM_UNSUPPORTED_OPERATOR;
+            op_def = opcode_definition_lookup(op);
+            vm_err.code = VM_UNSUPPORTED_OPERATOR;
+            vm_err.msg = get_err_msg("Unsupported opcode %s", op_def.name);
+            return vm_err;
         }
     }
-    return VM_ERROR_NONE;
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    return vm_err;
 }

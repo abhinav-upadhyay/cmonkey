@@ -9,12 +9,12 @@
 
 #define STACKSIZE 2048
 
-typedef enum vm_error_t {
+typedef enum vm_error_code {
     VM_ERROR_NONE,
     VM_STACKOVERFLOW,
     VM_UNSUPPORTED_OPERAND,
     VM_UNSUPPORTED_OPERATOR
-} vm_error_t;
+} vm_error_code;
 
 static const char *VM_ERROR_DESC[] = {
     "VM_ERROR_NONE",
@@ -22,6 +22,11 @@ static const char *VM_ERROR_DESC[] = {
     "UNSUPPORTED_OPERAND",
     "UNSUPPORTED_OPERATOR"
 };
+
+typedef struct vm_error_t {
+    vm_error_code code;
+    char *msg;
+} vm_error_t;
 
 #define get_vm_error_desc(err) VM_ERROR_DESC[err]
 

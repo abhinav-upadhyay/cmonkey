@@ -32,8 +32,8 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
         bytecode_t *bytecode = get_bytecode(compiler);
         vm_t *vm = vm_init(bytecode);
         vm_error_t vm_error = vm_run(vm);
-        if (vm_error != VM_ERROR_NONE)
-            errx(EXIT_FAILURE, "vm error: %s\n", get_vm_error_desc(vm_error));
+        if (vm_error.code != VM_ERROR_NONE)
+            errx(EXIT_FAILURE, "vm error: %s\n", vm_error.msg);
         monkey_object_t *top = vm_last_popped_stack_elem(vm);
         test_monkey_object(top, t.expected);
         free_monkey_object(top);
