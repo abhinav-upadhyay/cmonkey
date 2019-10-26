@@ -6,3 +6,4 @@ repl
 *.tmp
 bin/
 .vscode/
+vgcore*
