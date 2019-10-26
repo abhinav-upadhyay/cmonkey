@@ -11,12 +11,16 @@
 
 typedef enum vm_error_t {
     VM_ERROR_NONE,
-    VM_STACKOVERFLOW
+    VM_STACKOVERFLOW,
+    VM_UNSUPPORTED_OPERAND,
+    VM_UNSUPPORTED_OPERATOR
 } vm_error_t;
 
 static const char *VM_ERROR_DESC[] = {
     "VM_ERROR_NONE"
-    "STACKOVERFLOW"
+    "STACKOVERFLOW",
+    "UNSUPPORTED_OPERAND",
+    "UNSUPPORTED_OPERATOR"
 };
 
 #define get_vm_error_desc(err) VM_ERROR_DESC[err]

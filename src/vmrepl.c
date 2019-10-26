@@ -232,6 +232,7 @@ repl(void)
 			char *s = top->inspect(top);
 			printf("%s\n", s);
 			free(s);
+			free_monkey_object(top);
 		}
 
 CONTINUE:

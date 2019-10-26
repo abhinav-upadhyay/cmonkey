@@ -56,19 +56,59 @@ get_constant(vm_t *vm, size_t const_index)
     return (monkey_object_t *) cm_array_list_get(vm->constants, const_index);
 }
 
+static vm_error_t
+execute_binary_int_op(vm_t *vm, opcode_t op, long leftval, long rightval)
+{
+    long result;
+    switch (op) {
+    case OPADD:
+        result = leftval + rightval;
+        break;
+    case OPSUB:
+        result = leftval - rightval;
+        break;
+    case OPMUL:
+        result = leftval * rightval;
+        break;
+    case OPDIV:
+        result = leftval / rightval;
+        break;
+    default:
+        return VM_UNSUPPORTED_OPERATOR;
+    }
+    monkey_object_t *result_obj = (monkey_object_t *) create_monkey_int(result);
+    vm_push(vm, result_obj);
+    free_monkey_object(result_obj);
+    return VM_ERROR_NONE;
+}
+
+static vm_error_t
+execute_binary_op(vm_t *vm, opcode_t op)
+{
+    monkey_object_t *right = vm_pop(vm);
+    monkey_object_t *left = vm_pop(vm);
+    long leftval = ((monkey_int_t *) left)->value;
+    long rightval = ((monkey_int_t *) right)->value;
+    vm_error_t vm_err = VM_UNSUPPORTED_OPERAND;
+    if (left->type == MONKEY_INT && right->type == MONKEY_INT)
+        vm_err = execute_binary_int_op(vm, op, leftval, rightval);
+    free_monkey_object(left);
+    free_monkey_object(right);
+    return vm_err;
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
     size_t const_index;
     vm_error_t vm_err;
-    monkey_object_t *right;
-    monkey_object_t *left;
-    monkey_int_t *result_obj;
-    long left_value;
-    long right_value;
-    long result;
+    monkey_object_t *top = NULL;
     for (size_t ip = 0; ip < vm->instructions->length; ip++) {
         opcode_t op = vm->instructions->bytes[ip];
+        if (top != NULL) {
+            free_monkey_object(top);
+            top = NULL;
+        }
         switch (op) {
         case OPCONSTANT:
             const_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
@@ -78,22 +118,18 @@ vm_run(vm_t *vm)
                 return vm_err;
             break;
         case OPADD:
-            right = vm_pop(vm);
-            left = vm_pop(vm);
-            left_value = ((monkey_int_t *) left)->value;
-            right_value = ((monkey_int_t *) right)->value;
-            result = left_value + right_value;
-            result_obj = create_monkey_int(result);
-            free_monkey_object(left);
-            free_monkey_object(right);
-            vm_push(vm, (monkey_object_t *) result_obj);
-            free_monkey_object(result_obj);
+        case OPSUB:
+        case OPMUL:
+        case OPDIV:
+            vm_err = execute_binary_op(vm, op);
+            if (vm_err != VM_ERROR_NONE)
+                return vm_err;
             break;
         case OPPOP:
-            vm_pop(vm);
+            top = vm_pop(vm);
             break;
         default:
-            break;
+            return VM_UNSUPPORTED_OPERATOR;
         }
     }
     return VM_ERROR_NONE;

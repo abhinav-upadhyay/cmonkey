@@ -34,7 +34,8 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
         if (vm_error != VM_ERROR_NONE)
             errx(EXIT_FAILURE, "vm error: %s\n", get_vm_error_desc(vm_error));
         monkey_object_t *top = vm_last_popped_stack_elem(vm);
-        test_monkey_object(t.expected, top);
+        test_monkey_object(top, t.expected);
+        free_monkey_object(top);
         parser_free(parser);
         program_free(program);
         compiler_free(compiler);
@@ -49,13 +50,23 @@ test_integer_aritmetic(void)
     vm_testcase tests[] = {
         {"1", (monkey_object_t *) create_monkey_int(1)},
         {"2", (monkey_object_t *) create_monkey_int(2)},
-        {"1 + 2", (monkey_object_t *) create_monkey_int(3)}
+        {"1 + 2", (monkey_object_t *) create_monkey_int(3)},
+        {"1 - 2", (monkey_object_t *) create_monkey_int(-1)},
+        {"1 * 2", (monkey_object_t *) create_monkey_int(2)},
+        {"4 / 2", (monkey_object_t *) create_monkey_int(2)},
+        {"50 / 2 * 2 + 10 - 5", (monkey_object_t *) create_monkey_int(55)},
+        {"5 + 5 + 5 + 5 - 10", (monkey_object_t *) create_monkey_int(10)},
+        {"2 * 2 * 2 * 2 * 2", (monkey_object_t *) create_monkey_int(32)},
+        {"5 * 2 + 10", (monkey_object_t *) create_monkey_int(20)},
+        {"5 + 2 * 10", (monkey_object_t *) create_monkey_int(25)},
+        {"5 * (2 + 10)", (monkey_object_t *) create_monkey_int(60)}
     };
 
     print_test_separator_line();
     printf("Testing vm for integer arithmetic\n");
-    run_vm_tests(3, tests);
-    for (size_t i = 0; i < 3; i++)
+    size_t ntests = sizeof(tests)/ sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
         free_monkey_object(tests[i].expected);
 }
 
