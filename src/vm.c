@@ -128,6 +128,12 @@ vm_run(vm_t *vm)
         case OPPOP:
             top = vm_pop(vm);
             break;
+        case OPTRUE:
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(true));
+            break;
+        case OPFALSE:
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
+            break;
         default:
             return VM_UNSUPPORTED_OPERATOR;
         }

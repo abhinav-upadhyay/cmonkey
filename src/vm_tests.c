@@ -4,6 +4,7 @@
 #include "compiler.h"
 #include "lexer.h"
 #include "token.h"
+#include "object_test_utils.h"
 #include "parser.h"
 #include "test_utils.h"
 #include "vm.h"
@@ -45,6 +46,19 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
 }
 
 static void
+test_boolean_expressions(void)
+{
+    vm_testcase tests[] = {
+        {"true", (monkey_object_t *) create_monkey_bool(true)},
+        {"false", (monkey_object_t *) create_monkey_bool(false)}
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
+static void
 test_integer_aritmetic(void)
 {
     vm_testcase tests[] = {
@@ -74,5 +88,6 @@ int
 main(int argc, char **argv)
 {
     test_integer_aritmetic();
+    test_boolean_expressions();
     return 0;
 }

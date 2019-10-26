@@ -88,7 +88,7 @@ eval_integer_infix_expression(const char *operator,
             create_monkey_bool(left_value->value > right_value->value);
     else if (strcmp(operator, "==") == 0)
         return (monkey_object_t *)
-            create_monkey_bool(left_value->value == right_value->value);
+            (monkey_object_t *) create_monkey_bool(left_value->value == right_value->value);
     else if (strcmp(operator, "!=") == 0)
         return (monkey_object_t *)
             create_monkey_bool(left_value->value != right_value->value);

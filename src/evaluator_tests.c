@@ -38,6 +38,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "object.h"
+#include "object_test_utils.h"
 #include "test_utils.h"
 
 static monkey_object_t *

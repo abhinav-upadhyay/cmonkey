@@ -124,10 +124,19 @@ typedef struct monkey_hash_t {
     cm_hash_table *pairs;
 } monkey_hash_t;
 
+char *inspect(monkey_object_t *);
+_Bool monkey_object_equals(void *, void *);
+size_t monkey_object_hash(void *); // non-static for tests
+
+static monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
+static monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
+static monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL}};
+
+#define create_monkey_bool(val) ((val == true) ? (&MONKEY_TRUE_OBJ): (&MONKEY_FALSE_OBJ))
+#define create_monkey_null() (&MONKEY_NULL_OBJ)
+
 
 monkey_int_t * create_monkey_int(long);
-monkey_bool_t * create_monkey_bool(_Bool);
-monkey_null_t * create_monkey_null(void);
 monkey_bool_t *get_monkey_true(void);
 monkey_object_t *copy_monkey_object(monkey_object_t *);
 monkey_return_value_t *create_monkey_return_value(monkey_object_t *);
@@ -137,8 +146,6 @@ monkey_string_t *create_monkey_string(const char *, size_t);
 monkey_builtin_t *create_monkey_builtin(builtin_fn);
 monkey_array_t *create_monkey_array(cm_array_list *);
 monkey_hash_t *create_monkey_hash(cm_hash_table *);
-size_t monkey_object_hash(void *); // non-static for tests
-_Bool monkey_object_equals(void *, void *);
 void free_monkey_object(void *);
 
 #endif

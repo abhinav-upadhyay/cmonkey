@@ -38,12 +38,6 @@
 #include "parser.h"
 #include "object.h"
 
-static char *inspect(monkey_object_t *);
-
-monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
-monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
-monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL}};
-
 static char *
 monkey_function_inspect(monkey_object_t *obj)
 {
@@ -127,7 +121,7 @@ join_expressions_table(cm_hash_table *table)
     return temp;
 }
 
-static char *
+char *
 inspect(monkey_object_t *obj)
 {
     monkey_int_t *int_obj;
@@ -310,22 +304,6 @@ create_monkey_int(long value)
     int_obj->object.equals = monkey_object_equals;
     int_obj->value = value;
     return int_obj;
-}
-
-monkey_bool_t *
-create_monkey_bool(_Bool value)
-{
-    if (value) {
-        return &MONKEY_TRUE_OBJ;
-    } else {
-        return &MONKEY_FALSE_OBJ;
-    }
-}
-
-monkey_null_t *
-create_monkey_null(void)
-{
-    return &MONKEY_NULL_OBJ;
 }
 
 monkey_return_value_t *

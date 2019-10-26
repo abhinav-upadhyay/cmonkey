@@ -6,6 +6,7 @@
 #include "cmonkey_utils.h"
 #include "compiler.h"
 #include "object.h"
+#include "object_test_utils.h"
 #include "opcode.h"
 #include "parser.h"
 #include "test_utils.h"
