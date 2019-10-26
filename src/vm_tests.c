@@ -50,7 +50,23 @@ test_boolean_expressions(void)
 {
     vm_testcase tests[] = {
         {"true", (monkey_object_t *) create_monkey_bool(true)},
-        {"false", (monkey_object_t *) create_monkey_bool(false)}
+        {"false", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 < 2", (monkey_object_t *) create_monkey_bool(true)},
+        {"1 > 2", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 < 1", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 > 1", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 == 1", (monkey_object_t *) create_monkey_bool(true)},
+        {"1 != 1", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 == 2", (monkey_object_t *) create_monkey_bool(false)},
+        {"1 != 2", (monkey_object_t *) create_monkey_bool(true)},
+        {"true == true", (monkey_object_t *) create_monkey_bool(true)},
+        {"false == false", (monkey_object_t *) create_monkey_bool(true)},
+        {"true == false", (monkey_object_t *) create_monkey_bool(false)},
+        {"false != true", (monkey_object_t *) create_monkey_bool(true)},
+        {"(1 < 2) == true", (monkey_object_t *) create_monkey_bool(true)},
+        {"(1 < 2) == false", (monkey_object_t *) create_monkey_bool(false)},
+        {"(1 > 2) == false", (monkey_object_t *) create_monkey_bool(true)},
+        {"(1 > 2) == true", (monkey_object_t *) create_monkey_bool(false)}
     };
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_vm_tests(ntests, tests);

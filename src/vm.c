@@ -97,6 +97,65 @@ execute_binary_op(vm_t *vm, opcode_t op)
     return vm_err;
 }
 
+static vm_error_t
+execute_integer_comparison(vm_t *vm, opcode_t op, long left, long right)
+{
+    _Bool result = false;
+    switch (op) {
+    case OPGREATERTHAN:
+        if (left > right)
+            result = true;
+        break;
+    case OPEQUAL:
+        if (left == right)
+            result = true;
+        break;
+    case OPNOTEQUAL:
+        if (left != right)
+            result = true;
+        break;
+    default:
+        return VM_UNSUPPORTED_OPERATOR;
+    }
+    vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
+    return VM_ERROR_NONE;
+}
+
+static vm_error_t
+execute_comparison_op(vm_t *vm, opcode_t op)
+{
+    vm_error_t error = VM_ERROR_NONE;
+    monkey_object_t *right = vm_pop(vm);
+    monkey_object_t *left = vm_pop(vm);
+    if (left->type == MONKEY_INT && right->type == MONKEY_INT) {
+        long leftval = ((monkey_int_t *) left)->value;
+        long rightval = ((monkey_int_t *) right)->value;
+        error = execute_integer_comparison(vm, op, leftval, rightval);
+    } else if (left->type == MONKEY_BOOL && right->type == MONKEY_BOOL) {
+        _Bool result = false;
+        switch (op) {
+        case OPGREATERTHAN:
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
+            break;
+        case OPEQUAL:
+            if (left == right)
+                result = true;
+            break;
+        case OPNOTEQUAL:
+            if (left != right)
+                result = true;
+            break;
+        default:
+            return VM_UNSUPPORTED_OPERATOR;
+        }
+        vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
+    } else
+        error = VM_UNSUPPORTED_OPERAND;
+    free_monkey_object(left);
+    free_monkey_object(right);
+    return error;
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
@@ -133,6 +192,13 @@ vm_run(vm_t *vm)
             break;
         case OPFALSE:
             vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
+            break;
+        case OPGREATERTHAN:
+        case OPEQUAL:
+        case OPNOTEQUAL:
+            vm_err = execute_comparison_op(vm, op);
+            if (vm_err != VM_ERROR_NONE)
+                return vm_err;
             break;
         default:
             return VM_UNSUPPORTED_OPERATOR;
