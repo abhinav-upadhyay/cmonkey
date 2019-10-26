@@ -97,6 +97,16 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
         infix_exp = (infix_expression_t *) expression_node;
+        if (strcmp(infix_exp->operator, "<") == 0) {
+            error = compile(compiler, (node_t *) infix_exp->right);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+            error = compile(compiler, (node_t *) infix_exp->left);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+            emit(compiler, OPGREATERTHAN);
+            break;
+        }
         error = compile(compiler, (node_t *) infix_exp->left);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
@@ -111,6 +121,12 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             emit(compiler, OPMUL);
         else if(strcmp(infix_exp->operator, "/") == 0)
             emit(compiler, OPDIV);
+        else if (strcmp(infix_exp->operator, ">") == 0)
+            emit(compiler, OPGREATERTHAN);
+        else if (strcmp(infix_exp->operator, "==") == 0)
+            emit(compiler, OPEQUAL);
+        else if (strcmp(infix_exp->operator, "!=") == 0)
+            emit(compiler, OPNOTEQUAL);
         else {
             error.code = COMPILER_UNKNOWN_OPERATOR;
             error.msg = get_err_msg("Unknown operator %s", infix_exp->operator);

@@ -74,7 +74,7 @@ run_compiler_tests(size_t ntests, compiler_test tests[ntests])
 {
     for (size_t i = 0; i < ntests; i++) {
         compiler_test t = tests[i];
-        printf("Testing integer expression compilation for %s\n", t.input);
+        printf("Testing compilation for %s\n", t.input);
         lexer_t *lexer = lexer_init(t.input);
         parser_t *parser = parser_init(lexer);
         program_t *program = parse_program(parser);
@@ -123,6 +123,72 @@ test_boolean_expressions(void)
             2,
             {
                 instruction_init(OPFALSE),
+                instruction_init(OPPOP)
+            },
+            NULL
+        },
+        {
+            "1 > 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPGREATERTHAN),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "1 < 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPGREATERTHAN),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(2), create_monkey_int(1))
+        },
+        {
+            "1 == 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPEQUAL),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "1 != 2",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPNOTEQUAL),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "true == true",
+            4,
+            {
+                instruction_init(OPTRUE),
+                instruction_init(OPTRUE),
+                instruction_init(OPEQUAL),
+                instruction_init(OPPOP)
+            },
+            NULL
+        },
+        {
+            "true != false",
+            4,
+            {
+                instruction_init(OPTRUE),
+                instruction_init(OPFALSE),
+                instruction_init(OPNOTEQUAL),
                 instruction_init(OPPOP)
             },
             NULL
