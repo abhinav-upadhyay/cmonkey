@@ -89,7 +89,11 @@ test_integer_aritmetic(void)
         {"2 * 2 * 2 * 2 * 2", (monkey_object_t *) create_monkey_int(32)},
         {"5 * 2 + 10", (monkey_object_t *) create_monkey_int(20)},
         {"5 + 2 * 10", (monkey_object_t *) create_monkey_int(25)},
-        {"5 * (2 + 10)", (monkey_object_t *) create_monkey_int(60)}
+        {"5 * (2 + 10)", (monkey_object_t *) create_monkey_int(60)},
+        {"-5", (monkey_object_t *) create_monkey_int(-5)},
+        {"-10", (monkey_object_t *) create_monkey_int(-10)},
+        {"-50 + 100 + -50", (monkey_object_t *) create_monkey_int(0)},
+        {"(5 + 10 * 2 + 15 / 3) * 2 + -10", (monkey_object_t *) create_monkey_int(50)}
     };
 
     print_test_separator_line();

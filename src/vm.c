@@ -157,6 +157,45 @@ execute_integer_comparison(vm_t *vm, opcode_t op, long left, long right)
 }
 
 static vm_error_t
+execute_bang_operator(vm_t *vm)
+{
+    monkey_object_t *operand = vm_pop(vm);
+    vm_error_t vm_err;
+    if (operand->type != MONKEY_BOOL) {
+        vm_err.code = VM_UNSUPPORTED_OPERAND;
+        vm_err.msg = get_err_msg("'!' operator not supported for %s type operands",
+            get_type_name(operand->type));
+        return vm_err;
+    }
+    monkey_bool_t *bool_operand = (monkey_bool_t *) operand;
+    vm_push(vm, (monkey_object_t *) create_monkey_bool(!bool_operand->value));
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    return vm_err;
+}
+
+static vm_error_t
+execute_minus_operator(vm_t *vm)
+{
+    monkey_object_t *operand = vm_pop(vm);
+    vm_error_t vm_err;
+    if (operand->type != MONKEY_INT) {
+        vm_err.code = VM_UNSUPPORTED_OPERAND;
+        vm_err.msg = get_err_msg("'-' operator not supported for %s type operands",
+            get_type_name(operand->type));
+        return vm_err;
+    }
+    monkey_int_t *int_operand = (monkey_int_t *) operand;
+    monkey_int_t *result = create_monkey_int(-int_operand->value);
+    vm_push(vm, (monkey_object_t *) result);
+    free_monkey_object(result);
+    free_monkey_object(operand);
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    return vm_err;
+}
+
+static vm_error_t
 execute_comparison_op(vm_t *vm, opcode_t op)
 {
     vm_error_t error = {VM_ERROR_NONE, NULL};
@@ -241,6 +280,16 @@ vm_run(vm_t *vm)
         case OPEQUAL:
         case OPNOTEQUAL:
             vm_err = execute_comparison_op(vm, op);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPMINUS:
+            vm_err = execute_minus_operator(vm);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPBANG:
+            vm_err = execute_bang_operator(vm);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
