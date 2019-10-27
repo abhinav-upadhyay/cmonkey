@@ -192,6 +192,16 @@ test_boolean_expressions(void)
                 instruction_init(OPPOP)
             },
             NULL
+        },
+        {
+            "!true",
+            3,
+            {
+                instruction_init(OPTRUE),
+                instruction_init(OPBANG),
+                instruction_init(OPPOP)
+            },
+            NULL
         }
     };
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
@@ -256,6 +266,16 @@ test_integer_arithmetic(void)
                 instruction_init(OPPOP)
             },
             create_constant_pool(2, create_monkey_int(2), create_monkey_int(1))
+        },
+        {
+            "-1",
+            3,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPMINUS),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1, create_monkey_int(1))
         }
     };
 

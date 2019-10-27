@@ -34,6 +34,8 @@ vinstruction_init(opcode_t op, va_list ap)
     case OPGREATERTHAN:
     case OPEQUAL:
     case OPNOTEQUAL:
+    case OPMINUS:
+    case OPBANG:
         ins->bytes = create_uint8_array(1, op);
         ins->length = 1;
         ins->size = 1;
@@ -124,6 +126,8 @@ instructions_to_string(instructions_t *instructions)
         case OPGREATERTHAN:
         case OPEQUAL:
         case OPNOTEQUAL:
+        case OPMINUS:
+        case OPBANG:
         op_def = opcode_definition_lookup(op);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s", i, op_def.name);

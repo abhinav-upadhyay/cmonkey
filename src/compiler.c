@@ -90,6 +90,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     compiler_error_t error;
     compiler_error_t none_error = {COMPILER_ERROR_NONE, NULL};
     infix_expression_t *infix_exp;
+    prefix_expression_t *prefix_exp;
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
     monkey_int_t *int_obj;
@@ -130,6 +131,21 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         else {
             error.code = COMPILER_UNKNOWN_OPERATOR;
             error.msg = get_err_msg("Unknown operator %s", infix_exp->operator);
+            return error;
+        }
+        break;
+    case PREFIX_EXPRESSION:
+        prefix_exp = (prefix_expression_t *) expression_node;
+        error = compile(compiler, (node_t *) prefix_exp->right);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        if (strcmp(prefix_exp->operator, "-") == 0)
+            emit(compiler, OPMINUS);
+        else if (strcmp(prefix_exp->operator, "!") == 0)
+            emit(compiler, OPBANG);
+        else {
+            error.code = COMPILER_UNKNOWN_OPERATOR;
+            error.msg = get_err_msg("Unknown operator %s", prefix_exp->operator);
             return error;
         }
         break;
