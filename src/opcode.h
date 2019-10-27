@@ -29,22 +29,23 @@ typedef enum opcode_t {
 
 typedef struct opcode_definition_t {
     const char *name;
+    const char *desc;
     size_t operand_widths[MAX_OPERANDS];
 } opcode_definition_t;
 
 
 static opcode_definition_t opcode_definitions [] = {
-    { "OPCONSTANT", {(size_t) 2}},
-    {"OPADD", {(size_t) 0}},
-    {"OPSUB", {(size_t) 0}},
-    {"OPMUL", {(size_t) 0}},
-    {"OPDIV", {(size_t) 0}},
-    {"OPPOP", {(size_t) 0}},
-    {"OPTRUE", {(size_t) 0}},
-    {"OPFALSE", {(size_t) 0}},
-    {"OPEQUAL", {(size_t) 0}},
-    {"OPNOTEQUAL", {(size_t) 0}},
-    {"OPGREATERTHAN", {(size_t) 0}}
+    { "OPCONSTANT", "constant", {(size_t) 2}},
+    {"OPADD", "+", {(size_t) 0}},
+    {"OPSUB", "-", {(size_t) 0}},
+    {"OPMUL", "*", {(size_t) 0}},
+    {"OPDIV", "/", {(size_t) 0}},
+    {"OPPOP", "pop", {(size_t) 0}},
+    {"OPTRUE", "true", {(size_t) 0}},
+    {"OPFALSE", "false", {(size_t) 0}},
+    {"OPEQUAL", "==", {(size_t) 0}},
+    {"OPNOTEQUAL", "!=", {(size_t) 0}},
+    {"OPGREATERTHAN", ">", {(size_t) 0}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];

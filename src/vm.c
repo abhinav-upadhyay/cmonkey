@@ -119,8 +119,8 @@ execute_binary_op(vm_t *vm, opcode_t op)
     else {
         vm_err.code = VM_UNSUPPORTED_OPERAND;
         opcode_definition_t op_def = opcode_definition_lookup(op);
-        vm_err.msg = get_err_msg("Unsupported operand types %s and %s for operator %s",
-            get_type_name(left->type), get_type_name(right->type), op_def.name);
+        vm_err.msg = get_err_msg("'%s' operation not supported with types %s and %s",
+            op_def.desc, get_type_name(left->type), get_type_name(right->type));
     }
     free_monkey_object(left);
     free_monkey_object(right);
