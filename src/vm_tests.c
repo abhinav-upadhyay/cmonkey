@@ -104,10 +104,31 @@ test_integer_aritmetic(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_conditionals(void)
+{
+    vm_testcase tests[] = {
+        {"if (true) {10}", (monkey_object_t *) create_monkey_int(10)},
+        {"if (true) {10} else {20}", (monkey_object_t *) create_monkey_int(10)},
+        {"if (false) {10} else {20}", (monkey_object_t *) create_monkey_int(20)},
+        {"if (1) {10}", (monkey_object_t *) create_monkey_int(10)},
+        {"if (1 < 2) {10}", (monkey_object_t *) create_monkey_int(10)},
+        {"if (1 < 2) {10} else {20}", (monkey_object_t *) create_monkey_int(10)},
+        {"if (1 > 2) {10} else {20}", (monkey_object_t *) create_monkey_int(20)}
+    };
+    print_test_separator_line();
+    printf("Testing conditionals\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
     test_integer_aritmetic();
     test_boolean_expressions();
+    test_conditionals();
     return 0;
 }

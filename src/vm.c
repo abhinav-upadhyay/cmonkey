@@ -238,10 +238,21 @@ RETURN:
     return error;
 }
 
+static _Bool
+is_truthy(monkey_object_t *condition)
+{
+    switch (condition->type) {
+    case MONKEY_BOOL:
+        return ((monkey_bool_t *) condition)->value;
+    default:
+        return true;
+    }
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
-    size_t const_index;
+    size_t const_index, jmp_pos;
     vm_error_t vm_err;
     opcode_definition_t op_def;
     monkey_object_t *top = NULL;
@@ -292,6 +303,17 @@ vm_run(vm_t *vm)
             vm_err = execute_bang_operator(vm);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
+            break;
+        case OPJMP:
+            jmp_pos = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip = jmp_pos - 1;
+            break;
+        case OPJMPFALSE:
+            jmp_pos = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip += 2;
+            top = vm_pop(vm);
+            if (!is_truthy(top))
+                ip = jmp_pos - 1;
             break;
         default:
             op_def = opcode_definition_lookup(op);
