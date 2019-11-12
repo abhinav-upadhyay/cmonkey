@@ -122,6 +122,23 @@ test_conditionals(void)
             },
             create_constant_pool(2, (monkey_object_t *) create_monkey_int(10),
                 (monkey_object_t *) create_monkey_int(3333))
+        },
+        {
+            "if (true) {10} else {20}; 3333;",
+            8,
+            {
+                instruction_init(OPTRUE),
+                instruction_init(OPJMPFALSE, 10),
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPJMP, 13),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPPOP),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3, (monkey_object_t *) create_monkey_int(10),
+                (monkey_object_t *) create_monkey_int(20),
+                (monkey_object_t *) create_monkey_int(3333))
         }
     };
     size_t ntests = sizeof(tests) / sizeof(tests[0]);

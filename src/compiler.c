@@ -132,7 +132,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     if_expression_t *if_exp;
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
-    size_t opjmpfalse_pos, after_consequence_pos;
+    size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
         infix_exp = (infix_expression_t *) expression_node;
@@ -212,8 +212,21 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             return error;
         if (last_instruction_is_pop(compiler))
             remove_last_instruction(compiler);
-        after_consequence_pos = compiler->instructions->length;
-        change_operand(compiler, opjmpfalse_pos, after_consequence_pos);
+        if (if_exp->alternative == NULL) {
+            after_consequence_pos = compiler->instructions->length;
+            change_operand(compiler, opjmpfalse_pos, after_consequence_pos);
+        } else {
+            jmp_pos = emit(compiler, OPJMP, 9999);
+            after_consequence_pos = compiler->instructions->length;
+            change_operand(compiler, opjmpfalse_pos, after_consequence_pos);
+            error = compile(compiler, (node_t *) if_exp->alternative);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+            if (last_instruction_is_pop(compiler))
+                remove_last_instruction(compiler);
+            after_alternative_pos = compiler->instructions->length;
+            change_operand(compiler, jmp_pos, after_alternative_pos);
+        }
         break;
     default:
         return none_error;
