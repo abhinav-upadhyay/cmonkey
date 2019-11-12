@@ -66,7 +66,9 @@ test_boolean_expressions(void)
         {"(1 < 2) == true", (monkey_object_t *) create_monkey_bool(true)},
         {"(1 < 2) == false", (monkey_object_t *) create_monkey_bool(false)},
         {"(1 > 2) == false", (monkey_object_t *) create_monkey_bool(true)},
-        {"(1 > 2) == true", (monkey_object_t *) create_monkey_bool(false)}
+        {"(1 > 2) == true", (monkey_object_t *) create_monkey_bool(false)},
+        {"!(if (false) {5;})", (monkey_object_t *) create_monkey_bool(true)},
+        {"if (if (false) {10}) {10} else {20}", (monkey_object_t *) create_monkey_int(20)}
     };
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_vm_tests(ntests, tests);

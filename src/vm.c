@@ -160,14 +160,18 @@ static vm_error_t
 execute_bang_operator(vm_t *vm)
 {
     monkey_object_t *operand = vm_pop(vm);
+    monkey_bool_t *bool_operand;
     vm_error_t vm_err;
-    if (operand->type != MONKEY_BOOL) {
+    if (operand->type != MONKEY_BOOL && operand->type != MONKEY_NULL) {
         vm_err.code = VM_UNSUPPORTED_OPERAND;
         vm_err.msg = get_err_msg("'!' operator not supported for %s type operands",
             get_type_name(operand->type));
         return vm_err;
     }
-    monkey_bool_t *bool_operand = (monkey_bool_t *) operand;
+    if (operand->type == MONKEY_NULL)
+        bool_operand = create_monkey_bool(false);
+    else
+        bool_operand = (monkey_bool_t *) operand;
     vm_push(vm, (monkey_object_t *) create_monkey_bool(!bool_operand->value));
     vm_err.code = VM_ERROR_NONE;
     vm_err.msg = NULL;
@@ -244,6 +248,8 @@ is_truthy(monkey_object_t *condition)
     switch (condition->type) {
     case MONKEY_BOOL:
         return ((monkey_bool_t *) condition)->value;
+    case MONKEY_NULL:
+        return false;
     default:
         return true;
     }
