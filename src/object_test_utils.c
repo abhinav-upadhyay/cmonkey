@@ -29,7 +29,6 @@ test_null_object(monkey_object_t *object)
 {
     test(object->type == MONKEY_NULL, "Expected a MONKEY_NULL object, found %s\n",
         get_type_name(object->type));
-    test(object == (monkey_object_t *) create_monkey_null(), "object is not NULL\n");
 }
 
 void
@@ -41,4 +40,6 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
         test_integer_object(obj, ((monkey_int_t *) expected)->value);
     else if (expected->type == MONKEY_BOOL)
         test_boolean_object(obj, ((monkey_bool_t *) expected)->value);
+    else if (expected->type == MONKEY_NULL)
+        test_null_object(expected);
 }

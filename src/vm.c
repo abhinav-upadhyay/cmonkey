@@ -287,6 +287,9 @@ vm_run(vm_t *vm)
         case OPFALSE:
             vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
             break;
+        case OPNULL:
+            vm_push(vm, (monkey_object_t *) create_monkey_null());
+            break;
         case OPGREATERTHAN:
         case OPEQUAL:
         case OPNOTEQUAL:

@@ -114,7 +114,9 @@ test_conditionals(void)
         {"if (1) {10}", (monkey_object_t *) create_monkey_int(10)},
         {"if (1 < 2) {10}", (monkey_object_t *) create_monkey_int(10)},
         {"if (1 < 2) {10} else {20}", (monkey_object_t *) create_monkey_int(10)},
-        {"if (1 > 2) {10} else {20}", (monkey_object_t *) create_monkey_int(20)}
+        {"if (1 > 2) {10} else {20}", (monkey_object_t *) create_monkey_int(20)},
+        {"if (false) {10}", (monkey_object_t *) create_monkey_null()},
+        {"if (1 > 2) {10}", (monkey_object_t *) create_monkey_null()}
     };
     print_test_separator_line();
     printf("Testing conditionals\n");

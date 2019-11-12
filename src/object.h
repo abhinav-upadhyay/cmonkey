@@ -130,7 +130,7 @@ size_t monkey_object_hash(void *); // non-static for tests
 
 static monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
 static monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
-static monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL}};
+static monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL, NULL}};
 
 #define create_monkey_bool(val) ((val == true) ? (&MONKEY_TRUE_OBJ): (&MONKEY_FALSE_OBJ))
 #define create_monkey_null() (&MONKEY_NULL_OBJ)

@@ -111,11 +111,13 @@ test_conditionals(void)
     compiler_test tests[] = {
         {
             "if (true) {10}; 3333;",
-            6,
+            8,
             {
                 instruction_init(OPTRUE),
-                instruction_init(OPJMPFALSE, 7),
+                instruction_init(OPJMPFALSE, 10),
                 instruction_init(OPCONSTANT, 0),
+                instruction_init(OPJMP, 11),
+                instruction_init(OPNULL),
                 instruction_init(OPPOP),
                 instruction_init(OPCONSTANT, 1),
                 instruction_init(OPPOP)
