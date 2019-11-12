@@ -6,9 +6,16 @@
 #include "opcode.h"
 #include "object.h"
 
+typedef struct emitted_instrucion_t {
+    opcode_t opcode;
+    size_t position;
+} emitted_instrucion_t;
+
 typedef struct compiler_t {
     instructions_t *instructions;
     cm_array_list *constants_pool;
+    emitted_instrucion_t last_instruction;
+    emitted_instrucion_t prev_instruction;
 } compiler_t;
 
 typedef struct bytecode_t {
@@ -30,6 +37,7 @@ static const char *compiler_errors[] = {
     "COMPILER_ERROR_NONE",
     "COMPILER_UNKNOWN_OPERATOR"
 };
+
 
 #define get_compiler_error(e) compiler_errors[e]
 

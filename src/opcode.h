@@ -26,7 +26,9 @@ typedef enum opcode_t {
     OPNOTEQUAL,
     OPGREATERTHAN,
     OPMINUS,
-    OPBANG
+    OPBANG,
+    OPJMPFALSE,
+    OPJMP
 } opcode_t;
 
 typedef struct opcode_definition_t {
@@ -49,7 +51,9 @@ static opcode_definition_t opcode_definitions [] = {
     {"OPNOTEQUAL", "!=", {(size_t) 0}},
     {"OPGREATERTHAN", ">", {(size_t) 0}},
     {"OPMINUS", "-", {(size_t) 0}},
-    {"OPBANG", "not", {(size_t) 0}}
+    {"OPBANG", "not", {(size_t) 0}},
+    {"OPJMPFALSE", "jump_if_false", {(size_t) 2}},
+    {"OPJMP", "jump", {(size_t) 2}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];

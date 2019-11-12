@@ -552,7 +552,7 @@ be_to_size_t(uint8_t *bytes, size_t bytes_count)
         if (bytes[0] == 0)
             two_bytes = bytes[1] + bytes[0];
         else
-            two_bytes = (bytes[1] << 8) + bytes[0];
+            two_bytes = (bytes[0] << 8) + bytes[1];
         return (size_t) two_bytes;
     default:
         err(EXIT_FAILURE, "We don't support operands of %zu bytes width", bytes_count);

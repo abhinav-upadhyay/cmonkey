@@ -16,10 +16,12 @@ vinstruction_init(opcode_t op, va_list ap)
         err(EXIT_FAILURE, "malloc failed");
     switch (op) {
     case OPCONSTANT:
-        // OPCONSTANT needs only one operand 2 bytes wide
+    case OPJMPFALSE:
+    case OPJMP:
+        // these opcodes need only one operand 2 bytes wide
         operand = va_arg(ap, size_t);
         uint8_t *boperand = size_t_to_uint8_be(operand, 2);
-        ins->bytes = create_uint8_array(3, OPCONSTANT, boperand[0], boperand[1]);
+        ins->bytes = create_uint8_array(3, op, boperand[0], boperand[1]);
         ins->length = 3;
         ins->size = 3;
         free(boperand);
@@ -44,7 +46,6 @@ vinstruction_init(opcode_t op, va_list ap)
         break;
     }
     return ins;
-
 }
 
 instructions_t *
@@ -100,16 +101,19 @@ instructions_to_string(instructions_t *instructions)
     for (size_t i = 0; i < instructions->length; i++) {
         opcode_t op = (opcode_t) instructions->bytes[i];
         size_t operand;
+        op_def = opcode_definition_lookup(op);
         switch (op) {
         case OPCONSTANT:
+        case OPJMPFALSE:
+        case OPJMP:
             operand = be_to_size_t(instructions->bytes + i + 1, 2);
             if (string == NULL) {
-                int retval = asprintf(&string, "%04zu %s %zu", i, "OPCONSTANT", operand);
+                int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);
                 if (retval == -1)
                     err(EXIT_FAILURE, "malloc failed");
             } else {
                 char *temp = NULL;
-                int retval = asprintf(&temp, "%s\n%04zu %s %zu", string, i, "OPCONSTANT", operand);
+                int retval = asprintf(&temp, "%s\n%04zu %s %zu", string, i, op_def.name, operand);
                 if (retval == -1)
                     err(EXIT_FAILURE, "malloc failed");
                 free(string);
@@ -128,7 +132,6 @@ instructions_to_string(instructions_t *instructions)
         case OPNOTEQUAL:
         case OPMINUS:
         case OPBANG:
-        op_def = opcode_definition_lookup(op);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s", i, op_def.name);
                 if (retval == -1)

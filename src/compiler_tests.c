@@ -106,6 +106,29 @@ run_compiler_tests(size_t ntests, compiler_test tests[ntests])
 }
 
 static void
+test_conditionals(void)
+{
+    compiler_test tests[] = {
+        {
+            "if (true) {10}; 3333;",
+            6,
+            {
+                instruction_init(OPTRUE),
+                instruction_init(OPJMPFALSE, 7),
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPPOP),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, (monkey_object_t *) create_monkey_int(10),
+                (monkey_object_t *) create_monkey_int(3333))
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_boolean_expressions(void)
 {
     compiler_test tests[] = {
@@ -290,4 +313,5 @@ main(int argc, char **argv)
 {
     test_integer_arithmetic();
     test_boolean_expressions();
+    test_conditionals();
 }

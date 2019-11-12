@@ -10,6 +10,16 @@
 
 #define CONSTANTS_POOL_INIT_SIZE 16
 
+#define last_instruction_is_pop(c) c->last_instruction.opcode == OPPOP
+
+static void
+remove_last_instruction(compiler_t *compiler)
+{
+    compiler->instructions->length = compiler->last_instruction.position;
+    compiler->last_instruction.opcode = compiler->prev_instruction.opcode;
+    compiler->last_instruction.position = compiler->prev_instruction.position;
+}
+
 static size_t
 add_instructions(compiler_t *compiler, instructions_t *ins)
 {
@@ -17,6 +27,31 @@ add_instructions(compiler_t *compiler, instructions_t *ins)
     concat_instructions(compiler->instructions, ins);
     instructions_free(ins);
     return new_ins_pos;
+}
+
+static void
+set_last_instruction(compiler_t *compiler, opcode_t opcode, size_t pos)
+{
+    compiler->prev_instruction.opcode = compiler->last_instruction.opcode;
+    compiler->prev_instruction.position = compiler->last_instruction.position;
+    compiler->last_instruction.opcode = opcode;
+    compiler->last_instruction.position = pos;
+}
+
+static void
+replace_instruction(compiler_t *compiler, size_t position, instructions_t *ins)
+{
+    for (size_t i = 0; i < ins->length; i++)
+        compiler->instructions->bytes[position + i] = ins->bytes[i];
+}
+
+static void
+change_operand(compiler_t *compiler, size_t op_pos, size_t operand)
+{
+    opcode_t op = (opcode_t) compiler->instructions->bytes[op_pos];
+    instructions_t *new_ins = instruction_init(op, operand);
+    replace_instruction(compiler, op_pos, new_ins);
+    instructions_free(new_ins);
 }
 
 static size_t
@@ -27,6 +62,7 @@ emit(compiler_t *compiler, opcode_t op, ...)
     instructions_t *ins = vinstruction_init(op, ap);
     size_t new_ins_pos = add_instructions(compiler, ins);
     va_end(ap);
+    set_last_instruction(compiler, op, new_ins_pos);
     return new_ins_pos;
 }
 
@@ -93,8 +129,10 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     prefix_expression_t *prefix_exp;
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
+    if_expression_t *if_exp;
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
+    size_t opjmpfalse_pos, after_consequence_pos;
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
         infix_exp = (infix_expression_t *) expression_node;
@@ -154,7 +192,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         int_obj = create_monkey_int(int_exp->value);
         size_t constant_idx = add_constant(compiler, (monkey_object_t *) int_obj);
         emit(compiler, OPCONSTANT, constant_idx);
-        return none_error;
+        break;
     case BOOLEAN_EXPRESSION:
         bool_exp = (boolean_expression_t *) expression_node;
         bool_obj = create_monkey_bool(bool_exp->value);
@@ -162,7 +200,21 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             emit(compiler, OPTRUE);
         else
             emit(compiler, OPFALSE);
-        return none_error;
+        break;
+    case IF_EXPRESSION:
+        if_exp = (if_expression_t *) expression_node;
+        error = compile(compiler, (node_t *) if_exp->condition);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        opjmpfalse_pos = emit(compiler, OPJMPFALSE, 9999);
+        error = compile(compiler, (node_t *) if_exp->consequence);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        if (last_instruction_is_pop(compiler))
+            remove_last_instruction(compiler);
+        after_consequence_pos = compiler->instructions->length;
+        change_operand(compiler, opjmpfalse_pos, after_consequence_pos);
+        break;
     default:
         return none_error;
     }
@@ -175,6 +227,8 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
     compiler_error_t error;
     compiler_error_t none_error = {COMPILER_ERROR_NONE, NULL};
     expression_statement_t *expression_stmt;
+    block_statement_t *block_stmt;
+    size_t i;
     switch (statement_node->statement_type) {
     case EXPRESSION_STATEMENT:
         expression_stmt = (expression_statement_t *) statement_node;
@@ -182,6 +236,15 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
         if (error.code != COMPILER_ERROR_NONE)
             return error;
         emit(compiler, OPPOP);
+        break;
+    case BLOCK_STATEMENT:
+        block_stmt = (block_statement_t *) statement_node;
+        for (i = 0; i < block_stmt->nstatements; i++) {
+            error = compile(compiler, (node_t *) block_stmt->statements[i]);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+        }
+        break;
     default:
         return none_error;
     }
