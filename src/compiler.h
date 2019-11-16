@@ -5,6 +5,7 @@
 #include "cmonkey_utils.h"
 #include "opcode.h"
 #include "object.h"
+#include "symbol_table.h"
 
 typedef struct emitted_instrucion_t {
     opcode_t opcode;
@@ -14,6 +15,7 @@ typedef struct emitted_instrucion_t {
 typedef struct compiler_t {
     instructions_t *instructions;
     cm_array_list *constants_pool;
+    symbol_table_t *symbol_table;
     emitted_instrucion_t last_instruction;
     emitted_instrucion_t prev_instruction;
 } compiler_t;
@@ -25,7 +27,8 @@ typedef struct bytecode_t {
 
 typedef enum compiler_error_code {
     COMPILER_ERROR_NONE,
-    COMPILER_UNKNOWN_OPERATOR
+    COMPILER_UNKNOWN_OPERATOR,
+    COMPILER_UNDEFINED_VARIABLE
 } compiler_error_code;
 
 typedef struct compiler_error_t {
@@ -35,7 +38,8 @@ typedef struct compiler_error_t {
 
 static const char *compiler_errors[] = {
     "COMPILER_ERROR_NONE",
-    "COMPILER_UNKNOWN_OPERATOR"
+    "COMPILER_UNKNOWN_OPERATOR",
+    "COMPILER_UNDEFINED_VARIABLE"
 };
 
 

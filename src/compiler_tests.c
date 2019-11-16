@@ -251,6 +251,39 @@ test_boolean_expressions(void)
 }
 
 static void
+test_global_let_statements(void)
+{
+    compiler_test tests[] = {
+        {
+            "let one = 1; let two = 2;",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPSETGLOBAL, 1)
+            },
+            create_constant_pool(2, create_monkey_int(1), create_monkey_int(2))
+        },
+        {
+            "let one = 1; one;",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1, create_monkey_int(1))
+        }
+
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_integer_arithmetic(void)
 {
     compiler_test tests[] = {
@@ -322,7 +355,6 @@ test_integer_arithmetic(void)
     };
 
     print_test_separator_line();
-
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_compiler_tests(ntests, tests);
 }
@@ -333,4 +365,5 @@ main(int argc, char **argv)
     test_integer_arithmetic();
     test_boolean_expressions();
     test_conditionals();
+    test_global_let_statements();
 }

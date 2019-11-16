@@ -80,6 +80,7 @@ compiler_init(void)
     compiler->instructions->length = 0;
     compiler->instructions->size = 0;
     compiler->constants_pool = NULL;
+    compiler->symbol_table = symbol_table_init();
     return compiler;
 }
 
@@ -89,6 +90,7 @@ compiler_free(compiler_t *compiler)
     instructions_free(compiler->instructions);
     if (compiler->constants_pool)
         cm_array_list_free(compiler->constants_pool);
+    free_symbol_table(compiler->symbol_table);
     free(compiler);
 }
 
@@ -129,6 +131,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     prefix_expression_t *prefix_exp;
     integer_t *int_exp;
     boolean_expression_t *bool_exp;
+    identifier_t *ident_exp;
     if_expression_t *if_exp;
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
@@ -227,6 +230,16 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         after_alternative_pos = compiler->instructions->length;
         change_operand(compiler, jmp_pos, after_alternative_pos);
         break;
+    case IDENTIFIER_EXPRESSION:
+        ident_exp = (identifier_t *) expression_node;
+        symbol_t *sym = symbol_resolve(compiler->symbol_table, ident_exp->value);
+        if (sym == NULL) {
+            error.code = COMPILER_UNDEFINED_VARIABLE;
+            error.msg = get_err_msg("undefined variable: %s\n", ident_exp->value);
+            return error;
+        }
+        emit(compiler, OPGETGLOBAL, sym->index);
+        break;
     default:
         return none_error;
     }
@@ -240,6 +253,7 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
     compiler_error_t none_error = {COMPILER_ERROR_NONE, NULL};
     expression_statement_t *expression_stmt;
     block_statement_t *block_stmt;
+    letstatement_t *let_stmt;
     size_t i;
     switch (statement_node->statement_type) {
     case EXPRESSION_STATEMENT:
@@ -256,6 +270,14 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
             if (error.code != COMPILER_ERROR_NONE)
                 return error;
         }
+        break;
+    case LET_STATEMENT:
+        let_stmt = (letstatement_t *) statement_node;
+        error = compile(compiler, (node_t *) let_stmt->value);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        symbol_t *sym = symbol_define(compiler->symbol_table, let_stmt->name->value);
+        emit(compiler, OPSETGLOBAL, sym->index);
         break;
     default:
         return none_error;

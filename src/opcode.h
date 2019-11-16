@@ -29,7 +29,9 @@ typedef enum opcode_t {
     OPBANG,
     OPJMPFALSE,
     OPJMP,
-    OPNULL
+    OPNULL,
+    OPSETGLOBAL,
+    OPGETGLOBAL
 } opcode_t;
 
 typedef struct opcode_definition_t {
@@ -55,7 +57,9 @@ static opcode_definition_t opcode_definitions [] = {
     {"OPBANG", "not", {(size_t) 0}},
     {"OPJMPFALSE", "jump_if_false", {(size_t) 2}},
     {"OPJMP", "jump", {(size_t) 2}},
-    {"OPNULL", "null", {(size_t) 0}}
+    {"OPNULL", "null", {(size_t) 0}},
+    {"OPSETGLOBAL", "set_global", {(size_t) 2}},
+    {"OPGETGLOBAL", "get_global", {(size_t) 2}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];
