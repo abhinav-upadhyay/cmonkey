@@ -84,6 +84,46 @@ compiler_init(void)
     return compiler;
 }
 
+static void *
+_strdup(void *s)
+{
+    return (void *) strdup((char *) s);
+}
+
+static void *
+_copy_monkey_object(void *obj)
+{
+    return copy_monkey_object((monkey_object_t *) obj);
+}
+
+static void *
+_copy_symbol(void *obj)
+{
+    symbol_t *src = (symbol_t *) obj;
+    symbol_t *new_symbol = symbol_init(src->name, src->scope, src->index);
+    return new_symbol;
+}
+
+symbol_table_t *
+symbol_table_copy(symbol_table_t *src)
+{
+    symbol_table_t *new_table = symbol_table_init();
+    cm_hash_table_free(new_table->store);
+    new_table->store = cm_hash_table_copy(src->store, _strdup, _copy_symbol);
+    new_table->nentries = src->nentries;
+    return new_table;
+}
+
+compiler_t *
+compiler_init_with_state(symbol_table_t *symbol_table, cm_array_list *constants)
+{
+    compiler_t *compiler = compiler_init();
+    free_symbol_table(compiler->symbol_table);
+    compiler->symbol_table = symbol_table_copy(symbol_table);
+    compiler->constants_pool = cm_array_list_copy(constants, _copy_monkey_object);
+    return compiler;
+}
+
 void
 compiler_free(compiler_t *compiler)
 {

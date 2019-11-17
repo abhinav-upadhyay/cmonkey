@@ -74,7 +74,8 @@ monkey:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o 
 	${CC} ${CFLAGS} -o ${BINDIR}/monkey ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
 		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o
 
-symbol_table_tests: $(OBJDIR)/symbol_table_tests.o $(OBJDIR)/symbol_table.o $(OBJDIR)/cmonkey_utils.o
+symbol_table_tests: $(OBJDIR)/symbol_table_tests.o $(OBJDIR)/symbol_table.o \
+	$(OBJDIR)/cmonkey_utils.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/symbol_table_tests $(OBJDIR)/symbol_table_tests.o \
 		$(OBJDIR)/symbol_table.o $(OBJDIR)/cmonkey_utils.o
 

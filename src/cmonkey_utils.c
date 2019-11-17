@@ -347,7 +347,7 @@ int
 cm_array_list_add(cm_array_list *list, void *value)
 {
     if (list->length == list->array_size) {
-        list->array_size *= 2;
+        list->array_size = list->array_size * 2 + 1;
         list->array = reallocarray(list->array, list->array_size, sizeof(*list->array));
         if (list->array == NULL)
             err(EXIT_FAILURE, "malloc failed");

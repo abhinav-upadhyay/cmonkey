@@ -128,11 +128,28 @@ test_conditionals(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_global_let_stmts(void)
+{
+    vm_testcase tests[] = {
+        {"let one = 1; one", (monkey_object_t *) create_monkey_int(1)},
+        {"let one = 1; let two = 2; one + two", (monkey_object_t *) create_monkey_int(3)},
+        {"let one = 1; let two = one + one; one + two", (monkey_object_t *) create_monkey_int(3)}
+    };
+    print_test_separator_line();
+    printf("Testing global let statements\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
     test_integer_aritmetic();
     test_boolean_expressions();
     test_conditionals();
+    test_global_let_stmts();
     return 0;
 }

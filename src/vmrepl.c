@@ -169,6 +169,24 @@ EXIT:
 	return 0;
 }
 
+static void
+copy_globals(monkey_object_t *dst[GLOBALS_SIZE], monkey_object_t *src[GLOBALS_SIZE])
+{
+	for (size_t i = 0; i < GLOBALS_SIZE; i++) {
+		if (dst[i] != NULL)
+			free_monkey_object(dst[i]);
+		if (src[i] == NULL)
+			return;
+		dst[i] = copy_monkey_object(src[i]);
+	}
+}
+
+static void *
+_copy_monkey_object(void *obj)
+{
+	return copy_monkey_object((monkey_object_t *) obj);
+}
+
 static int
 repl(void)
 {
@@ -181,6 +199,9 @@ repl(void)
 	program_t *program = NULL;
 	compiler_t *compiler = NULL;
 	bytecode_t *bytecode = NULL;
+	monkey_object_t *globals[GLOBALS_SIZE] = {NULL};
+	cm_array_list *constants = cm_array_list_init(16, free_monkey_object);
+	symbol_table_t *symbol_table = symbol_table_init();
 	vm_t *machine = NULL;
 	environment_t *env = create_env();
 	printf("%s\n", MONKEY_FACE);
@@ -213,7 +234,7 @@ repl(void)
 			print_parse_errors(parser);
 			goto CONTINUE;
 		}
-		compiler = compiler_init();
+		compiler = compiler_init_with_state(symbol_table, constants);
 		compiler_error_t compile_err = compile(compiler, (node_t *) program);
 		if (compile_err.code != COMPILER_ERROR_NONE) {
 			printf("Compiler error: %s\n", compile_err.msg);
@@ -222,7 +243,7 @@ repl(void)
 		}
 
 		bytecode = get_bytecode(compiler);
-		machine = vm_init(bytecode);
+		machine = vm_init_with_state(bytecode, globals);
 		vm_error_t vm_err = vm_run(machine);
 		if (vm_err.code != VM_ERROR_NONE) {
 			printf("VM error: %s\n", vm_err.msg);
@@ -244,10 +265,17 @@ CONTINUE:
 		free(program_string);
 		if (bytecode)
 			bytecode_free(bytecode);
-		if (compiler)
+		if (compiler) {
+			free_symbol_table(symbol_table);
+			cm_array_list_free(constants);
+			symbol_table = symbol_table_copy(compiler->symbol_table);
+			constants = cm_array_list_copy(compiler->constants_pool, _copy_monkey_object);
 			compiler_free(compiler);
-		if (machine)
+		}
+		if (machine) {
+			copy_globals(globals, machine->globals);
 			vm_free(machine);
+		}
 		line = NULL;
 		program = NULL;
 		parser = NULL;
@@ -263,8 +291,21 @@ CONTINUE:
 		parser_free(parser);
 	if (line)
 		free(line);
+	if (compiler)
+		compiler_free(compiler);
+	if (bytecode)
+		bytecode_free(bytecode);
+	if (machine)
+		vm_free(machine);
 	cm_array_list_free(lines);
 	env_free(env);
+	free_symbol_table(symbol_table);
+	cm_array_list_free(constants);
+	for (size_t i = 0; i < GLOBALS_SIZE; i++) {
+		if (globals[i] == NULL)
+			break;
+		free_monkey_object(globals[i]);
+	}
 	return 0;
 }
 

@@ -46,9 +46,10 @@ static const char *compiler_errors[] = {
 #define get_compiler_error(e) compiler_errors[e]
 
 compiler_t *compiler_init(void);
+compiler_t *compiler_init_with_state(symbol_table_t *, cm_array_list *);
 void compiler_free(compiler_t *);
 compiler_error_t compile(compiler_t *, node_t *);
 bytecode_t *get_bytecode(compiler_t *);
 void bytecode_free(bytecode_t *);
-
+symbol_table_t *symbol_table_copy(symbol_table_t *);
 #endif

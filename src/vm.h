@@ -8,6 +8,7 @@
 #include "opcode.h"
 
 #define STACKSIZE 2048
+#define GLOBALS_SIZE 65536
 
 typedef enum vm_error_code {
     VM_ERROR_NONE,
@@ -34,10 +35,12 @@ typedef struct vm_t {
     cm_array_list *constants;
     instructions_t *instructions;
     monkey_object_t *stack[STACKSIZE];
+    monkey_object_t *globals[GLOBALS_SIZE];
     size_t sp;
 } vm_t;
 
 vm_t *vm_init(bytecode_t *);
+vm_t *vm_init_with_state(bytecode_t *, monkey_object_t *[GLOBALS_SIZE]);
 void vm_free(vm_t *);
 monkey_object_t *vm_last_popped_stack_elem(vm_t *);
 vm_error_t vm_run(vm_t *);

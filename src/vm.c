@@ -30,6 +30,21 @@ vm_init(bytecode_t *bytecode)
     vm->instructions = bytecode->instructions;
     vm->constants = bytecode->constants_pool;
     vm->sp = 0;
+    for (size_t i = 0; i < GLOBALS_SIZE; i++)
+        vm->globals[i] = NULL;
+    return vm;
+}
+
+vm_t *
+vm_init_with_state(bytecode_t *bytecode, monkey_object_t *globals[GLOBALS_SIZE])
+{
+    vm_t *vm = vm_init(bytecode);
+    for (size_t i = 0; i < GLOBALS_SIZE; i++) {
+        if (globals[i] != NULL)
+            vm->globals[i] = copy_monkey_object(globals[i]);
+        else
+            break;
+    }
     return vm;
 }
 
@@ -38,6 +53,12 @@ vm_free(vm_t *vm)
 {
     for (size_t i = 0; i < vm->sp; i++)
         free_monkey_object(vm->stack[i]);
+    for (size_t i = 0; i < GLOBALS_SIZE; i++) {
+        if (vm->globals[i] != NULL)
+            free_monkey_object(vm->globals[i]);
+        else
+            break;
+    }
     free(vm);
 }
 
@@ -258,7 +279,7 @@ is_truthy(monkey_object_t *condition)
 vm_error_t
 vm_run(vm_t *vm)
 {
-    size_t const_index, jmp_pos;
+    size_t const_index, jmp_pos, sym_index;
     vm_error_t vm_err;
     opcode_definition_t op_def;
     monkey_object_t *top = NULL;
@@ -323,6 +344,19 @@ vm_run(vm_t *vm)
             top = vm_pop(vm);
             if (!is_truthy(top))
                 ip = jmp_pos - 1;
+            break;
+        case OPSETGLOBAL:
+            sym_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip += 2;
+            top = vm_pop(vm);
+            vm->globals[sym_index] = copy_monkey_object(top);
+            break;
+        case OPGETGLOBAL:
+            sym_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip += 2;
+            vm_err = vm_push(vm, vm->globals[sym_index]);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
             break;
         default:
             op_def = opcode_definition_lookup(op);
