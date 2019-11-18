@@ -196,6 +196,7 @@ test_be_to_size_t(void)
         uint8_t *arr = size_t_to_uint8_be(i, 2);
         size_t res = be_to_size_t(arr, 2);
         test(res == i, "Expected value %zu, got %zu\n", i, res);
+        free(arr);
     }
     print_test_separator_line();
 }
