@@ -431,11 +431,11 @@ cm_array_string_list_join(cm_array_list *list, const char *delim)
         if (string == NULL) {
             ret = asprintf(&temp, "%s", (char *) list->array[i]);
             if (ret == -1)
-                errx(EXIT_FAILURE, "malloc failed");
+                err(EXIT_FAILURE, "malloc failed");
         } else {
             ret = asprintf(&temp, "%s%s%s", string, delim, (char *) list->array[i]);
             if (ret == -1)
-                errx(EXIT_FAILURE, "malloc failed");
+                err(EXIT_FAILURE, "malloc failed");
             free(string);
         }
         string = temp;
@@ -524,7 +524,6 @@ power_ceil(size_t x)
 uint8_t *
 size_t_to_uint8_be(size_t val, size_t nbytes)
 {
-    size_t next_power = power_ceil(val);
     uint8_t *array;
     array = malloc(sizeof(*array) * nbytes);
     if (array == NULL)
