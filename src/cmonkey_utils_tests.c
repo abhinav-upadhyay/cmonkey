@@ -147,13 +147,13 @@ test_cm_array_list(void)
     ret = cm_array_list_add(list, strdup("third"));
     test(ret == 1, "list add at index 2 failed with return value %d\n", ret);
     test(list->length == 3, "Expected list length 3, found %zu\n", list->length);
-    test(list->array_size == 4, "Expected list array size 4, found %zu\n", list->array_size);
+    test(list->array_size == 5, "Expected list array size 5, found %zu\n", list->array_size);
     test(strcmp((char *)list->array[2], "third") == 0, "Expected third value \"third\", found \"%s\"\n", (char *)list->array[2]);
 
     ret = cm_array_list_add_at(list, 1, strdup("new second"));
     test(ret == 1, "Expected list add to pass at index 1, it failed with return value %d\n", ret);
     test(list->length == 3, "Expected list length 3, found %zu\n", list->length);
-    test(list->array_size == 4, "Expected list array size 4, found %zu\n", list->array_size);
+    test(list->array_size == 5, "Expected list array size 5, found %zu\n", list->array_size);
     test(strcmp((char *)list->array[1], "new second") == 0, "Expected third value \"third\", found \"%s\"\n", (char *)list->array[1]);
 
 
@@ -186,6 +186,20 @@ test_cm_array_list(void)
     cm_array_list_free(list);
 }
 
+static void
+test_be_to_size_t(void)
+{
+    print_test_separator_line();
+    printf("Testing test_be_to_size_t\n");
+    for (size_t i = 0; i < 65536; i++) {
+        printf("Testing for %zu\n", i);
+        uint8_t *arr = size_t_to_uint8_be(i, 2);
+        size_t res = be_to_size_t(arr, 2);
+        test(res == i, "Expected value %zu, got %zu\n", i, res);
+    }
+    print_test_separator_line();
+}
+
 int
 main(int argc, char **argv)
 {
@@ -194,4 +208,5 @@ main(int argc, char **argv)
     test_cm_array_list_init();
     test_cm_array_list();
     test_cm_array_list_init_size_t();
+    test_be_to_size_t();
 }
