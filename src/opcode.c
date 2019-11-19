@@ -11,6 +11,7 @@ vinstruction_init(opcode_t op, va_list ap)
 {
     instructions_t *ins;
     size_t operand;
+    opcode_definition_t op_def;
     ins = malloc(sizeof(*ins));
     if (ins == NULL)
         err(EXIT_FAILURE, "malloc failed");
@@ -20,6 +21,7 @@ vinstruction_init(opcode_t op, va_list ap)
     case OPJMP:
     case OPSETGLOBAL:
     case OPGETGLOBAL:
+    case OPARRAY:
         // these opcodes need only one operand 2 bytes wide
         operand = va_arg(ap, size_t);
         uint8_t *boperand = size_t_to_uint8_be(operand, 2);
@@ -46,7 +48,8 @@ vinstruction_init(opcode_t op, va_list ap)
         ins->size = 1;
         return ins;
     default:
-        break;
+        op_def = opcode_definition_lookup(op);
+        errx(EXIT_FAILURE, "Unsupported opcode %s", op_def.name);
     }
     return ins;
 }
@@ -111,6 +114,7 @@ instructions_to_string(instructions_t *instructions)
         case OPJMP:
         case OPSETGLOBAL:
         case OPGETGLOBAL:
+        case OPARRAY:
             operand = be_to_size_t(instructions->bytes + i + 1, 2);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);

@@ -1,4 +1,6 @@
 #include <stdbool.h>
+#include <string.h>
+
 #include "object.h"
 #include "test_utils.h"
 

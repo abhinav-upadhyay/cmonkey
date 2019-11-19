@@ -177,6 +177,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     monkey_bool_t *bool_obj;
     string_t *str_exp;
     monkey_string_t *str_obj;
+    array_literal_t *array_exp;
     size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     switch (expression_node->expression_type) {
@@ -288,6 +289,15 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             return error;
         }
         emit(compiler, OPGETGLOBAL, sym->index);
+        break;
+    case ARRAY_LITERAL:
+        array_exp = (array_literal_t *) expression_node;
+        for (size_t i = 0; i < array_exp->elements->length; i++) {
+            error = compile(compiler, cm_array_list_get(array_exp->elements, i));
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+        }
+        emit(compiler, OPARRAY, array_exp->elements->length);
         break;
     default:
         return none_error;

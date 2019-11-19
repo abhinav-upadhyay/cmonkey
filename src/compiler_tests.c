@@ -27,7 +27,7 @@ create_constant_pool(size_t count, ...)
 typedef struct compiler_test {
     const char *input;
     size_t instructions_count;
-    instructions_t *expected_instructions[10];
+    instructions_t *expected_instructions[32];
     cm_array_list *expected_constants;
 } compiler_test;
 
@@ -314,6 +314,66 @@ test_string_expressions(void)
 }
 
 static void
+test_array_literals(void)
+{
+    print_test_separator_line();
+    printf("Testing array literals\n");
+
+    compiler_test tests[] = {
+        {
+            "[]",
+            2,
+            {
+                instruction_init(OPARRAY, 0),
+                instruction_init(OPPOP)
+            },
+            NULL
+        },
+        {
+            "[1, 2, 3]",
+            5,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPARRAY, 3),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3))
+        },
+        {
+            "[1 + 2, 3 - 4, 5 * 6]",
+            11,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPADD),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPSUB),
+                instruction_init(OPCONSTANT, 4),
+                instruction_init(OPCONSTANT, 5),
+                instruction_init(OPMUL),
+                instruction_init(OPARRAY, 3),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(6,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3),
+                (monkey_object_t *) create_monkey_int(4),
+                (monkey_object_t *) create_monkey_int(5),
+                (monkey_object_t *) create_monkey_int(6))
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_integer_arithmetic(void)
 {
     compiler_test tests[] = {
@@ -397,4 +457,5 @@ main(int argc, char **argv)
     test_conditionals();
     test_global_let_statements();
     test_string_expressions();
+    test_array_literals();
 }
