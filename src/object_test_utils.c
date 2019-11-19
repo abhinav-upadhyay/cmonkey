@@ -32,6 +32,17 @@ test_null_object(monkey_object_t *object)
 }
 
 void
+test_string_object(monkey_object_t *obj, char *expected_value, size_t expected_length)
+{
+    monkey_string_t *str_obj = (monkey_string_t *) obj;
+    test(str_obj->length == expected_length,
+        "Expected string length %zu, got %zu\n",
+        expected_length, str_obj->length);
+    test(strncmp(str_obj->value, expected_value, expected_length) == 0,
+        "Expected string %s, got %s\n", expected_value, str_obj->value);
+}
+
+void
 test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
 {
     test(obj->type == expected->type, "Expected object of type %s, got %s\n",
@@ -42,4 +53,8 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
         test_boolean_object(obj, ((monkey_bool_t *) expected)->value);
     else if (expected->type == MONKEY_NULL)
         test_null_object(expected);
+    else if (expected->type == MONKEY_STRING) {
+        monkey_string_t *expected_str_obj = (monkey_string_t *) expected;
+        test_string_object(obj, expected_str_obj->value, expected_str_obj->length);
+    }
 }

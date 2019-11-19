@@ -175,6 +175,9 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     if_expression_t *if_exp;
     monkey_int_t *int_obj;
     monkey_bool_t *bool_obj;
+    string_t *str_exp;
+    monkey_string_t *str_obj;
+    size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
@@ -233,7 +236,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     case INTEGER_EXPRESSION:
         int_exp = (integer_t *) expression_node;
         int_obj = create_monkey_int(int_exp->value);
-        size_t constant_idx = add_constant(compiler, (monkey_object_t *) int_obj);
+        constant_idx = add_constant(compiler, (monkey_object_t *) int_obj);
         emit(compiler, OPCONSTANT, constant_idx);
         break;
     case BOOLEAN_EXPRESSION:
@@ -243,6 +246,12 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             emit(compiler, OPTRUE);
         else
             emit(compiler, OPFALSE);
+        break;
+    case STRING_EXPRESSION:
+        str_exp = (string_t *) expression_node;
+        str_obj = create_monkey_string(str_exp->value, strlen(str_exp->value));
+        size_t constant_idx = add_constant(compiler, (monkey_object_t *) str_obj);
+        emit(compiler, OPCONSTANT, constant_idx);
         break;
     case IF_EXPRESSION:
         if_exp = (if_expression_t *) expression_node;

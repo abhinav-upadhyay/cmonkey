@@ -144,6 +144,22 @@ test_global_let_stmts(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_string_expressions(void)
+{
+    vm_testcase tests[] = {
+        {"\"monkey\"", (monkey_object_t *) create_monkey_string("monkey", 6)},
+        {"\"mon\" + \"key\"", (monkey_object_t *) create_monkey_string("monkey", 6)},
+        {"\"mon\" + \"key\" + \"banana\"", (monkey_object_t *) create_monkey_string("monkeybanana", 12)}
+    };
+    print_test_separator_line();
+    printf("Testing string expressions\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -151,5 +167,6 @@ main(int argc, char **argv)
     test_boolean_expressions();
     test_conditionals();
     test_global_let_stmts();
+    test_string_expressions();
     return 0;
 }

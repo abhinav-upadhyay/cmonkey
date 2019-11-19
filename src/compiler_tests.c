@@ -284,6 +284,36 @@ test_global_let_statements(void)
 }
 
 static void
+test_string_expressions(void)
+{
+    compiler_test tests[] = {
+        {
+            "\"monkey\"",
+            2,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1, create_monkey_string("monkey", 6))
+        },
+        {
+            "\"mon\" + \"key\"",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPADD),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2, create_monkey_string("mon", 3), create_monkey_string("key", 3))
+        }
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_integer_arithmetic(void)
 {
     compiler_test tests[] = {
@@ -366,4 +396,5 @@ main(int argc, char **argv)
     test_boolean_expressions();
     test_conditionals();
     test_global_let_statements();
+    test_string_expressions();
 }

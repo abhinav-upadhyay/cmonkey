@@ -128,16 +128,39 @@ execute_binary_int_op(vm_t *vm, opcode_t op, long leftval, long rightval)
 }
 
 static vm_error_t
+execute_binary_string_op(vm_t *vm, opcode_t op, monkey_string_t *leftval, monkey_string_t *rightval)
+{
+    char *result = NULL;
+    vm_error_t error = {VM_ERROR_NONE, NULL};
+    opcode_definition_t op_def;
+    if (op != OPADD) {
+        op_def = opcode_definition_lookup(op);
+        error.code = VM_UNSUPPORTED_OPERATOR;
+        error.msg = get_err_msg("opcode %s not support for string operands", op_def.name);
+        return error;
+    }
+    if ((asprintf(&result, "%s%s", leftval->value, rightval->value)) == -1)
+        err(EXIT_FAILURE, "malloc failed");
+    monkey_object_t *result_obj = (monkey_object_t *) create_monkey_string(result, leftval->length + rightval->length);
+    free(result);
+    vm_push(vm, result_obj);
+    free_monkey_object(result_obj);
+    return error;
+}
+
+static vm_error_t
 execute_binary_op(vm_t *vm, opcode_t op)
 {
     monkey_object_t *right = vm_pop(vm);
     monkey_object_t *left = vm_pop(vm);
-    long leftval = ((monkey_int_t *) left)->value;
-    long rightval = ((monkey_int_t *) right)->value;
     vm_error_t vm_err;
-    if (left->type == MONKEY_INT && right->type == MONKEY_INT)
+    if (left->type == MONKEY_INT && right->type == MONKEY_INT) {
+        long leftval = ((monkey_int_t *) left)->value;
+        long rightval = ((monkey_int_t *) right)->value;
         vm_err = execute_binary_int_op(vm, op, leftval, rightval);
-    else {
+    } else if (left->type == MONKEY_STRING && right->type == MONKEY_STRING) {
+        vm_err = execute_binary_string_op(vm, op, (monkey_string_t *) left, (monkey_string_t *) right);
+    }else {
         vm_err.code = VM_UNSUPPORTED_OPERAND;
         opcode_definition_t op_def = opcode_definition_lookup(op);
         vm_err.msg = get_err_msg("'%s' operation not supported with types %s and %s",
