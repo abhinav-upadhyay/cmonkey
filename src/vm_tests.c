@@ -160,6 +160,36 @@ test_string_expressions(void)
         free_monkey_object(tests[i].expected);
 }
 
+static monkey_array_t *
+create_monkey_int_array(size_t count, ...)
+{
+    va_list ap;
+    va_start(ap, count);
+    cm_array_list *list = cm_array_list_init(count, free_monkey_object);
+    for (size_t i = 0; i < count; i++) {
+        int val = va_arg(ap, int);
+        cm_array_list_add(list, create_monkey_int(val));
+    };
+    va_end(ap);
+    return create_monkey_array(list);
+}
+
+static void
+test_array_literals(void)
+{
+    vm_testcase tests[] = {
+        {"[]", (monkey_object_t *) create_monkey_int_array(0)},
+        {"[1, 2, 3]", (monkey_object_t *) create_monkey_int_array(3, 1, 2, 3)},
+        {"[1 + 2, 3  * 4, 5 + 6]", (monkey_object_t *) create_monkey_int_array(3, 3, 12, 11)}
+    };
+    print_test_separator_line();
+    printf("Testing array literals\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -168,5 +198,6 @@ main(int argc, char **argv)
     test_conditionals();
     test_global_let_stmts();
     test_string_expressions();
+    test_array_literals();
     return 0;
 }

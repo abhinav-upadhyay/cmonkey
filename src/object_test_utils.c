@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "object.h"
+#include "object_test_utils.h"
 #include "test_utils.h"
 
 void
@@ -44,6 +45,7 @@ test_string_object(monkey_object_t *obj, char *expected_value, size_t expected_l
         "Expected string %s, got %s\n", expected_value, str_obj->value);
 }
 
+
 void
 test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
 {
@@ -58,5 +60,21 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
     else if (expected->type == MONKEY_STRING) {
         monkey_string_t *expected_str_obj = (monkey_string_t *) expected;
         test_string_object(obj, expected_str_obj->value, expected_str_obj->length);
+    } else if (expected->type == MONKEY_ARRAY)
+        test_array_object(obj, expected);
+}
+
+void
+test_array_object(monkey_object_t *actual, monkey_object_t *expected)
+{
+    monkey_array_t *actual_arr = (monkey_array_t *) actual;
+    monkey_array_t *expected_arr = (monkey_array_t *) expected;
+    test(actual_arr->elements->length == expected_arr->elements->length,
+        "Expected array size %zu, got %zu\n",
+        expected_arr->elements->length, actual_arr->elements->length);
+    for (size_t i = 0; i < actual_arr->elements->length; i++) {
+        monkey_object_t *actual_obj = (monkey_object_t *) cm_array_list_get(actual_arr->elements, i);
+        monkey_object_t *expected_obj = (monkey_object_t *) cm_array_list_get(expected_arr->elements, i);
+        test_monkey_object(actual_obj, expected_obj);
     }
 }

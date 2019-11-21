@@ -69,7 +69,7 @@ vm_last_popped_stack_elem(vm_t *vm)
 }
 
 static vm_error_t
-vm_push(vm_t *vm, monkey_object_t *obj)
+vm_push(vm_t *vm, monkey_object_t *obj, _Bool copy)
 {
     vm_error_t error = {VM_ERROR_NONE, NULL};
     if (vm->sp >= STACKSIZE) {
@@ -78,7 +78,7 @@ vm_push(vm_t *vm, monkey_object_t *obj)
             STACKSIZE);
         return error;
     }
-    vm->stack[vm->sp++] = copy_monkey_object(obj);
+    vm->stack[vm->sp++] = copy? copy_monkey_object(obj): obj;
     return error;
 }
 
@@ -122,8 +122,7 @@ execute_binary_int_op(vm_t *vm, opcode_t op, long leftval, long rightval)
         return error;
     }
     monkey_object_t *result_obj = (monkey_object_t *) create_monkey_int(result);
-    vm_push(vm, result_obj);
-    free_monkey_object(result_obj);
+    vm_push(vm, result_obj, false);
     return error;
 }
 
@@ -143,8 +142,7 @@ execute_binary_string_op(vm_t *vm, opcode_t op, monkey_string_t *leftval, monkey
         err(EXIT_FAILURE, "malloc failed");
     monkey_object_t *result_obj = (monkey_object_t *) create_monkey_string(result, leftval->length + rightval->length);
     free(result);
-    vm_push(vm, result_obj);
-    free_monkey_object(result_obj);
+    vm_push(vm, result_obj, false);
     return error;
 }
 
@@ -196,7 +194,7 @@ execute_integer_comparison(vm_t *vm, opcode_t op, long left, long right)
         error.msg = get_err_msg("Unsupported opcode %s for integer operands", op_def.name);
         return error;
     }
-    vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
+    vm_push(vm, (monkey_object_t *) create_monkey_bool(result), false);
     return error;
 }
 
@@ -216,7 +214,7 @@ execute_bang_operator(vm_t *vm)
         bool_operand = create_monkey_bool(false);
     else
         bool_operand = (monkey_bool_t *) operand;
-    vm_push(vm, (monkey_object_t *) create_monkey_bool(!bool_operand->value));
+    vm_push(vm, (monkey_object_t *) create_monkey_bool(!bool_operand->value), false);
     vm_err.code = VM_ERROR_NONE;
     vm_err.msg = NULL;
     return vm_err;
@@ -235,8 +233,7 @@ execute_minus_operator(vm_t *vm)
     }
     monkey_int_t *int_operand = (monkey_int_t *) operand;
     monkey_int_t *result = create_monkey_int(-int_operand->value);
-    vm_push(vm, (monkey_object_t *) result);
-    free_monkey_object(result);
+    vm_push(vm, (monkey_object_t *) result, false);
     free_monkey_object(operand);
     vm_err.code = VM_ERROR_NONE;
     vm_err.msg = NULL;
@@ -258,7 +255,7 @@ execute_comparison_op(vm_t *vm, opcode_t op)
         _Bool result = false;
         switch (op) {
         case OPGREATERTHAN:
-            vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(false), false);
             break;
         case OPEQUAL:
             if (left == right)
@@ -274,7 +271,7 @@ execute_comparison_op(vm_t *vm, opcode_t op)
             error.msg = get_err_msg("Unsupported opcode %s", op_def.name);
             goto RETURN;
         }
-        vm_push(vm, (monkey_object_t *) create_monkey_bool(result));
+        vm_push(vm, (monkey_object_t *) create_monkey_bool(result), false);
     } else {
         error.code = VM_UNSUPPORTED_OPERAND;
         error.msg = get_err_msg("Unsupported operand types %s and %s",
@@ -299,13 +296,27 @@ is_truthy(monkey_object_t *condition)
     }
 }
 
+static cm_array_list *
+build_array(vm_t *vm, size_t array_size)
+{
+    cm_array_list *list = cm_array_list_init(array_size, free_monkey_object);
+    for (size_t i = vm->sp - array_size; i < vm->sp; i++) {
+        monkey_object_t *obj = (monkey_object_t *) vm->stack[i];
+        cm_array_list_add(list, obj);
+    }
+    vm->sp -= array_size;
+    return list;
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
-    size_t const_index, jmp_pos, sym_index;
+    size_t const_index, jmp_pos, sym_index, array_size;
     vm_error_t vm_err;
     opcode_definition_t op_def;
     monkey_object_t *top = NULL;
+    cm_array_list *array_list;
+    monkey_array_t *array_obj;
     for (size_t ip = 0; ip < vm->instructions->length; ip++) {
         opcode_t op = vm->instructions->bytes[ip];
         if (top != NULL) {
@@ -316,7 +327,7 @@ vm_run(vm_t *vm)
         case OPCONSTANT:
             const_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
             ip += 2;
-            vm_err = vm_push(vm, get_constant(vm, const_index));
+            vm_err = vm_push(vm, get_constant(vm, const_index), true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
@@ -332,13 +343,13 @@ vm_run(vm_t *vm)
             top = vm_pop(vm);
             break;
         case OPTRUE:
-            vm_push(vm, (monkey_object_t *) create_monkey_bool(true));
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(true), false);
             break;
         case OPFALSE:
-            vm_push(vm, (monkey_object_t *) create_monkey_bool(false));
+            vm_push(vm, (monkey_object_t *) create_monkey_bool(false), false);
             break;
         case OPNULL:
-            vm_push(vm, (monkey_object_t *) create_monkey_null());
+            vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
             break;
         case OPGREATERTHAN:
         case OPEQUAL:
@@ -377,7 +388,16 @@ vm_run(vm_t *vm)
         case OPGETGLOBAL:
             sym_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
             ip += 2;
-            vm_err = vm_push(vm, vm->globals[sym_index]);
+            vm_err = vm_push(vm, vm->globals[sym_index], true);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPARRAY:
+            array_size = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip += 2;
+            array_list = build_array(vm, array_size);
+            array_obj = create_monkey_array(array_list);
+            vm_err = vm_push(vm, (monkey_object_t *) array_obj, false);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
