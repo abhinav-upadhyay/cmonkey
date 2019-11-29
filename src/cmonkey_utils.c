@@ -241,6 +241,42 @@ cm_hash_table_get(cm_hash_table *hash_table, void *key)
     return NULL;
 }
 
+cm_array_list *
+cm_hash_table_get_keys(cm_hash_table *hash_table)
+{
+    cm_array_list *keys_list = cm_array_list_init(hash_table->nkeys, NULL);
+    for (size_t i = 0; i < hash_table->table_size; i++) {
+        cm_list *bucket = hash_table->table[i];
+        if (bucket == NULL)
+            continue;
+        cm_list_node *node = bucket->head;
+        while (node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) node->data;
+            node = node->next;
+            cm_array_list_add(keys_list, (void *) entry->key);
+        }
+    }
+    return keys_list;
+}
+
+cm_array_list *
+cm_hash_table_get_values(cm_hash_table *hash_table)
+{
+    cm_array_list *values_list = cm_array_list_init(hash_table->nkeys, NULL);
+    for (size_t i = 0; i < hash_table->table_size; i++) {
+        cm_list *bucket = hash_table->table[i];
+        if (bucket == NULL)
+            continue;
+        cm_list_node *node = bucket->head;
+        while (node != NULL) {
+            cm_hash_entry *entry = (cm_hash_entry *) node->data;
+            node = node->next;
+            cm_array_list_add(values_list, (void *) entry->value);
+        }
+    }
+    return values_list;
+}
+
 cm_hash_table *
 cm_hash_table_copy(cm_hash_table *src, void * (*key_copy) (void *), void * (*value_copy) (void *))
 {
@@ -337,6 +373,8 @@ cm_array_list_init(size_t init_size, void (*free_func) (void *))
     list->array = calloc(init_size, sizeof(*list->array));
     if (list->array == NULL)
         err(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < init_size; i++)
+        list->array[i] = NULL;
     list->array_size = init_size;
     list->length = 0;
     list->free_func = free_func;
@@ -349,11 +387,57 @@ cm_array_list_add(cm_array_list *list, void *value)
     if (list->length == list->array_size) {
         list->array_size = list->array_size * 2 + 1;
         list->array = reallocarray(list->array, list->array_size, sizeof(*list->array));
+        for (size_t i = list->length; i < list->array_size; i++)
+            list->array[i] = NULL;
         if (list->array == NULL)
             err(EXIT_FAILURE, "malloc failed");
     }
     list->array[list->length++] = value;
     return 1;
+}
+
+static void
+swap(void **array, size_t i, size_t j)
+{
+    void *tmp = array[i];
+    array[i] = array[j];
+    array[j] = tmp;
+}
+
+static size_t
+partition(void **array, size_t lo, size_t hi, int (*cmp_func) (const void *, const void *))
+{
+    void *pivot = array[hi];
+    size_t i = lo;
+    for (size_t j = lo; j < hi; j++) {
+        if (cmp_func(array[j], pivot) < 0) {
+            swap(array, i, j);
+            i++;
+        }
+    }
+    swap(array, i, hi);
+    return i;
+}
+
+static void
+_qsort(void **array, size_t lo, size_t hi, int (*cmp_func) (const void *, const void *))
+{
+    size_t pivot;
+    if (lo < hi) {
+        pivot = partition(array, lo, hi, cmp_func);
+        _qsort(array, lo, pivot - 1, cmp_func);
+        _qsort(array, pivot + 1, hi, cmp_func);
+    }
+}
+
+void
+cm_array_list_sort(cm_array_list *list, size_t elem_size, int (*cmp_func) (const void *, const void *))
+{
+
+    if (list->length > 0) {
+        size_t sz = sizeof(list->array[0]);
+        _qsort((list->array), 0, list->length - 1, cmp_func);
+    }
 }
 
 int

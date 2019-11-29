@@ -22,6 +22,7 @@ vinstruction_init(opcode_t op, va_list ap)
     case OPSETGLOBAL:
     case OPGETGLOBAL:
     case OPARRAY:
+    case OPHASH:
         // these opcodes need only one operand 2 bytes wide
         operand = va_arg(ap, size_t);
         uint8_t *boperand = size_t_to_uint8_be(operand, 2);
@@ -115,6 +116,7 @@ instructions_to_string(instructions_t *instructions)
         case OPSETGLOBAL:
         case OPGETGLOBAL:
         case OPARRAY:
+        case OPHASH:
             operand = be_to_size_t(instructions->bytes + i + 1, 2);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);

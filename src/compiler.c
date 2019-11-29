@@ -162,6 +162,19 @@ get_err_msg(const char *s, ...)
     return msg;
 }
 
+static int
+compare_monkey_hash_keys(const void *v1, const void *v2)
+{
+    node_t *n1 = (node_t *) v1;
+    node_t *n2 = (node_t *) v2;
+    char *s1 = n1->string(n1);
+    char *s2 = n2->string(n2);
+    int ret = strcmp(s1, s2);
+    free(s1);
+    free(s2);
+    return ret;
+}
+
 static compiler_error_t
 compile_expression_node(compiler_t *compiler, expression_t *expression_node)
 {
@@ -178,6 +191,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     string_t *str_exp;
     monkey_string_t *str_obj;
     array_literal_t *array_exp;
+    hash_literal_t *hash_exp;
     size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     switch (expression_node->expression_type) {
@@ -298,6 +312,23 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
                 return error;
         }
         emit(compiler, OPARRAY, array_exp->elements->length);
+        break;
+    case HASH_LITERAL:
+        hash_exp = (hash_literal_t *) expression_node;
+        cm_array_list *keys = cm_hash_table_get_keys(hash_exp->pairs);
+        cm_array_list_sort(keys, sizeof(node_t *), compare_monkey_hash_keys);
+        for (size_t i = 0; i < keys->length; i++) {
+            node_t *key = (node_t *) cm_array_list_get(keys, i);
+            node_t *value = (node_t *) cm_hash_table_get(hash_exp->pairs, key);
+            error = compile(compiler, key);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+            error = compile(compiler, value);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+        }
+        cm_array_list_free(keys);
+        emit(compiler, OPHASH, 2 * hash_exp->pairs->nkeys);
         break;
     default:
         return none_error;

@@ -85,6 +85,7 @@ void *cm_array_list_last(cm_array_list *);
 void *cm_array_list_first(cm_array_list *);
 void cm_array_list_remove(cm_array_list *, size_t);
 void cm_array_list_free(cm_array_list *);
+void cm_array_list_sort(cm_array_list *, size_t, int (*cmp_func) (const void *, const void *));
 char *cm_array_string_list_join(cm_array_list *, const char *);
 cm_array_list *cm_array_list_copy(cm_array_list *, void * (*copy_func) (void *));
 
@@ -99,6 +100,8 @@ cm_hash_table *cm_hash_table_init(
 void cm_hash_table_put(cm_hash_table *, void *, void *);
 void *cm_hash_table_get(cm_hash_table *, void *);
 void cm_hash_table_free(cm_hash_table *);
+cm_array_list *cm_hash_table_get_values(cm_hash_table *);
+cm_array_list *cm_hash_table_get_keys(cm_hash_table *);
 cm_hash_table *cm_hash_table_copy(cm_hash_table *, void * (*key_copy) (void *), void * (*value_copy) (void *));
 size_t string_hash_function(void *);
 _Bool string_equals(void *, void *);

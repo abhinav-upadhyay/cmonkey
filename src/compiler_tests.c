@@ -314,6 +314,71 @@ test_string_expressions(void)
 }
 
 static void
+test_hash_literals(void)
+{
+    print_test_separator_line();
+    printf("Testing hash literals\n");
+
+    compiler_test tests[] = {
+        {
+            "{}",
+            2,
+            {
+                instruction_init(OPHASH, 0),
+                instruction_init(OPPOP)
+            },
+            NULL
+        },
+        {
+            "{1: 2, 3: 4, 5: 6}",
+            8,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPCONSTANT, 4),
+                instruction_init(OPCONSTANT, 5),
+                instruction_init(OPHASH, 6),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(6,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3),
+                (monkey_object_t *) create_monkey_int(4),
+                (monkey_object_t *) create_monkey_int(5),
+                (monkey_object_t *) create_monkey_int(6))
+        },
+        {
+            "{1: 2 + 3, 4: 5 * 6}",
+            10,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPADD),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPCONSTANT, 4),
+                instruction_init(OPCONSTANT, 5),
+                instruction_init(OPMUL),
+                instruction_init(OPHASH, 4),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(6,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3),
+                (monkey_object_t *) create_monkey_int(4),
+                (monkey_object_t *) create_monkey_int(5),
+                (monkey_object_t *) create_monkey_int(6))
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_array_literals(void)
 {
     print_test_separator_line();
@@ -458,4 +523,5 @@ main(int argc, char **argv)
     test_global_let_statements();
     test_string_expressions();
     test_array_literals();
+    test_hash_literals();
 }
