@@ -62,6 +62,8 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
         test_string_object(obj, expected_str_obj->value, expected_str_obj->length);
     } else if (expected->type == MONKEY_ARRAY)
         test_array_object(obj, expected);
+    else if (expected->type == MONKEY_HASH)
+        test_hash_object(obj, expected);
 }
 
 void
@@ -77,4 +79,31 @@ test_array_object(monkey_object_t *actual, monkey_object_t *expected)
         monkey_object_t *expected_obj = (monkey_object_t *) cm_array_list_get(expected_arr->elements, i);
         test_monkey_object(actual_obj, expected_obj);
     }
+}
+
+void
+test_hash_object(monkey_object_t *actual, monkey_object_t *expected)
+{
+    monkey_hash_t *actual_hash = (monkey_hash_t *) actual;
+    monkey_hash_t *expected_hash = (monkey_hash_t *) expected;
+    test(actual_hash->pairs->nkeys == expected_hash->pairs->nkeys,
+        "Expected hash size %zu, got %zu\n", expected_hash->pairs->nkeys,
+        actual_hash->pairs->nkeys);
+    cm_array_list *expected_keys = cm_hash_table_get_keys(expected_hash->pairs);
+    cm_array_list *actual_keys = cm_hash_table_get_keys(actual_hash->pairs);
+    if (expected_keys == NULL) {
+        test(actual_keys == NULL, "Expected 0 keys in hash, got %zu\n", actual_keys->length);
+    } else {
+        for (size_t i = 0; i < expected_keys->length; i++) {
+            monkey_object_t *key = cm_array_list_get(expected_keys, i);
+            monkey_object_t *expected_value = (monkey_object_t *) cm_hash_table_get(expected_hash->pairs, key);
+            monkey_object_t *actual_value = (monkey_object_t *) cm_hash_table_get(actual_hash->pairs, key);
+            char *key_string = key->inspect(key);
+            test(actual_value != NULL, "No value found for key %s in hash\n", key_string);
+            test_monkey_object(actual_value, expected_value);
+            free(key_string);
+        }
+    }
+    cm_array_list_free(expected_keys);
+    cm_array_list_free(actual_keys);
 }

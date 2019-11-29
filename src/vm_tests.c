@@ -190,6 +190,48 @@ test_array_literals(void)
         free_monkey_object(tests[i].expected);
 }
 
+static monkey_hash_t *
+create_hash_table(size_t n, monkey_object_t *objects[n])
+{
+    cm_hash_table *table = cm_hash_table_init(monkey_object_hash, monkey_object_equals, free_monkey_object, free_monkey_object);
+    for (size_t i = 0; i < n; i += 2) {
+        monkey_object_t *key = objects[i];
+        monkey_object_t *value = objects[i + 1];
+        cm_hash_table_put(table, key, value);
+    }
+    return create_monkey_hash(table);
+}
+
+static void
+test_hash_literals(void)
+{
+    vm_testcase tests[] = {
+        {"{}", (monkey_object_t *) create_hash_table(0, NULL)},
+        {"{1: 2, 3: 4}", (monkey_object_t *) create_hash_table((size_t) 4, (monkey_object_t *[4])
+            {
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3),
+                (monkey_object_t *) create_monkey_int(4)
+            })
+        },
+        {"{1 + 1: 2 * 2, 3 + 3: 4 * 4}", (monkey_object_t *) create_hash_table((size_t) 4, (monkey_object_t *[4])
+            {
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(4),
+                (monkey_object_t *) create_monkey_int(6),
+                (monkey_object_t *) create_monkey_int(16)
+            })
+        }
+    };
+    print_test_separator_line();
+    printf("Testing hash literals\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -199,5 +241,6 @@ main(int argc, char **argv)
     test_global_let_stmts();
     test_string_expressions();
     test_array_literals();
+    test_hash_literals();
     return 0;
 }

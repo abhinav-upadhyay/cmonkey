@@ -244,6 +244,8 @@ cm_hash_table_get(cm_hash_table *hash_table, void *key)
 cm_array_list *
 cm_hash_table_get_keys(cm_hash_table *hash_table)
 {
+    if (hash_table->nkeys == 0)
+        return NULL;
     cm_array_list *keys_list = cm_array_list_init(hash_table->nkeys, NULL);
     for (size_t i = 0; i < hash_table->table_size; i++) {
         cm_list *bucket = hash_table->table[i];
@@ -422,10 +424,14 @@ partition(void **array, size_t lo, size_t hi, int (*cmp_func) (const void *, con
 static void
 _qsort(void **array, size_t lo, size_t hi, int (*cmp_func) (const void *, const void *))
 {
+    if (array == NULL)
+        return;
+    if (lo == 0 && hi == 0)
+        return;
     size_t pivot;
     if (lo < hi) {
         pivot = partition(array, lo, hi, cmp_func);
-        _qsort(array, lo, pivot - 1, cmp_func);
+        _qsort(array, lo, pivot > 0? pivot - 1: pivot, cmp_func);
         _qsort(array, pivot + 1, hi, cmp_func);
     }
 }
@@ -433,11 +439,8 @@ _qsort(void **array, size_t lo, size_t hi, int (*cmp_func) (const void *, const 
 void
 cm_array_list_sort(cm_array_list *list, size_t elem_size, int (*cmp_func) (const void *, const void *))
 {
-
-    if (list->length > 0) {
-        size_t sz = sizeof(list->array[0]);
+    if (list && list->length > 1)
         _qsort((list->array), 0, list->length - 1, cmp_func);
-    }
 }
 
 int
@@ -493,10 +496,11 @@ cm_array_list_remove(cm_array_list *list, size_t index)
 void
 cm_array_list_free(cm_array_list *list)
 {
+    if (list == NULL)
+        return;
     if (list->free_func != NULL) {
-        for (size_t i = 0; i < list->length; i++) {
+        for (size_t i = 0; i < list->length; i++)
             list->free_func(list->array[i]);
-        }
     }
     free(list->array);
     free(list);

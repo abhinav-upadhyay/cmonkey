@@ -308,15 +308,31 @@ build_array(vm_t *vm, size_t array_size)
     return list;
 }
 
+static cm_hash_table *
+build_hash(vm_t *vm, size_t size)
+{
+    cm_hash_table *table = cm_hash_table_init(monkey_object_hash,
+        monkey_object_equals, free_monkey_object, free_monkey_object);
+    for (size_t i = vm->sp - size; i < vm->sp; i += 2) {
+        monkey_object_t *key = (monkey_object_t *) vm->stack[i];
+        monkey_object_t *value = (monkey_object_t *) vm->stack[i + 1];
+        cm_hash_table_put(table, key, value);
+    }
+    vm->sp -= size;
+    return table;
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
-    size_t const_index, jmp_pos, sym_index, array_size;
+    size_t const_index, jmp_pos, sym_index, array_size, hash_size;
     vm_error_t vm_err;
     opcode_definition_t op_def;
     monkey_object_t *top = NULL;
     cm_array_list *array_list;
+    cm_hash_table *table;
     monkey_array_t *array_obj;
+    monkey_hash_t *hash_obj;
     for (size_t ip = 0; ip < vm->instructions->length; ip++) {
         opcode_t op = vm->instructions->bytes[ip];
         if (top != NULL) {
@@ -398,6 +414,15 @@ vm_run(vm_t *vm)
             array_list = build_array(vm, array_size);
             array_obj = create_monkey_array(array_list);
             vm_err = vm_push(vm, (monkey_object_t *) array_obj, false);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPHASH:
+            hash_size = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
+            ip += 2;
+            table = build_hash(vm, hash_size);
+            hash_obj = create_monkey_hash(table);
+            vm_err = vm_push(vm, (monkey_object_t *) hash_obj, false);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
