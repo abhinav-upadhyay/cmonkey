@@ -192,6 +192,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     monkey_string_t *str_obj;
     array_literal_t *array_exp;
     hash_literal_t *hash_exp;
+    index_expression_t *index_exp;
     size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     switch (expression_node->expression_type) {
@@ -331,6 +332,16 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             cm_array_list_free(keys);
         }
         emit(compiler, OPHASH, 2 * hash_exp->pairs->nkeys);
+        break;
+    case INDEX_EXPRESSION:
+        index_exp = (index_expression_t *) expression_node;
+        error = compile(compiler, index_exp->left);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        error = compile(compiler, index_exp->index);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        emit(compiler, OPINDEX);
         break;
     default:
         return none_error;

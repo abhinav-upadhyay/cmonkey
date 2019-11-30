@@ -439,6 +439,56 @@ test_array_literals(void)
 }
 
 static void
+test_index_expressions(void)
+{
+    compiler_test tests[] = {
+        {
+            "[1, 2, 3][1 + 2]",
+            9,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPARRAY, 3),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPCONSTANT, 4),
+                instruction_init(OPADD),
+                instruction_init(OPINDEX),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(5,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(3),
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2))
+        },
+        {
+            "{1: 2}[2 - 1]",
+            8,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPHASH, 2),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPSUB),
+                instruction_init(OPINDEX),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(4,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_int(1))
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+
+}
+
+static void
 test_integer_arithmetic(void)
 {
     compiler_test tests[] = {
@@ -524,4 +574,5 @@ main(int argc, char **argv)
     test_string_expressions();
     test_array_literals();
     test_hash_literals();
+    test_index_expressions();
 }
