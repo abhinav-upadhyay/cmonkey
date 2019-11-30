@@ -241,6 +241,49 @@ execute_minus_operator(vm_t *vm)
 }
 
 static vm_error_t
+execute_array_index_expression(vm_t *vm, monkey_array_t *left, monkey_int_t *index)
+{
+    vm_error_t vm_err = {VM_ERROR_NONE, NULL};
+    if (index->value < 0 || index->value >= left->elements->length) {
+        vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
+        return vm_err;
+    }
+    vm_push(vm, cm_array_list_get(left->elements, index->value), true);
+    return vm_err;
+}
+
+static vm_error_t
+execute_hash_index_expression(vm_t *vm, monkey_hash_t *left, monkey_object_t *index)
+{
+    vm_error_t vm_err = {VM_ERROR_NONE, NULL};
+    monkey_object_t *value = cm_hash_table_get(left->pairs, index);
+    if (value == NULL)
+        vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
+    else
+        vm_push(vm, value, true);
+    return vm_err;
+}
+
+static vm_error_t
+execute_index_expression(vm_t *vm, monkey_object_t *left, monkey_object_t *index)
+{
+    vm_error_t vm_err;
+    if (left->type == MONKEY_ARRAY) {
+        if (index->type != MONKEY_INT) {
+            vm_err.code = VM_UNSUPPORTED_OPERATOR;
+            vm_err.msg = get_err_msg("unsupported index operator type %s for array object",
+                get_type_name(index->type));
+            return vm_err;
+        }
+        return execute_array_index_expression(vm, (monkey_array_t *) left, (monkey_int_t *) index);
+    } else if (left->type == MONKEY_HASH)
+        return execute_hash_index_expression(vm, (monkey_hash_t *) left, index);
+    vm_err.code = VM_UNSUPPORTED_OPERATOR;
+    vm_err.msg = get_err_msg("index operator not supported for %s", get_type_name(left->type));
+    return vm_err;
+}
+
+static vm_error_t
 execute_comparison_op(vm_t *vm, opcode_t op)
 {
     vm_error_t error = {VM_ERROR_NONE, NULL};
@@ -333,6 +376,8 @@ vm_run(vm_t *vm)
     cm_hash_table *table;
     monkey_array_t *array_obj;
     monkey_hash_t *hash_obj;
+    monkey_object_t *index;
+    monkey_object_t *left;
     for (size_t ip = 0; ip < vm->instructions->length; ip++) {
         opcode_t op = vm->instructions->bytes[ip];
         if (top != NULL) {
@@ -423,6 +468,15 @@ vm_run(vm_t *vm)
             table = build_hash(vm, hash_size);
             hash_obj = create_monkey_hash(table);
             vm_err = vm_push(vm, (monkey_object_t *) hash_obj, false);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPINDEX:
+            index = vm_pop(vm);
+            left = vm_pop(vm);
+            vm_err = execute_index_expression(vm, left, index);
+            free_monkey_object(index);
+            free_monkey_object(left);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;

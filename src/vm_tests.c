@@ -232,6 +232,29 @@ test_hash_literals(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_index_expresions(void)
+{
+    vm_testcase tests[] = {
+        {"[1, 2, 3][1]", (monkey_object_t *) create_monkey_int(2)},
+        {"[1, 2, 3][0 + 2]", (monkey_object_t *) create_monkey_int(3)},
+        {"[[1, 1, 1]][0][0]", (monkey_object_t *) create_monkey_int(1)},
+        {"[][0]", (monkey_object_t *) create_monkey_null()},
+        {"[1, 2, 3][99]", (monkey_object_t *) create_monkey_null()},
+        {"[1][-1]", (monkey_object_t *) create_monkey_null()},
+        {"{1: 1, 2: 2}[1]", (monkey_object_t *) create_monkey_int(1)},
+        {"{1: 1, 2: 2}[2]", (monkey_object_t *) create_monkey_int(2)},
+        {"{1: 1}[0]", (monkey_object_t *) create_monkey_null()},
+        {"{}[0]", (monkey_object_t *) create_monkey_null()}
+    };
+    print_test_separator_line();
+    printf("Testing index expressions\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -242,5 +265,6 @@ main(int argc, char **argv)
     test_string_expressions();
     test_array_literals();
     test_hash_literals();
+    test_index_expresions();
     return 0;
 }
