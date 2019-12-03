@@ -12,12 +12,18 @@ typedef struct emitted_instrucion_t {
     size_t position;
 } emitted_instrucion_t;
 
-typedef struct compiler_t {
+typedef struct compilation_scope_t {
     instructions_t *instructions;
-    cm_array_list *constants_pool;
-    symbol_table_t *symbol_table;
     emitted_instrucion_t last_instruction;
     emitted_instrucion_t prev_instruction;
+} compilation_scope_t;
+
+
+typedef struct compiler_t {
+    cm_array_list *constants_pool;
+    symbol_table_t *symbol_table;
+    cm_array_list *scopes;
+    size_t scope_index;
 } compiler_t;
 
 typedef struct bytecode_t {
@@ -52,4 +58,10 @@ compiler_error_t compile(compiler_t *, node_t *);
 bytecode_t *get_bytecode(compiler_t *);
 void bytecode_free(bytecode_t *);
 symbol_table_t *symbol_table_copy(symbol_table_t *);
+size_t emit(compiler_t *, opcode_t, ...);
+void compiler_enter_scope(compiler_t *);
+instructions_t *compiler_leave_scope(compiler_t *);
+compilation_scope_t *scope_init(void);
+void scope_free(compilation_scope_t *);
+compilation_scope_t *get_top_scope(compiler_t *);
 #endif

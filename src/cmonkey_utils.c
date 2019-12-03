@@ -38,6 +38,20 @@
 
 #include "cmonkey_utils.h"
 
+void *
+cm_list_get_at(cm_list *list, size_t index)
+{
+    cm_list_node *node = list->head;
+    size_t i = 0;
+    while (node != NULL) {
+        if (i == index)
+            return node->data;
+        i++;
+        node = node->next;
+    }
+    return NULL;
+}
+
 cm_list *
 cm_list_init(void)
 {
@@ -644,4 +658,35 @@ be_to_size_t(uint8_t *bytes, size_t bytes_count)
     default:
         err(EXIT_FAILURE, "We don't support operands of %zu bytes width", bytes_count);
     }
+}
+
+cm_stack *
+cm_stack_init(void)
+{
+    cm_stack *stack;
+    stack = malloc(sizeof(*stack));
+    if (stack == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    stack->list = cm_list_init();
+    return stack;
+}
+
+void
+cm_stack_push(cm_stack *stack, void *obj)
+{
+    cm_list_node *node;
+    node = malloc(sizeof(*node));
+    if (node == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    node->data = obj;
+    node->next = stack->list->head;
+    stack->list->head = node;
+}
+
+void *
+cm_stack_pop(cm_stack *stack)
+{
+    void *head = stack->list->head;
+    stack->list->head = stack->list->head->next;
+    return head;
 }

@@ -106,6 +106,46 @@ run_compiler_tests(size_t ntests, compiler_test tests[ntests])
 }
 
 static void
+test_compiler_scopes(void)
+{
+    print_test_separator_line();
+    instructions_t *ins;
+    printf("Testing compiler scopes\n");
+    compiler_t *compiler = compiler_init();
+    opcode_definition_t op_def;
+    test(compiler->scope_index == 0,
+        "Expected scope index to be 0, found %zu\n", compiler->scope_index);
+    emit(compiler, OPMUL);
+    compiler_enter_scope(compiler);
+    test(compiler->scope_index == 1,
+        "Expected scope index to be 1, found %zu\n", compiler->scope_index);
+    emit(compiler, OPSUB);
+    compilation_scope_t *scope = get_top_scope(compiler);
+    test(scope != NULL, "scope NULL at index %zu\n", compiler->scope_index);
+    test(scope->instructions->length == 1,
+        "Expected instructions length 1 at scope index %zu, found %zu\n",
+        compiler->scope_index, scope->instructions->length);
+    op_def = opcode_definition_lookup(scope->last_instruction.opcode);
+    test(scope->last_instruction.opcode == OPSUB,
+        "Expected last opcode OPSUB, found %s\n", op_def.name);
+    ins = compiler_leave_scope(compiler);
+    test(compiler->scope_index == 0, "Expected scope index 0, found %zu\n",
+        compiler->scope_index);
+    instructions_free(ins);
+    emit(compiler, OPADD);
+    scope = get_top_scope(compiler);
+    test(scope->instructions->length == 2, "Expected scope length 2, found %zu\n",
+        scope->instructions->length);
+    op_def = opcode_definition_lookup(scope->last_instruction.opcode);
+    test(scope->last_instruction.opcode == OPADD,
+        "Expected last opcode OPADD, found %s\n", op_def.name);
+    op_def = opcode_definition_lookup(scope->prev_instruction.opcode);
+    test(scope->prev_instruction.opcode == OPMUL,
+        "Expected previous instruction OPMUL, found %s\n", op_def.name);
+    compiler_free(compiler);
+}
+
+static void
 test_conditionals(void)
 {
     compiler_test tests[] = {
@@ -488,6 +528,51 @@ test_index_expressions(void)
 
 }
 
+static instructions_t *
+create_compiled_fn_instructions(size_t nins, ...)
+{
+    va_list ap;
+    va_start(ap, nins);
+    instructions_t *retval = NULL;
+    for (size_t i = 0; i < nins; i++) {
+        instructions_t *ins = (instructions_t *) va_arg(ap, instructions_t *);
+        if (retval == NULL)
+            retval = ins;
+        else {
+            concat_instructions(retval, ins);
+            instructions_free(ins);
+        }
+    }
+    return retval;
+}
+
+static void
+test_functions(void)
+{
+    compiler_test tests[] = {
+        {
+            "fn() {return 5 + 10}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(5),
+                (monkey_object_t *) create_monkey_int(10),
+                (monkey_object_t *) create_monkey_compiled_fn(
+                    create_compiled_fn_instructions(4,
+                        instruction_init(OPCONSTANT, 0),
+                        instruction_init(OPCONSTANT, 1),
+                        instruction_init(OPADD),
+                        instruction_init(OPRETURNVALUE))))
+        }
+    };
+    print_test_separator_line();
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
 static void
 test_integer_arithmetic(void)
 {
@@ -575,4 +660,6 @@ main(int argc, char **argv)
     test_array_literals();
     test_hash_literals();
     test_index_expressions();
+    test_compiler_scopes();
+    test_functions();
 }

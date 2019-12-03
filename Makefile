@@ -39,24 +39,26 @@ parser_tests:	${OBJDIR}/parser_tests.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJ
 
 evaluator_tests:	${OBJDIR}/evaluator.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
 	$(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o \
-	$(OBJDIR)/environment.o $(OBJDIR)/builtins.o $(OBJDIR)/object_test_utils.o
+	$(OBJDIR)/environment.o $(OBJDIR)/builtins.o $(OBJDIR)/object_test_utils.o $(OBJDIR)/opcode.o
 	${CC} ${CFLAGS} -o ${BINDIR}/evaluator_tests ${OBJDIR}/evaluator_tests.o ${OBJDIR}/lexer.o \
 		${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/parser_tracing.o \
-		$(OBJDIR)/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o $(OBJDIR)/object_test_utils.o
+		$(OBJDIR)/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o \
+		$(OBJDIR)/object_test_utils.o $(OBJDIR)/opcode.o
 
 cmonkey_utils_tests: $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/cmonkey_utils_tests.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/cmonkey_utils_tests $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/cmonkey_utils_tests.o
 
 object_tests: $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/object_tests.o $(OBJDIR)/object.o \
-	$(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o
+	$(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o $(OBJDIR)/opcode.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/object_tests $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/object_tests.o \
-	$(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o
+	$(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o $(OBJDIR)/opcode.o
 
 opcode_tests: $(OBJDIR)/opcode_tests.o $(OBJDIR)/opcode.o $(OBJDIR)/cmonkey_utils.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/opcode_tests $(OBJDIR)/opcode_tests.o $(OBJDIR)/opcode.o $(OBJDIR)/cmonkey_utils.o
 
 compiler_tests: $(OBJDIR)/compiler_tests.o $(OBJDIR)/compiler.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/object_test_utils.o \
-	$(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o $(OBJDIR)/opcode.o $(OBJDIR)/symbol_table.o
+	$(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o $(OBJDIR)/lexer.o $(OBJDIR)/opcode.o \
+	$(OBJDIR)/symbol_table.o
 	$(CC) $(CFLAGS) -o $(BINDIR)/compiler_tests $(OBJDIR)/compiler_tests.o $(OBJDIR)/compiler.o \
 		$(OBJDIR)/cmonkey_utils.o $(OBJDIR)/object_test_utils.o $(OBJDIR)/object.o $(OBJDIR)/parser.o $(OBJDIR)/token.o \
 		$(OBJDIR)/lexer.o $(OBJDIR)/opcode.o $(OBJDIR)/symbol_table.o
@@ -70,9 +72,10 @@ vm_tests: $(OBJDIR)/vm_tests.o $(OBJDIR)/compiler.o $(OBJDIR)/object_test_utils.
 		$(OBJDIR)/symbol_table.o
 
 monkey:	${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o \
-	$(OBJDIR)/evaluator.o ${OBJDIR}/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o
+	$(OBJDIR)/evaluator.o ${OBJDIR}/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o $(OBJDIR)/opcode.o
 	${CC} ${CFLAGS} -o ${BINDIR}/monkey ${OBJDIR}/repl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parser.o \
-		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o $(OBJDIR)/builtins.o
+		$(OBJDIR)/cmonkey_utils.o ${OBJDIR}/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o \
+		$(OBJDIR)/builtins.o $(OBJDIR)/opcode.o
 
 symbol_table_tests: $(OBJDIR)/symbol_table_tests.o $(OBJDIR)/symbol_table.o \
 	$(OBJDIR)/cmonkey_utils.o

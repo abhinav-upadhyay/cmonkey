@@ -10,21 +10,29 @@
 
 #define CONSTANTS_POOL_INIT_SIZE 16
 
-#define last_instruction_is_pop(c) c->last_instruction.opcode == OPPOP
+#define last_instruction_is_pop(c) get_top_scope(c)->last_instruction.opcode == OPPOP
+
+static void
+_scope_free(void *scope)
+{
+    scope_free((compilation_scope_t *) scope);
+}
 
 static void
 remove_last_instruction(compiler_t *compiler)
 {
-    compiler->instructions->length = compiler->last_instruction.position;
-    compiler->last_instruction.opcode = compiler->prev_instruction.opcode;
-    compiler->last_instruction.position = compiler->prev_instruction.position;
+    compilation_scope_t *scope = get_top_scope(compiler);
+    scope->instructions->length = scope->last_instruction.position;
+    scope->last_instruction.opcode = scope->prev_instruction.opcode;
+    scope->last_instruction.position = scope->prev_instruction.position;
 }
 
 static size_t
 add_instructions(compiler_t *compiler, instructions_t *ins)
 {
-    size_t new_ins_pos = compiler->instructions->length;
-    concat_instructions(compiler->instructions, ins);
+    compilation_scope_t *scope = get_top_scope(compiler);
+    size_t new_ins_pos = scope->instructions->length;
+    concat_instructions(scope->instructions, ins);
     instructions_free(ins);
     return new_ins_pos;
 }
@@ -32,29 +40,32 @@ add_instructions(compiler_t *compiler, instructions_t *ins)
 static void
 set_last_instruction(compiler_t *compiler, opcode_t opcode, size_t pos)
 {
-    compiler->prev_instruction.opcode = compiler->last_instruction.opcode;
-    compiler->prev_instruction.position = compiler->last_instruction.position;
-    compiler->last_instruction.opcode = opcode;
-    compiler->last_instruction.position = pos;
+    compilation_scope_t *scope = get_top_scope(compiler);
+    scope->prev_instruction.opcode = scope->last_instruction.opcode;
+    scope->prev_instruction.position = scope->last_instruction.position;
+    scope->last_instruction.opcode = opcode;
+    scope->last_instruction.position = pos;
 }
 
 static void
 replace_instruction(compiler_t *compiler, size_t position, instructions_t *ins)
 {
+    compilation_scope_t *scope = get_top_scope(compiler);
     for (size_t i = 0; i < ins->length; i++)
-        compiler->instructions->bytes[position + i] = ins->bytes[i];
+        scope->instructions->bytes[position + i] = ins->bytes[i];
 }
 
 static void
 change_operand(compiler_t *compiler, size_t op_pos, size_t operand)
 {
-    opcode_t op = (opcode_t) compiler->instructions->bytes[op_pos];
+    compilation_scope_t *scope = get_top_scope(compiler);
+    opcode_t op = (opcode_t) scope->instructions->bytes[op_pos];
     instructions_t *new_ins = instruction_init(op, operand);
     replace_instruction(compiler, op_pos, new_ins);
     instructions_free(new_ins);
 }
 
-static size_t
+size_t
 emit(compiler_t *compiler, opcode_t op, ...)
 {
     va_list ap;
@@ -66,6 +77,28 @@ emit(compiler_t *compiler, opcode_t op, ...)
     return new_ins_pos;
 }
 
+instructions_t *
+get_current_instructions(compiler_t *compiler)
+{
+    return get_top_scope(compiler)->instructions;
+}
+
+compilation_scope_t *
+scope_init()
+{
+    compilation_scope_t *scope;
+    scope = malloc(sizeof(*scope));
+    if (scope == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    scope->instructions = malloc(sizeof(*scope->instructions));
+    if (scope->instructions == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    scope->instructions->bytes = NULL;
+    scope->instructions->length = 0;
+    scope->instructions->size = 0;
+    return scope;
+}
+
 compiler_t *
 compiler_init(void)
 {
@@ -73,14 +106,12 @@ compiler_init(void)
     compiler = malloc(sizeof(*compiler));
     if (compiler == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    compiler->instructions = malloc(sizeof(*compiler->instructions));
-    if (compiler->instructions == NULL)
-        err(EXIT_FAILURE, "malloc failed");
-    compiler->instructions->bytes = NULL;
-    compiler->instructions->length = 0;
-    compiler->instructions->size = 0;
     compiler->constants_pool = NULL;
     compiler->symbol_table = symbol_table_init();
+    compiler->scope_index = 0;
+    compiler->scopes = cm_array_list_init(16, _scope_free);
+    compilation_scope_t *main_scope = scope_init();
+    cm_array_list_add(compiler->scopes, main_scope);
     return compiler;
 }
 
@@ -127,7 +158,7 @@ compiler_init_with_state(symbol_table_t *symbol_table, cm_array_list *constants)
 void
 compiler_free(compiler_t *compiler)
 {
-    instructions_free(compiler->instructions);
+    cm_array_list_free(compiler->scopes);
     if (compiler->constants_pool)
         cm_array_list_free(compiler->constants_pool);
     free_symbol_table(compiler->symbol_table);
@@ -193,8 +224,10 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     array_literal_t *array_exp;
     hash_literal_t *hash_exp;
     index_expression_t *index_exp;
+    function_literal_t *func_exp;
     size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
+    compilation_scope_t *scope;
     switch (expression_node->expression_type) {
     case INFIX_EXPRESSION:
         infix_exp = (infix_expression_t *) expression_node;
@@ -281,7 +314,8 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         if (last_instruction_is_pop(compiler))
             remove_last_instruction(compiler);
         jmp_pos = emit(compiler, OPJMP, 9999);
-        after_consequence_pos = compiler->instructions->length;
+        scope = get_top_scope(compiler);
+        after_consequence_pos = scope->instructions->length;
         change_operand(compiler, opjmpfalse_pos, after_consequence_pos);
         if (if_exp->alternative == NULL) {
             emit(compiler, OPNULL);
@@ -292,7 +326,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             if (last_instruction_is_pop(compiler))
                 remove_last_instruction(compiler);
         }
-        after_alternative_pos = compiler->instructions->length;
+        after_alternative_pos = scope->instructions->length;
         change_operand(compiler, jmp_pos, after_alternative_pos);
         break;
     case IDENTIFIER_EXPRESSION:
@@ -343,6 +377,17 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             return error;
         emit(compiler, OPINDEX);
         break;
+    case FUNCTION_LITERAL:
+        func_exp = (function_literal_t *) expression_node;
+        compiler_enter_scope(compiler);
+        error = compile(compiler, (node_t *) func_exp->body);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        instructions_t *ins = compiler_leave_scope(compiler);
+        monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins);
+        constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
+        emit(compiler, OPCONSTANT, constant_idx);
+        break;
     default:
         return none_error;
     }
@@ -357,6 +402,7 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
     expression_statement_t *expression_stmt;
     block_statement_t *block_stmt;
     letstatement_t *let_stmt;
+    return_statement_t *ret_stmt;
     size_t i;
     switch (statement_node->statement_type) {
     case EXPRESSION_STATEMENT:
@@ -381,6 +427,13 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
             return error;
         symbol_t *sym = symbol_define(compiler->symbol_table, let_stmt->name->value);
         emit(compiler, OPSETGLOBAL, sym->index);
+        break;
+    case RETURN_STATEMENT:
+        ret_stmt = (return_statement_t *) statement_node;
+        error = compile(compiler, (node_t *) ret_stmt->return_value);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        emit(compiler, OPRETURNVALUE);
         break;
     default:
         return none_error;
@@ -429,7 +482,57 @@ get_bytecode(compiler_t *compiler)
 {
     bytecode_t *bytecode;
     bytecode = malloc(sizeof(*bytecode));
-    bytecode->instructions = compiler->instructions;
+    compilation_scope_t *scope = get_top_scope(compiler);
+    bytecode->instructions = scope->instructions;
     bytecode->constants_pool = compiler->constants_pool;
     return bytecode;
+}
+
+compilation_scope_t *
+get_top_scope(compiler_t *compiler)
+{
+    return (compilation_scope_t *) cm_array_list_get(compiler->scopes, compiler->scope_index);
+}
+
+
+void
+scope_free(compilation_scope_t *scope)
+{
+    instructions_free(scope->instructions);
+    free(scope);
+}
+
+static instructions_t *
+copy_instructions(instructions_t *ins)
+{
+    instructions_t *ret;
+    ret = malloc(sizeof(*ret));
+    if (ret == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    ret->bytes = malloc(ins->length);
+    if (ret->bytes == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < ins->length; i++)
+        ret->bytes[i] = ins->bytes[i];
+    ret->length = ins->length;
+    ret->size = ins->size;
+    return ret;
+}
+
+instructions_t *
+compiler_leave_scope(compiler_t *compiler)
+{
+    compilation_scope_t *scope = get_top_scope(compiler);
+    instructions_t *ins = copy_instructions(scope->instructions);
+    cm_array_list_remove(compiler->scopes, compiler->scope_index);
+    compiler->scope_index--;
+    return ins;
+}
+
+void
+compiler_enter_scope(compiler_t *compiler)
+{
+    compilation_scope_t *scope = scope_init();
+    cm_array_list_add(compiler->scopes, scope);
+    compiler->scope_index++;
 }

@@ -70,11 +70,16 @@ typedef struct cm_hash_table {
     void (*free_value) (void *);
 } cm_hash_table;
 
+typedef struct cm_stack {
+    cm_list *list;
+} cm_stack;
+
 
 cm_list *cm_list_init(void);
 int cm_list_add(cm_list *, void *);
 void cm_list_free(cm_list *, void (*free_data) (void *));
 void *cm_list_get(cm_list *, void *, _Bool (*cmp) (void *, void *));
+void *cm_list_get_at(cm_list *, size_t);
 
 cm_array_list * cm_array_list_init(size_t, void (*free_func) (void *));
 cm_array_list * cm_array_list_init_size_t(size_t, size_t, ...);
@@ -113,4 +118,7 @@ size_t *create_size_t_array(size_t, ...);
 uint8_t *create_uint8_array(size_t, ...);
 uint8_t *size_t_to_uint8_be(size_t, size_t);
 size_t be_to_size_t(uint8_t *, size_t);
+cm_stack *cm_stack_init(void);
+void *cm_stack_pop(cm_stack *);
+void cm_stack_push(cm_stack *, void *);
 #endif

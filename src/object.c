@@ -37,6 +37,7 @@
 #include "cmonkey_utils.h"
 #include "parser.h"
 #include "object.h"
+#include "opcode.h"
 
 static char *
 monkey_function_inspect(monkey_object_t *obj)
@@ -130,6 +131,7 @@ inspect(monkey_object_t *obj)
     monkey_error_t *err_obj;
     monkey_array_t *array;
     monkey_hash_t *hash_obj;
+    monkey_compiled_fn_t *compiled_fn;
     char *string = NULL;
     char *elements_string = NULL;
     int ret;
@@ -169,6 +171,12 @@ inspect(monkey_object_t *obj)
         case MONKEY_HASH:
             hash_obj = (monkey_hash_t *) obj;
             return join_expressions_table(hash_obj->pairs);
+        case MONKEY_COMPILED_FUNCTION:
+            compiled_fn = (monkey_compiled_fn_t *) obj;
+            ret = asprintf(&string, "compiled function %p", compiled_fn);
+            if (ret == -1)
+                err(EXIT_FAILURE, "malloc failed");
+            return string;
     }
 }
 
@@ -203,6 +211,18 @@ hash_equals(monkey_hash_t *hash1, monkey_hash_t *hash2)
     return true;
 }
 
+static _Bool
+instructions_equals(instructions_t *ins1, instructions_t *ins2)
+{
+    if (ins1->length != ins2->length)
+        return false;
+    for (size_t i = 0; i < ins1->length; i++) {
+        if (ins1->bytes[i] != ins2->bytes[i])
+            return false;
+    }
+    return true;
+}
+
 _Bool
 monkey_object_equals(void *o1, void *o2)
 {
@@ -227,6 +247,8 @@ monkey_object_equals(void *o1, void *o2)
     monkey_string_t *str2;
     monkey_return_value_t *ret1;
     monkey_return_value_t *ret2;
+    monkey_compiled_fn_t *fn1;
+    monkey_compiled_fn_t *fn2;
     switch (obj1->type) {
         case MONKEY_ARRAY:
             array1 = (monkey_array_t *) obj1;
@@ -264,6 +286,10 @@ monkey_object_equals(void *o1, void *o2)
             return monkey_object_equals(ret1->value, ret2->value);
         case MONKEY_NULL:
             return obj1 == obj2;
+        case MONKEY_COMPILED_FUNCTION:
+            fn1 = (monkey_compiled_fn_t *) obj1;
+            fn2 = (monkey_compiled_fn_t *) obj2;
+            return instructions_equals(fn1->instructions, fn2->instructions);
     }
 }
 
@@ -297,13 +323,28 @@ create_monkey_int(long value)
     monkey_int_t *int_obj;
     int_obj = malloc(sizeof(*int_obj));
     if (int_obj == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
+        err(EXIT_FAILURE, "malloc failed");
     int_obj->object.inspect = inspect;
     int_obj->object.type = MONKEY_INT;
     int_obj->object.hash = monkey_object_hash;
     int_obj->object.equals = monkey_object_equals;
     int_obj->value = value;
     return int_obj;
+}
+
+monkey_compiled_fn_t *
+create_monkey_compiled_fn(instructions_t *ins)
+{
+    monkey_compiled_fn_t *compiled_fn;
+    compiled_fn = malloc(sizeof(*compiled_fn));
+    if (compiled_fn == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    compiled_fn->instructions = ins;
+    compiled_fn->object.type = MONKEY_COMPILED_FUNCTION;
+    compiled_fn->object.inspect = inspect;
+    compiled_fn->object.equals = monkey_object_equals;
+    compiled_fn->object.hash = NULL;
+    return compiled_fn;
 }
 
 monkey_return_value_t *
@@ -361,6 +402,7 @@ free_monkey_object(void *v)
     monkey_string_t *str_obj;
     monkey_array_t *array;
     monkey_hash_t *hash_obj;
+    monkey_compiled_fn_t *compiled_fn;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -395,6 +437,11 @@ free_monkey_object(void *v)
             hash_obj = (monkey_hash_t *) object;
             cm_hash_table_free(hash_obj->pairs);
             free(hash_obj);
+            break;
+        case MONKEY_COMPILED_FUNCTION:
+            compiled_fn = (monkey_compiled_fn_t *) object;
+            instructions_free(compiled_fn->instructions);
+            free(compiled_fn);
             break;
         default:
             free(object);

@@ -34,7 +34,10 @@ typedef enum opcode_t {
     OPGETGLOBAL,
     OPARRAY,
     OPHASH,
-    OPINDEX
+    OPINDEX,
+    OPCALL,
+    OPRETURNVALUE,
+    OPRETURN
 } opcode_t;
 
 typedef struct opcode_definition_t {
@@ -45,7 +48,7 @@ typedef struct opcode_definition_t {
 
 
 static opcode_definition_t opcode_definitions [] = {
-    { "OPCONSTANT", "constant", {(size_t) 2}},
+    {"OPCONSTANT", "constant", {(size_t) 2}},
     {"OPADD", "+", {(size_t) 0}},
     {"OPSUB", "-", {(size_t) 0}},
     {"OPMUL", "*", {(size_t) 0}},
@@ -65,7 +68,10 @@ static opcode_definition_t opcode_definitions [] = {
     {"OPGETGLOBAL", "get_global", {(size_t) 2}},
     {"OPARRAY", "array", {(size_t) 2}},
     {"OPHASH", "hash", {(size_t) 2}},
-    {"OPINDEX", "index", {(size_t) 0}}
+    {"OPINDEX", "index", {(size_t) 0}},
+    {"OPCALL", "call", {(size_t) 0}},
+    {"OPRETURNVALUE", "reeturn_value", {(size_t) 0}},
+    {"OPRETURN", "return", {(size_t) 0}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];
