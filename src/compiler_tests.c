@@ -566,6 +566,50 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 1),
                         instruction_init(OPADD),
                         instruction_init(OPRETURNVALUE))))
+        },
+        {
+            "fn() {5 + 10}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(5),
+                (monkey_object_t *) create_monkey_int(10),
+                (monkey_object_t *) create_monkey_compiled_fn(
+                    create_compiled_fn_instructions(4,
+                        instruction_init(OPCONSTANT, 0),
+                        instruction_init(OPCONSTANT, 1),
+                        instruction_init(OPADD),
+                        instruction_init(OPRETURNVALUE))))
+        },
+        {
+            "fn() {1; 2;}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_int(2),
+                (monkey_object_t *) create_monkey_compiled_fn(
+                    create_compiled_fn_instructions(4,
+                        instruction_init(OPCONSTANT, 0),
+                        instruction_init(OPPOP),
+                        instruction_init(OPCONSTANT, 1),
+                        instruction_init(OPRETURNVALUE))))
+        },
+        {
+            "fn() {}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1,
+                create_monkey_compiled_fn(create_compiled_fn_instructions(1, instruction_init(OPRETURN))))
         }
     };
     print_test_separator_line();

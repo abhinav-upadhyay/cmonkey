@@ -10,7 +10,19 @@
 
 #define CONSTANTS_POOL_INIT_SIZE 16
 
-#define last_instruction_is_pop(c) get_top_scope(c)->last_instruction.opcode == OPPOP
+static instructions_t *
+get_current_instructions(compiler_t *compiler)
+{
+    return get_top_scope(compiler)->instructions;
+}
+
+static _Bool
+last_instruction_is(compiler_t *compiler, opcode_t opcode)
+{
+    if (get_current_instructions(compiler)->length == 0)
+        return false;
+    return get_top_scope(compiler)->last_instruction.opcode == opcode;
+}
 
 static void
 _scope_free(void *scope)
@@ -77,11 +89,6 @@ emit(compiler_t *compiler, opcode_t op, ...)
     return new_ins_pos;
 }
 
-instructions_t *
-get_current_instructions(compiler_t *compiler)
-{
-    return get_top_scope(compiler)->instructions;
-}
 
 compilation_scope_t *
 scope_init()
@@ -206,6 +213,17 @@ compare_monkey_hash_keys(const void *v1, const void *v2)
     return ret;
 }
 
+static void
+replace_last_pop_with_return(compiler_t *compiler)
+{
+    compilation_scope_t *top_scope = get_top_scope(compiler);
+    size_t lastpos = top_scope->last_instruction.position;
+    instructions_t *new_ins = instruction_init(OPRETURNVALUE);
+    replace_instruction(compiler, lastpos, new_ins);
+    instructions_free(new_ins);
+    top_scope->last_instruction.opcode = OPRETURNVALUE;
+}
+
 static compiler_error_t
 compile_expression_node(compiler_t *compiler, expression_t *expression_node)
 {
@@ -311,7 +329,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         error = compile(compiler, (node_t *) if_exp->consequence);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
-        if (last_instruction_is_pop(compiler))
+        if (last_instruction_is(compiler, OPPOP))
             remove_last_instruction(compiler);
         jmp_pos = emit(compiler, OPJMP, 9999);
         scope = get_top_scope(compiler);
@@ -323,7 +341,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             error = compile(compiler, (node_t *) if_exp->alternative);
             if (error.code != COMPILER_ERROR_NONE)
                 return error;
-            if (last_instruction_is_pop(compiler))
+            if (last_instruction_is(compiler, OPPOP))
                 remove_last_instruction(compiler);
         }
         after_alternative_pos = scope->instructions->length;
@@ -383,6 +401,10 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         error = compile(compiler, (node_t *) func_exp->body);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
+        if (last_instruction_is(compiler, OPPOP))
+            replace_last_pop_with_return(compiler);
+        if (!last_instruction_is(compiler, OPRETURNVALUE))
+            emit(compiler, OPRETURN);
         instructions_t *ins = compiler_leave_scope(compiler);
         monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
