@@ -108,9 +108,9 @@ run_compiler_tests(size_t ntests, compiler_test tests[ntests])
 static void
 test_compiler_scopes(void)
 {
+    printf("Testing compiler scopes\n");
     print_test_separator_line();
     instructions_t *ins;
-    printf("Testing compiler scopes\n");
     compiler_t *compiler = compiler_init();
     opcode_definition_t op_def;
     test(compiler->scope_index == 0,
@@ -547,6 +547,48 @@ create_compiled_fn_instructions(size_t nins, ...)
 }
 
 static void
+test_function_calls(void)
+{
+    compiler_test tests[] = {
+        {
+            "fn() {24}();",
+            3,
+            {
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCALL),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_int(24),
+                (monkey_object_t *) create_monkey_compiled_fn(
+                    create_compiled_fn_instructions(2,
+                    instruction_init(OPCONSTANT, 0),
+                    instruction_init(OPRETURNVALUE))))
+        },
+        {
+            "let noArg = fn() {24}; noArg();",
+            5,
+            {
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPCALL),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_int(24),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPRETURNVALUE))))
+        }
+    };
+    print_test_separator_line();
+    printf("Testing function calls\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_functions(void)
 {
     compiler_test tests[] = {
@@ -613,6 +655,7 @@ test_functions(void)
         }
     };
     print_test_separator_line();
+    printf("Testing function compilation\n");
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_compiler_tests(ntests, tests);
 }
@@ -706,4 +749,5 @@ main(int argc, char **argv)
     test_index_expressions();
     test_compiler_scopes();
     test_functions();
+    test_function_calls();
 }

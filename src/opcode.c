@@ -47,6 +47,7 @@ vinstruction_init(opcode_t op, va_list ap)
     case OPINDEX:
     case OPRETURNVALUE:
     case OPRETURN:
+    case OPCALL:
         ins->bytes = create_uint8_array(1, op);
         ins->length = 1;
         ins->size = 1;
@@ -150,6 +151,7 @@ instructions_to_string(instructions_t *instructions)
         case OPINDEX:
         case OPRETURN:
         case OPRETURNVALUE:
+        case OPCALL:
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s", i, op_def.name);
                 if (retval == -1)

@@ -243,6 +243,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     hash_literal_t *hash_exp;
     index_expression_t *index_exp;
     function_literal_t *func_exp;
+    call_expression_t *call_exp;
     size_t constant_idx;
     size_t opjmpfalse_pos, after_consequence_pos, jmp_pos, after_alternative_pos;
     compilation_scope_t *scope;
@@ -409,6 +410,13 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
         emit(compiler, OPCONSTANT, constant_idx);
+        break;
+    case CALL_EXPRESSION:
+        call_exp = (call_expression_t *) expression_node;
+        error = compile(compiler, (node_t *) call_exp->function);
+        if (error.code != COMPILER_ERROR_NONE)
+            return error;
+        emit(compiler, OPCALL);
         break;
     default:
         return none_error;
