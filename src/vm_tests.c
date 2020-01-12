@@ -255,6 +255,67 @@ test_index_expresions(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_functions_without_arguments(void)
+{
+    vm_testcase tests[] = {
+        {"let fivePlusTen = fn() {5 + 10;}; fivePlusTen();", (monkey_object_t *) create_monkey_int(15)},
+        {"let one = fn() {1;}\n let two = fn() {2;}\n one() + two();", (monkey_object_t *) create_monkey_int(3)},
+        {"let a = fn() {1};\n let b = fn() {a() + 1};\n let c = fn() {b() + 1;};\n c();", (monkey_object_t *) create_monkey_int(3)}
+    };
+    print_test_separator_line();
+    printf("Testing functions without arguments\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
+static void
+test_function_with_return_statement(void)
+{
+    vm_testcase tests[] = {
+        {"let earlyExit = fn() {return 99; 100;};\n earlyExit();", (monkey_object_t *) create_monkey_int(99)},
+        {"let earlyExit = fn() {return 99; return 100;};\n earlyExit();", (monkey_object_t *) create_monkey_int(99)}
+    };
+    print_test_separator_line();
+    printf("Testing functions with return statement\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
+static void
+test_functions_without_return_value(void)
+{
+    vm_testcase tests[] = {
+        {"let noReturn = fn() {};\n noReturn();", (monkey_object_t *) create_monkey_null()},
+        {"let noReturn = fn() {};\n let noReturnTwo = fn() {noReturn();}\n noReturn();\n noReturnTwo();", (monkey_object_t *) create_monkey_null()}
+    };
+    print_test_separator_line();
+    printf("Testing functions without return value\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
+static void
+test_first_class_functions(void)
+{
+    vm_testcase tests[] = {
+        {"let returnOne = fn() {1;};\n let returnOneReturner = fn() {returnOne;};\n returnOneReturner()();",
+            (monkey_object_t *) create_monkey_int(1)}
+    };
+    print_test_separator_line();
+    printf("Testing first class functions\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -266,5 +327,9 @@ main(int argc, char **argv)
     test_array_literals();
     test_hash_literals();
     test_index_expresions();
+    test_functions_without_arguments();
+    test_function_with_return_statement();
+    test_functions_without_return_value();
+    test_first_class_functions();
     return 0;
 }

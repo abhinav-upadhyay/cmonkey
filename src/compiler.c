@@ -532,22 +532,6 @@ scope_free(compilation_scope_t *scope)
     free(scope);
 }
 
-static instructions_t *
-copy_instructions(instructions_t *ins)
-{
-    instructions_t *ret;
-    ret = malloc(sizeof(*ret));
-    if (ret == NULL)
-        err(EXIT_FAILURE, "malloc failed");
-    ret->bytes = malloc(ins->length);
-    if (ret->bytes == NULL)
-        err(EXIT_FAILURE, "malloc failed");
-    for (size_t i = 0; i < ins->length; i++)
-        ret->bytes[i] = ins->bytes[i];
-    ret->length = ins->length;
-    ret->size = ins->size;
-    return ret;
-}
 
 instructions_t *
 compiler_leave_scope(compiler_t *compiler)

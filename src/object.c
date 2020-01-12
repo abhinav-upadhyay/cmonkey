@@ -463,6 +463,7 @@ copy_monkey_object(monkey_object_t *object)
     monkey_builtin_t *builtin;
     monkey_array_t *array_obj;
     monkey_hash_t *hash_obj;
+    monkey_compiled_fn_t *compiled_fn;
     if (object == NULL)
         return (monkey_object_t *) create_monkey_null();
 
@@ -490,6 +491,9 @@ copy_monkey_object(monkey_object_t *object)
             hash_obj = (monkey_hash_t *) object;
             return (monkey_object_t *) create_monkey_hash(cm_hash_table_copy(hash_obj->pairs,
                 _copy_monkey_object, _copy_monkey_object));
+        case MONKEY_COMPILED_FUNCTION:
+            compiled_fn = (monkey_compiled_fn_t *) object;
+            return (monkey_object_t *) create_monkey_compiled_fn(copy_instructions(compiled_fn->instructions));
         default:
             return NULL;
     }

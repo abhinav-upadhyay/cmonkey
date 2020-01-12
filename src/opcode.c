@@ -70,6 +70,23 @@ instruction_init(opcode_t op, ...)
 }
 
 instructions_t *
+copy_instructions(instructions_t *ins)
+{
+    instructions_t *ret;
+    ret = malloc(sizeof(*ret));
+    if (ret == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    ret->bytes = malloc(ins->length);
+    if (ret->bytes == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    for (size_t i = 0; i < ins->length; i++)
+        ret->bytes[i] = ins->bytes[i];
+    ret->length = ins->length;
+    ret->size = ins->size;
+    return ret;
+}
+
+instructions_t *
 flatten_instructions(size_t n, instructions_t *ins_array[n])
 {
     size_t bytes_len = 0;

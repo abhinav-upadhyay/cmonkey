@@ -83,4 +83,5 @@ char *instructions_to_string(instructions_t *);
 instructions_t * flatten_instructions(size_t n, instructions_t *ins_array[n]);
 void concat_instructions(instructions_t *, instructions_t *);
 size_t decode_instructions_to_sizet(uint8_t *, size_t);
+instructions_t *copy_instructions(instructions_t *);
 #endif

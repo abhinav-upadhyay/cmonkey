@@ -19,6 +19,25 @@ get_err_msg(const char *s, ...)
     return msg;
 }
 
+static frame_t *
+get_current_frame(vm_t *vm)
+{
+    return vm->frames[vm->frame_index - 1];
+}
+
+static void
+push_frame(vm_t *vm, frame_t *frame)
+{
+    vm->frames[vm->frame_index] = frame;
+    vm->frame_index++;
+}
+
+static frame_t *
+pop_frame(vm_t *vm)
+{
+    vm->frame_index--;
+    return vm->frames[vm->frame_index];
+}
 
 vm_t *
 vm_init(bytecode_t *bytecode)
@@ -27,11 +46,15 @@ vm_init(bytecode_t *bytecode)
     vm = malloc(sizeof(*vm));
     if (vm == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    vm->instructions = bytecode->instructions;
+    monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions);
+    frame_t *main_frame = frame_init(main_fn);
+    vm->frames[0] = main_frame;
+    vm->frame_index = 1;
     vm->constants = bytecode->constants_pool;
     vm->sp = 0;
     for (size_t i = 0; i < GLOBALS_SIZE; i++)
         vm->globals[i] = NULL;
+    free(main_fn);
     return vm;
 }
 
@@ -58,6 +81,9 @@ vm_free(vm_t *vm)
             free_monkey_object(vm->globals[i]);
         else
             break;
+    }
+    for (size_t i = 0; i < vm->frame_index; i++) {
+        frame_free(vm->frames[i]);
     }
     free(vm);
 }
@@ -378,16 +404,25 @@ vm_run(vm_t *vm)
     monkey_hash_t *hash_obj;
     monkey_object_t *index;
     monkey_object_t *left;
-    for (size_t ip = 0; ip < vm->instructions->length; ip++) {
-        opcode_t op = vm->instructions->bytes[ip];
+    monkey_compiled_fn_t *compiled_fn;
+    monkey_object_t *return_value;
+    frame_t *new_frame;
+    frame_t *popped_frame = NULL;
+    size_t ip;
+    frame_t *current_frame = get_current_frame(vm);
+    while (current_frame->ip < get_frame_instructions(current_frame)->length) {
+        ip = current_frame->ip;
+        instructions_t *current_frame_instructions = get_frame_instructions(current_frame);
+        opcode_t op = current_frame_instructions->bytes[ip];
         if (top != NULL) {
             free_monkey_object(top);
             top = NULL;
         }
         switch (op) {
         case OPCONSTANT:
-            const_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            const_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
+            // ip += 2;
             vm_err = vm_push(vm, get_constant(vm, const_index), true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
@@ -430,32 +465,32 @@ vm_run(vm_t *vm)
                 return vm_err;
             break;
         case OPJMP:
-            jmp_pos = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip = jmp_pos - 1;
+            jmp_pos = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip = jmp_pos - 1;
             break;
         case OPJMPFALSE:
-            jmp_pos = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            jmp_pos = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
             top = vm_pop(vm);
             if (!is_truthy(top))
-                ip = jmp_pos - 1;
+                current_frame->ip = jmp_pos - 1;
             break;
         case OPSETGLOBAL:
-            sym_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
             top = vm_pop(vm);
             vm->globals[sym_index] = copy_monkey_object(top);
             break;
         case OPGETGLOBAL:
-            sym_index = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
             vm_err = vm_push(vm, vm->globals[sym_index], true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
         case OPARRAY:
-            array_size = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            array_size = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
             array_list = build_array(vm, array_size);
             array_obj = create_monkey_array(array_list);
             vm_err = vm_push(vm, (monkey_object_t *) array_obj, false);
@@ -463,8 +498,8 @@ vm_run(vm_t *vm)
                 return vm_err;
             break;
         case OPHASH:
-            hash_size = decode_instructions_to_sizet(vm->instructions->bytes + ip + 1, 2);
-            ip += 2;
+            hash_size = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
             table = build_hash(vm, hash_size);
             hash_obj = create_monkey_hash(table);
             vm_err = vm_push(vm, (monkey_object_t *) hash_obj, false);
@@ -480,12 +515,40 @@ vm_run(vm_t *vm)
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
+        case OPCALL:
+            top = vm->stack[vm->sp - 1];
+            if (top->type != MONKEY_COMPILED_FUNCTION) {
+                vm_err.code = VM_NON_FUNCTION;
+                vm_err.msg = get_err_msg("Calling non-function\n");
+                return vm_err;
+            }
+            compiled_fn = (monkey_compiled_fn_t *) top;
+            new_frame = frame_init(compiled_fn);
+            push_frame(vm, new_frame);
+            break;
+        case OPRETURNVALUE:
+            return_value = (monkey_object_t *) vm_pop(vm);
+            popped_frame = pop_frame(vm);
+            vm_pop(vm);
+            vm_push(vm, return_value, false);
+            break;
+        case OPRETURN:
+            popped_frame = pop_frame(vm);
+            vm_pop(vm);
+            vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
+            break;
         default:
             op_def = opcode_definition_lookup(op);
             vm_err.code = VM_UNSUPPORTED_OPERATOR;
             vm_err.msg = get_err_msg("Unsupported opcode %s", op_def.name);
             return vm_err;
         }
+        if (popped_frame == current_frame) {
+            frame_free(popped_frame);
+            popped_frame = NULL;
+        } else
+            current_frame->ip++;
+        current_frame = get_current_frame(vm);
     }
     vm_err.code = VM_ERROR_NONE;
     vm_err.msg = NULL;
