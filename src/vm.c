@@ -46,8 +46,8 @@ vm_init(bytecode_t *bytecode)
     vm = malloc(sizeof(*vm));
     if (vm == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions);
-    frame_t *main_frame = frame_init(main_fn);
+    monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions, 0);
+    frame_t *main_frame = frame_init(main_fn, 0);
     vm->frames[0] = main_frame;
     vm->frame_index = 1;
     vm->constants = bytecode->constants_pool;
@@ -422,7 +422,6 @@ vm_run(vm_t *vm)
         case OPCONSTANT:
             const_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
             current_frame->ip += 2;
-            // ip += 2;
             vm_err = vm_push(vm, get_constant(vm, const_index), true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
@@ -481,10 +480,23 @@ vm_run(vm_t *vm)
             top = vm_pop(vm);
             vm->globals[sym_index] = copy_monkey_object(top);
             break;
+        case OPSETLOCAL:
+            sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            current_frame->ip++;
+            top = vm_pop(vm);
+            vm->stack[current_frame->bp + sym_index] = copy_monkey_object(top);
+            break;
         case OPGETGLOBAL:
             sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
             current_frame->ip += 2;
             vm_err = vm_push(vm, vm->globals[sym_index], true);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPGETLOCAL:
+            sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            current_frame->ip++;
+            vm_err = vm_push(vm, vm->stack[current_frame->bp + sym_index], false);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
@@ -523,18 +535,19 @@ vm_run(vm_t *vm)
                 return vm_err;
             }
             compiled_fn = (monkey_compiled_fn_t *) top;
-            new_frame = frame_init(compiled_fn);
+            new_frame = frame_init(compiled_fn, vm->sp);
             push_frame(vm, new_frame);
+            vm->sp = new_frame->bp + compiled_fn->num_locals;
             break;
         case OPRETURNVALUE:
             return_value = (monkey_object_t *) vm_pop(vm);
             popped_frame = pop_frame(vm);
-            vm_pop(vm);
+            vm->sp = popped_frame->bp - 1;
             vm_push(vm, return_value, false);
             break;
         case OPRETURN:
             popped_frame = pop_frame(vm);
-            vm_pop(vm);
+            vm->sp = popped_frame->bp - 1;
             vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
             break;
         default:

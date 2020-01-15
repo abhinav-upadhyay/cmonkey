@@ -333,13 +333,14 @@ create_monkey_int(long value)
 }
 
 monkey_compiled_fn_t *
-create_monkey_compiled_fn(instructions_t *ins)
+create_monkey_compiled_fn(instructions_t *ins, size_t num_locals)
 {
     monkey_compiled_fn_t *compiled_fn;
     compiled_fn = malloc(sizeof(*compiled_fn));
     if (compiled_fn == NULL)
         err(EXIT_FAILURE, "malloc failed");
     compiled_fn->instructions = ins;
+    compiled_fn->num_locals = num_locals;
     compiled_fn->object.type = MONKEY_COMPILED_FUNCTION;
     compiled_fn->object.inspect = inspect;
     compiled_fn->object.equals = monkey_object_equals;
@@ -493,7 +494,7 @@ copy_monkey_object(monkey_object_t *object)
                 _copy_monkey_object, _copy_monkey_object));
         case MONKEY_COMPILED_FUNCTION:
             compiled_fn = (monkey_compiled_fn_t *) object;
-            return (monkey_object_t *) create_monkey_compiled_fn(copy_instructions(compiled_fn->instructions));
+            return (monkey_object_t *) create_monkey_compiled_fn(copy_instructions(compiled_fn->instructions), compiled_fn->num_locals);
         default:
             return NULL;
     }

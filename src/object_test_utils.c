@@ -64,6 +64,21 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
         test_array_object(obj, expected);
     else if (expected->type == MONKEY_HASH)
         test_hash_object(obj, expected);
+    else if (expected->type == MONKEY_COMPILED_FUNCTION) {
+        instructions_t *expected_ins = ((monkey_compiled_fn_t *) expected)->instructions;
+        instructions_t *actual_ins = ((monkey_compiled_fn_t *) obj)->instructions;
+        char *expected_ins_string = instructions_to_string(expected_ins);
+        char *actual_ins_string = instructions_to_string(actual_ins);
+        test(expected_ins->length == actual_ins->length,
+            "Expected instructions length of function %zu, got %zu\n"
+            "Expected instructions: %s\n Actual instructions:%s\n",
+            expected_ins->length, actual_ins->length, expected_ins_string, actual_ins_string);
+        test(memcmp(expected_ins->bytes, actual_ins->bytes, expected_ins->length) == 0,
+            "compiled functions not equal\n"
+            "Expected instructions: %s\n Actual instructions: %s\n", expected_ins_string, actual_ins_string);
+        free(expected_ins_string);
+        free(actual_ins_string);
+    }
 }
 
 void

@@ -35,6 +35,12 @@ test_instruction_init(void)
             {},
             1,
             create_uint8_array(1, OPADD)
+        },
+        {
+            "Test OPSETLOCAL 255",
+            OPSETLOCAL, {(size_t) 255},
+            2,
+            create_uint8_array(2, OPSETLOCAL, 255)
         }
     };
     print_test_separator_line();
@@ -57,17 +63,19 @@ test_instruction_init(void)
 static void
 test_instructions_string(void)
 {
-    instructions_t *ins_array[3] = {
+    instructions_t *ins_array[4] = {
         instruction_init(OPADD),
         instruction_init(OPCONSTANT, 2),
-        instruction_init(OPCONSTANT, 65535)
+        instruction_init(OPCONSTANT, 65535),
+        instruction_init(OPGETLOCAL, 1)
     };
 
     const char *expected_string = "0000 OPADD\n" \
         "0001 OPCONSTANT 2\n" \
-        "0004 OPCONSTANT 65535";
+        "0004 OPCONSTANT 65535\n" \
+        "0007 OPGETLOCAL 1";
     
-    instructions_t *flat_ins = flatten_instructions(3, ins_array);
+    instructions_t *flat_ins = flatten_instructions(4, ins_array);
     char *string = instructions_to_string(flat_ins);
     print_test_separator_line();
     printf("Testing instructions_to_string\n");

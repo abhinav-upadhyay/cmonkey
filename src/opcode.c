@@ -31,6 +31,15 @@ vinstruction_init(opcode_t op, va_list ap)
         ins->size = 3;
         free(boperand);
         return ins;
+    case OPSETLOCAL:
+    case OPGETLOCAL:
+        operand = va_arg(ap, size_t);
+        boperand = size_t_to_uint8_be(operand, 1);
+        ins->bytes = create_uint8_array(2, op, boperand[0]);
+        ins->length = 2;
+        ins->size = 2;
+        free(boperand);
+        return ins;
     case OPADD:
     case OPSUB:
     case OPMUL:
@@ -152,6 +161,23 @@ instructions_to_string(instructions_t *instructions)
                 string = temp;
             }
             i += 2;
+            break;
+        case OPSETLOCAL:
+        case OPGETLOCAL:
+            operand = be_to_size_t(instructions->bytes + i + 1, 1);
+            if (string == NULL) {
+                int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+            } else {
+                char *temp = NULL;
+                int retval = asprintf(&temp, "%s\n%04zu %s %zu", string, i, op_def.name, operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+                free(string);
+                string = temp;
+            }
+            i++;
             break;
         case OPADD:
         case OPSUB:

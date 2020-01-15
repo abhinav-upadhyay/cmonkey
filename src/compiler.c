@@ -356,7 +356,10 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             error.msg = get_err_msg("undefined variable: %s\n", ident_exp->value);
             return error;
         }
-        emit(compiler, OPGETGLOBAL, sym->index);
+        if (sym->scope == GLOBAL)
+            emit(compiler, OPGETGLOBAL, sym->index);
+        else
+            emit(compiler, OPGETLOCAL, sym->index);
         break;
     case ARRAY_LITERAL:
         array_exp = (array_literal_t *) expression_node;
@@ -406,8 +409,9 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             replace_last_pop_with_return(compiler);
         if (!last_instruction_is(compiler, OPRETURNVALUE))
             emit(compiler, OPRETURN);
+        size_t num_locals = compiler->symbol_table->nentries;
         instructions_t *ins = compiler_leave_scope(compiler);
-        monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins);
+        monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins, num_locals);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
         emit(compiler, OPCONSTANT, constant_idx);
         break;
@@ -456,7 +460,10 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
         if (error.code != COMPILER_ERROR_NONE)
             return error;
         symbol_t *sym = symbol_define(compiler->symbol_table, let_stmt->name->value);
-        emit(compiler, OPSETGLOBAL, sym->index);
+        if (sym->scope == GLOBAL)
+            emit(compiler, OPSETGLOBAL, sym->index);
+        else
+            emit(compiler, OPSETLOCAL, sym->index);
         break;
     case RETURN_STATEMENT:
         ret_stmt = (return_statement_t *) statement_node;
@@ -540,6 +547,9 @@ compiler_leave_scope(compiler_t *compiler)
     instructions_t *ins = copy_instructions(scope->instructions);
     cm_array_list_remove(compiler->scopes, compiler->scope_index);
     compiler->scope_index--;
+    symbol_table_t *table = compiler->symbol_table;
+    compiler->symbol_table = compiler->symbol_table->outer;
+    free_symbol_table(table);
     return ins;
 }
 
@@ -549,4 +559,5 @@ compiler_enter_scope(compiler_t *compiler)
     compilation_scope_t *scope = scope_init();
     cm_array_list_add(compiler->scopes, scope);
     compiler->scope_index++;
+    compiler->symbol_table = enclosed_symbol_table_init(compiler->symbol_table);
 }

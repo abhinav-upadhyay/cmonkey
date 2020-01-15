@@ -316,6 +316,53 @@ test_first_class_functions(void)
         free_monkey_object(tests[i].expected);
 }
 
+static void
+test_calling_functions_with_bindings(void)
+{
+    vm_testcase tests[] = {
+        {
+            "let one = fn() {let one = 1; one;}; one();",
+            (monkey_object_t *) create_monkey_int(1)
+        },
+        {
+            "let oneAndTwo = fn() {let one = 1; let two = 2; one + two;}; oneAndTwo();",
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            "let oneAndTwo = fn() {let one = 1; let two = 2; one + two;}\n"
+            "let threeAndFour = fn() {let three = 3; let four = 4; three + four;}\n"
+            "oneAndTwo() + threeAndFour();",
+            (monkey_object_t *) create_monkey_int(10)
+        },
+        {
+            "let firstFooBar = fn() {let foobar = 50; foobar;}\n"
+            "let secondFooBar = fn() { let foobar = 100; foobar;};\n"
+            "firstFooBar() + secondFooBar();",
+            (monkey_object_t *) create_monkey_int(150)
+        },
+        {
+            "let globalSeed = 50;\n"
+            "let minusOne = fn() {\n"
+            "  let num = 1;\n"
+            "  globalSeed - num;\n"
+            "}\n"
+            "let minusTwo = fn() {\n"
+            "  let num = 2;\n"
+            "  globalSeed - num;\n"
+            "}\n"
+            "minusOne() + minusTwo();",
+            (monkey_object_t *) create_monkey_int(97)
+        }
+    };
+    print_test_separator_line();
+    printf("Testing function calls with local bindings\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+
+}
+
 int
 main(int argc, char **argv)
 {
@@ -331,5 +378,6 @@ main(int argc, char **argv)
     test_function_with_return_statement();
     test_functions_without_return_value();
     test_first_class_functions();
+    test_calling_functions_with_bindings();
     return 0;
 }

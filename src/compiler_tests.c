@@ -112,6 +112,7 @@ test_compiler_scopes(void)
     print_test_separator_line();
     instructions_t *ins;
     compiler_t *compiler = compiler_init();
+    symbol_table_t *global_symbol_table = compiler->symbol_table;
     opcode_definition_t op_def;
     test(compiler->scope_index == 0,
         "Expected scope index to be 0, found %zu\n", compiler->scope_index);
@@ -128,9 +129,12 @@ test_compiler_scopes(void)
     op_def = opcode_definition_lookup(scope->last_instruction.opcode);
     test(scope->last_instruction.opcode == OPSUB,
         "Expected last opcode OPSUB, found %s\n", op_def.name);
+    test(compiler->symbol_table->outer == global_symbol_table, "compiler did not enclose symbol table\n");
     ins = compiler_leave_scope(compiler);
     test(compiler->scope_index == 0, "Expected scope index 0, found %zu\n",
         compiler->scope_index);
+    test(compiler->symbol_table == global_symbol_table, "compiler did not restore symbol table\n");
+    test(compiler->symbol_table->outer == NULL, "compiler modified global symbol table incorrectly\n");
     instructions_free(ins);
     emit(compiler, OPADD);
     scope = get_top_scope(compiler);
@@ -563,7 +567,7 @@ test_function_calls(void)
                 (monkey_object_t *) create_monkey_compiled_fn(
                     create_compiled_fn_instructions(2,
                     instruction_init(OPCONSTANT, 0),
-                    instruction_init(OPRETURNVALUE))))
+                    instruction_init(OPRETURNVALUE)), 0))
         },
         {
             "let noArg = fn() {24}; noArg();",
@@ -579,7 +583,7 @@ test_function_calls(void)
                 (monkey_object_t *) create_monkey_int(24),
                 (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
                 instruction_init(OPCONSTANT, 0),
-                instruction_init(OPRETURNVALUE))))
+                instruction_init(OPRETURNVALUE)), 0))
         }
     };
     print_test_separator_line();
@@ -607,7 +611,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPCONSTANT, 1),
                         instruction_init(OPADD),
-                        instruction_init(OPRETURNVALUE))))
+                        instruction_init(OPRETURNVALUE)), 0))
         },
         {
             "fn() {5 + 10}",
@@ -624,7 +628,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPCONSTANT, 1),
                         instruction_init(OPADD),
-                        instruction_init(OPRETURNVALUE))))
+                        instruction_init(OPRETURNVALUE)), 0))
         },
         {
             "fn() {1; 2;}",
@@ -641,7 +645,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPPOP),
                         instruction_init(OPCONSTANT, 1),
-                        instruction_init(OPRETURNVALUE))))
+                        instruction_init(OPRETURNVALUE)), 0))
         },
         {
             "fn() {}",
@@ -651,11 +655,80 @@ test_functions(void)
                 instruction_init(OPPOP)
             },
             create_constant_pool(1,
-                create_monkey_compiled_fn(create_compiled_fn_instructions(1, instruction_init(OPRETURN))))
+                create_monkey_compiled_fn(create_compiled_fn_instructions(1, instruction_init(OPRETURN)), 0))
         }
     };
     print_test_separator_line();
     printf("Testing function compilation\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
+test_let_statement_scope(void)
+{
+    compiler_test tests[] = {
+        {
+            "let num = 55;\n"
+            "fn() { num };",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_int(55),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
+                    instruction_init(OPGETGLOBAL, 0),
+                    instruction_init(OPRETURNVALUE)), 0))
+        },
+        {
+            "fn() {\n"
+            "  let num = 55;\n"
+            "  num;\n"
+            "}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_int(55),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(4,
+                    instruction_init(OPCONSTANT, 0),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPRETURNVALUE)), 1))
+        },
+        {
+            "fn() {\n"
+            "  let a = 55;\n"
+            "  let b = 77;\n"
+            "  a + b;\n"
+            "}",
+            2,
+            {
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(55),
+                (monkey_object_t *) create_monkey_int(77),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(8,
+                    instruction_init(OPCONSTANT, 0),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPCONSTANT, 1),
+                    instruction_init(OPSETLOCAL, 1),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPGETLOCAL, 1),
+                    instruction_init(OPADD),
+                    instruction_init(OPRETURNVALUE)), 2))
+        }
+    };
+    print_test_separator_line();
+    printf("Testing let statements with scopes\n");
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_compiler_tests(ntests, tests);
 }
@@ -750,4 +823,5 @@ main(int argc, char **argv)
     test_compiler_scopes();
     test_functions();
     test_function_calls();
+    test_let_statement_scope();
 }
