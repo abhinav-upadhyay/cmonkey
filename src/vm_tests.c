@@ -1,5 +1,6 @@
 #include <err.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "compiler.h"
 #include "lexer.h"
@@ -317,6 +318,119 @@ test_first_class_functions(void)
 }
 
 static void
+test_calling_functions_with_wrong_arguments(void)
+{
+    typedef struct testcase {
+        const char *input;
+        const char *expected_errmsg;
+    } testcase;
+    print_test_separator_line();
+    printf("Testing functions with wrong arguments\n");
+
+    testcase tests[] = {
+        {
+            "fn() {1;}(1);",
+            "wrong number of arguments: want=0, got=1"
+        },
+        {
+            "fn(a) {a;}();",
+            "wrong number of arguments: want=1, got=0"
+        },
+        {
+            "fn(a, b) {a + b;}(1);",
+            "wrong number of arguments: want=2, got=1"
+        }
+    };
+
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    for (size_t i = 0; i < ntests; i++) {
+        testcase t = tests[i];
+        printf("Testing %s\n", t.input);
+        lexer_t *lexer = lexer_init(t.input);
+        parser_t *parser = parser_init(lexer);
+        program_t *program = parse_program(parser);
+        compiler_t *compiler = compiler_init();
+        compiler_error_t error = compile(compiler, (node_t *) program);
+        if (error.code != COMPILER_ERROR_NONE)
+            errx(EXIT_FAILURE, "compilation failed for input %s with error %s\n",
+                t.input, error.msg);
+        bytecode_t *bytecode = get_bytecode(compiler);
+        vm_t *vm = vm_init(bytecode);
+        vm_error_t vm_error = vm_run(vm);
+        test(vm_error.code != VM_ERROR_NONE, "expected VM error but got no error\n");
+        test(strcmp(vm_error.msg, t.expected_errmsg) == 0, "Expected error: %s, got %s\n", t.expected_errmsg, vm_error.msg);
+        free(vm_error.msg);
+        parser_free(parser);
+        program_free(program);
+        compiler_free(compiler);
+        bytecode_free(bytecode);
+        vm_free(vm);
+    }
+}
+
+static void
+test_calling_functions_with_bindings_and_arguments(void)
+{
+    vm_testcase tests[] = {
+        {
+            "let identity = fn(a) {a};\n"
+            "identity(4);",
+            (monkey_object_t *) create_monkey_int(4)
+        },
+        {
+            "let sum = fn(a, b) { a + b;};\n"
+            "sum(1, 2);",
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            "let sum = fn(a, b) {\n"
+            "  let c = a + b;\n"
+            "  c;\n"
+            "};\n"
+            "sum(1, 2);",
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            "let sum = fn(a, b) {\n"
+            "  let c = a + b;\n"
+            "  c;\n"
+            "};\n"
+            "sum(1, 2) + sum(3, 4);",
+            (monkey_object_t *) create_monkey_int(10)
+        },
+        {
+            "let sum = fn(a, b) {\n"
+            "  let c = a + b;\n"
+            "  c;\n"
+            "};\n"
+            "let outer = fn() {\n"
+            "  sum(1, 2) + sum(3, 4);\n"
+            "};\n"
+            "outer();",
+            (monkey_object_t *) create_monkey_int(10)
+        },
+        {
+            "let globalNum = 10;\n"
+            "let sum = fn(a, b) {\n"
+            "  let c = a + b;\n"
+            "  c + globalNum;\n"
+            "};\n"
+            "let outer = fn() {\n"
+            "  sum(1, 2) + sum(3, 4) + globalNum;\n"
+            "};\n"
+            "outer() + globalNum;",
+            (monkey_object_t *) create_monkey_int(50)
+        }
+    };
+    print_test_separator_line();
+    printf("Testing functions with bindings and arguments\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
+static void
 test_calling_functions_with_bindings(void)
 {
     vm_testcase tests[] = {
@@ -379,5 +493,7 @@ main(int argc, char **argv)
     test_functions_without_return_value();
     test_first_class_functions();
     test_calling_functions_with_bindings();
+    test_calling_functions_with_bindings_and_arguments();
+    test_calling_functions_with_wrong_arguments();
     return 0;
 }

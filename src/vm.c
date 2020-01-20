@@ -46,7 +46,7 @@ vm_init(bytecode_t *bytecode)
     vm = malloc(sizeof(*vm));
     if (vm == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions, 0);
+    monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions, 0, 0);
     frame_t *main_frame = frame_init(main_fn, 0);
     vm->frames[0] = main_frame;
     vm->frame_index = 1;
@@ -409,6 +409,7 @@ vm_run(vm_t *vm)
     frame_t *new_frame;
     frame_t *popped_frame = NULL;
     size_t ip;
+    size_t num_args;
     frame_t *current_frame = get_current_frame(vm);
     while (current_frame->ip < get_frame_instructions(current_frame)->length) {
         ip = current_frame->ip;
@@ -528,14 +529,22 @@ vm_run(vm_t *vm)
                 return vm_err;
             break;
         case OPCALL:
-            top = vm->stack[vm->sp - 1];
+            num_args = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            top = vm->stack[vm->sp - 1 - num_args];
+            current_frame->ip++;
             if (top->type != MONKEY_COMPILED_FUNCTION) {
                 vm_err.code = VM_NON_FUNCTION;
                 vm_err.msg = get_err_msg("Calling non-function\n");
                 return vm_err;
             }
             compiled_fn = (monkey_compiled_fn_t *) top;
-            new_frame = frame_init(compiled_fn, vm->sp);
+            if (compiled_fn->num_args != num_args) {
+                vm_err.code = VM_WRONG_NUMBER_ARGUMENTS;
+                vm_err.msg = get_err_msg("wrong number of arguments: want=%zu, got=%zu",
+                    compiled_fn->num_args, num_args);
+                return vm_err;
+            }
+            new_frame = frame_init(compiled_fn, vm->sp - num_args);
             push_frame(vm, new_frame);
             vm->sp = new_frame->bp + compiled_fn->num_locals;
             break;

@@ -113,6 +113,7 @@ typedef struct monkey_compiled_fn_t {
     monkey_object_t object;
     instructions_t *instructions;
     size_t num_locals;
+    size_t num_args;
 } monkey_compiled_fn_t;
 
 typedef monkey_object_t * (*builtin_fn) (cm_list *);
@@ -154,7 +155,7 @@ monkey_string_t *create_monkey_string(const char *, size_t);
 monkey_builtin_t *create_monkey_builtin(builtin_fn);
 monkey_array_t *create_monkey_array(cm_array_list *);
 monkey_hash_t *create_monkey_hash(cm_hash_table *);
-monkey_compiled_fn_t *create_monkey_compiled_fn(instructions_t *, size_t);
+monkey_compiled_fn_t *create_monkey_compiled_fn(instructions_t *, size_t, size_t);
 void free_monkey_object(void *);
 
 #endif

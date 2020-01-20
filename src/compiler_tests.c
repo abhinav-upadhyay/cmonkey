@@ -559,7 +559,7 @@ test_function_calls(void)
             3,
             {
                 instruction_init(OPCONSTANT, 1),
-                instruction_init(OPCALL),
+                instruction_init(OPCALL, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(2,
@@ -567,7 +567,7 @@ test_function_calls(void)
                 (monkey_object_t *) create_monkey_compiled_fn(
                     create_compiled_fn_instructions(2,
                     instruction_init(OPCONSTANT, 0),
-                    instruction_init(OPRETURNVALUE)), 0))
+                    instruction_init(OPRETURNVALUE)), 0, 0))
         },
         {
             "let noArg = fn() {24}; noArg();",
@@ -576,14 +576,57 @@ test_function_calls(void)
                 instruction_init(OPCONSTANT, 1),
                 instruction_init(OPSETGLOBAL, 0),
                 instruction_init(OPGETGLOBAL, 0),
-                instruction_init(OPCALL),
+                instruction_init(OPCALL, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(2,
                 (monkey_object_t *) create_monkey_int(24),
                 (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
                 instruction_init(OPCONSTANT, 0),
-                instruction_init(OPRETURNVALUE)), 0))
+                instruction_init(OPRETURNVALUE)), 0, 0))
+        },
+        {
+            "let oneArg = fn(a) {a};\n oneArg(24);",
+            6,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCALL, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_int(24))
+        },
+        {
+            "let manyArg = fn(a, b, c) {a; b; c;};\n manyArg(24, 25, 26);",
+            8,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCONSTANT, 3),
+                instruction_init(OPCALL, 3),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(4,
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPPOP),
+                    instruction_init(OPGETLOCAL, 1),
+                    instruction_init(OPPOP),
+                    instruction_init(OPGETLOCAL, 2),
+                    instruction_init(OPRETURNVALUE)), 0, 3),
+                (monkey_object_t *) create_monkey_int(24),
+                (monkey_object_t *) create_monkey_int(25),
+                (monkey_object_t *) create_monkey_int(26))
+
         }
     };
     print_test_separator_line();
@@ -611,7 +654,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPCONSTANT, 1),
                         instruction_init(OPADD),
-                        instruction_init(OPRETURNVALUE)), 0))
+                        instruction_init(OPRETURNVALUE)), 0, 0))
         },
         {
             "fn() {5 + 10}",
@@ -628,7 +671,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPCONSTANT, 1),
                         instruction_init(OPADD),
-                        instruction_init(OPRETURNVALUE)), 0))
+                        instruction_init(OPRETURNVALUE)), 0, 0))
         },
         {
             "fn() {1; 2;}",
@@ -645,7 +688,7 @@ test_functions(void)
                         instruction_init(OPCONSTANT, 0),
                         instruction_init(OPPOP),
                         instruction_init(OPCONSTANT, 1),
-                        instruction_init(OPRETURNVALUE)), 0))
+                        instruction_init(OPRETURNVALUE)), 0, 0))
         },
         {
             "fn() {}",
@@ -655,7 +698,7 @@ test_functions(void)
                 instruction_init(OPPOP)
             },
             create_constant_pool(1,
-                create_monkey_compiled_fn(create_compiled_fn_instructions(1, instruction_init(OPRETURN)), 0))
+                create_monkey_compiled_fn(create_compiled_fn_instructions(1, instruction_init(OPRETURN)), 0, 0))
         }
     };
     print_test_separator_line();
@@ -682,7 +725,7 @@ test_let_statement_scope(void)
                 (monkey_object_t *) create_monkey_int(55),
                 (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(2,
                     instruction_init(OPGETGLOBAL, 0),
-                    instruction_init(OPRETURNVALUE)), 0))
+                    instruction_init(OPRETURNVALUE)), 0, 0))
         },
         {
             "fn() {\n"
@@ -700,7 +743,7 @@ test_let_statement_scope(void)
                     instruction_init(OPCONSTANT, 0),
                     instruction_init(OPSETLOCAL, 0),
                     instruction_init(OPGETLOCAL, 0),
-                    instruction_init(OPRETURNVALUE)), 1))
+                    instruction_init(OPRETURNVALUE)), 1, 0))
         },
         {
             "fn() {\n"
@@ -724,7 +767,7 @@ test_let_statement_scope(void)
                     instruction_init(OPGETLOCAL, 0),
                     instruction_init(OPGETLOCAL, 1),
                     instruction_init(OPADD),
-                    instruction_init(OPRETURNVALUE)), 2))
+                    instruction_init(OPRETURNVALUE)), 2, 0))
         }
     };
     print_test_separator_line();

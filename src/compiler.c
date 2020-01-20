@@ -402,6 +402,12 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     case FUNCTION_LITERAL:
         func_exp = (function_literal_t *) expression_node;
         compiler_enter_scope(compiler);
+        cm_list_node *param_list_node = func_exp->parameters->head;
+        while (param_list_node != NULL) {
+            identifier_t *param = (identifier_t *) param_list_node->data;
+            symbol_define(compiler->symbol_table, param->value);
+            param_list_node = param_list_node->next;
+        }
         error = compile(compiler, (node_t *) func_exp->body);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
@@ -411,7 +417,8 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             emit(compiler, OPRETURN);
         size_t num_locals = compiler->symbol_table->nentries;
         instructions_t *ins = compiler_leave_scope(compiler);
-        monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins, num_locals);
+        monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins,
+            num_locals, func_exp->parameters->length);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
         emit(compiler, OPCONSTANT, constant_idx);
         break;
@@ -420,7 +427,13 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         error = compile(compiler, (node_t *) call_exp->function);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
-        emit(compiler, OPCALL);
+        for (size_t i = 0; i < call_exp->arguments->length; i++) {
+            node_t *arg = (node_t *) cm_list_get_at(call_exp->arguments, i);
+            error = compile(compiler, arg);
+            if (error.code != COMPILER_ERROR_NONE)
+                return error;
+        }
+        emit(compiler, OPCALL, call_exp->arguments->length);
         break;
     default:
         return none_error;

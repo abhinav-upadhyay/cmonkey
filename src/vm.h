@@ -17,7 +17,8 @@ typedef enum vm_error_code {
     VM_STACKOVERFLOW,
     VM_UNSUPPORTED_OPERAND,
     VM_UNSUPPORTED_OPERATOR,
-    VM_NON_FUNCTION
+    VM_NON_FUNCTION,
+    VM_WRONG_NUMBER_ARGUMENTS
 } vm_error_code;
 
 static const char *VM_ERROR_DESC[] = {
@@ -25,7 +26,8 @@ static const char *VM_ERROR_DESC[] = {
     "STACKOVERFLOW",
     "UNSUPPORTED_OPERAND",
     "UNSUPPORTED_OPERATOR",
-    "VM_NON_FUNCTION"
+    "VM_NON_FUNCTION",
+    "VM_WRONG_NUMBER_OF_ARGUMENTS"
 };
 
 typedef struct vm_error_t {

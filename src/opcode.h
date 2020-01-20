@@ -71,7 +71,7 @@ static opcode_definition_t opcode_definitions [] = {
     {"OPARRAY", "array", {(size_t) 2}},
     {"OPHASH", "hash", {(size_t) 2}},
     {"OPINDEX", "index", {(size_t) 0}},
-    {"OPCALL", "call", {(size_t) 0}},
+    {"OPCALL", "call", {(size_t) 1}},
     {"OPRETURNVALUE", "reeturn_value", {(size_t) 0}},
     {"OPRETURN", "return", {(size_t) 0}},
     {"OPSETLOCAL", "set_local", {(size_t) 1}},
