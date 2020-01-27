@@ -413,14 +413,11 @@ eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
 {
     cm_hash_table *pairs = cm_hash_table_init(monkey_object_hash,
     monkey_object_equals, free_monkey_object, free_monkey_object);
-    for (size_t i = 0; i < hash_exp->pairs->used_slots->length; i++) {
-        size_t *index = (size_t *) hash_exp->pairs->used_slots->array[i];
-        cm_list *entry_list = hash_exp->pairs->table[*index];
-        cm_list_node *entry_node = entry_list->head;
-        while (entry_node != NULL) {
-            cm_hash_entry *entry = (cm_hash_entry *) entry_node->data;
-            expression_t *exp_key = (expression_t *) entry->key;
-            expression_t *exp_value = (expression_t *) entry->value;
+    cm_array_list *keys = cm_hash_table_get_keys(hash_exp->pairs);
+    if (keys != NULL) {
+        for (size_t i = 0; i < keys->length; i++) {
+            expression_t *exp_key = (expression_t *) cm_array_list_get(keys, i);
+            expression_t *exp_value = (expression_t *) cm_hash_table_get(hash_exp->pairs, exp_key);
             monkey_object_t *key = monkey_eval((node_t *) exp_key, env);
             if (is_error(key)) {
                 cm_hash_table_free(pairs);
@@ -439,8 +436,8 @@ eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
                 return value;
             }
             cm_hash_table_put(pairs, key, value);
-            entry_node = entry_node->next;
         }
+        cm_array_list_free(keys);
     }
     return (monkey_object_t *) create_monkey_hash(pairs);
 }

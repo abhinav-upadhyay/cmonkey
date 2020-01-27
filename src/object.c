@@ -39,6 +39,10 @@
 #include "object.h"
 #include "opcode.h"
 
+const monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
+const monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
+const monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL, NULL}};
+
 static char *
 monkey_function_inspect(monkey_object_t *obj)
 {

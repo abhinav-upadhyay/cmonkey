@@ -137,11 +137,11 @@ char *inspect(monkey_object_t *);
 _Bool monkey_object_equals(void *, void *);
 size_t monkey_object_hash(void *); // non-static for tests
 
-static monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
-static monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
-static monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL, NULL}};
+extern const monkey_bool_t MONKEY_TRUE_OBJ;
+extern const monkey_bool_t MONKEY_FALSE_OBJ;
+extern const monkey_null_t MONKEY_NULL_OBJ;
 
-#define create_monkey_bool(val) ((val == true) ? (&MONKEY_TRUE_OBJ): (&MONKEY_FALSE_OBJ))
+#define create_monkey_bool(val) ((val == true) ? ((monkey_bool_t *)&MONKEY_TRUE_OBJ): ((monkey_bool_t *)&MONKEY_FALSE_OBJ))
 #define create_monkey_null() (&MONKEY_NULL_OBJ)
 
 

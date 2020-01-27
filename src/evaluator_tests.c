@@ -768,14 +768,37 @@ test_hash_literals(void)
         "true: 5,\n"\
         "false: 6\n"\
         "}";
-    cm_hash_table *expected = cm_hash_table_init(monkey_object_hash,
-        monkey_object_equals, free_monkey_object, free_monkey_object);
-    cm_hash_table_put(expected, create_monkey_string("one", 3), create_monkey_int(1));
-    cm_hash_table_put(expected, create_monkey_string("two", 3), create_monkey_int(2));
-    cm_hash_table_put(expected, create_monkey_string("three", 5), create_monkey_int(3));
-    cm_hash_table_put(expected, create_monkey_int(4), create_monkey_int(4));
-    cm_hash_table_put(expected, create_monkey_bool(true), create_monkey_int(5));
-    cm_hash_table_put(expected, create_monkey_bool(false), create_monkey_int(6));
+
+    typedef struct kv {
+        monkey_object_t *key;
+        monkey_object_t *value;
+    } kv;
+    kv expected[] = {
+        {
+            (monkey_object_t *) create_monkey_string("one", 3),
+            (monkey_object_t *) create_monkey_int(1)
+        },
+        {
+            (monkey_object_t *) create_monkey_string("two", 3),
+            (monkey_object_t *) create_monkey_int(2)
+        },
+        {
+            (monkey_object_t *) create_monkey_string("three", 5),
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            (monkey_object_t *) create_monkey_int(4),
+            (monkey_object_t *) create_monkey_int(4)
+        },
+        {
+            (monkey_object_t *) create_monkey_bool(true),
+            (monkey_object_t *) create_monkey_int(5)
+        },
+        {
+            (monkey_object_t *) create_monkey_bool(false),
+            (monkey_object_t *) create_monkey_int(6)
+        }
+    };
     print_test_separator_line();
     printf("Testing hash literal evaluation for %s\n", input);
     environment_t *env = create_env();
@@ -783,28 +806,22 @@ test_hash_literals(void)
     test(evaluated->type == MONKEY_HASH,
         "Expected a HASH object, got %s\n", get_type_name(evaluated->type));
     monkey_hash_t *hash_obj = (monkey_hash_t *) evaluated;
-    test(hash_obj->pairs->nkeys == expected->nkeys,
-        "Expected %zu entries in table, got %zu\n",
-        expected->nkeys, hash_obj->pairs->nkeys);
-    for (size_t i = 0; i < expected->used_slots->length; i++) {
-        size_t *index = (size_t *) expected->used_slots->array[i];
-        cm_list *entry_list = expected->table[*index];
-        cm_list_node *entry_node = entry_list->head;
-        while (entry_node != NULL) {
-            cm_hash_entry *entry = (cm_hash_entry *) entry_node->data;
-            monkey_object_t *expected_key = (monkey_object_t *) entry->key;
-            monkey_object_t *expected_value = (monkey_object_t *) entry->value;
-            monkey_object_t *actual_value = (monkey_object_t *) cm_hash_table_get(hash_obj->pairs, expected_key);
-            char *key_string = expected_key->inspect(expected_key);
-            test(actual_value != NULL,
-                "Key %s not found in hash object\n", key_string);
-            free(key_string);
-            test_integer_object(actual_value, ((monkey_int_t *) expected_value)->value);
-            entry_node = entry_node->next;
-        }
+    size_t expected_objs_count = sizeof(expected) / sizeof(expected[0]);
+    test(hash_obj->pairs->nkeys == expected_objs_count,
+        "Expected %zu entries in hash table, got %zu\n", expected_objs_count, hash_obj->pairs->nkeys);
+
+    for (size_t i = 0; i < expected_objs_count; i++) {
+        monkey_object_t *key = expected[i].key;
+        char *key_string = key->inspect(key);
+        monkey_object_t *expected_value = expected[i].value;
+        monkey_object_t *actual_value = (monkey_object_t *) cm_hash_table_get(hash_obj->pairs, key);
+        test(actual_value != NULL, "key %s not found in hash object\n", key_string);
+        test_monkey_object(actual_value, expected_value);
+        free(key_string);
+        free_monkey_object(key);
+        free_monkey_object(expected_value);
     }
     free_monkey_object(evaluated);
-    cm_hash_table_free(expected);
     env_free(env);
 }
 
