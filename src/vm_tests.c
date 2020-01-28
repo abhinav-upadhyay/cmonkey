@@ -430,6 +430,101 @@ test_calling_functions_with_bindings_and_arguments(void)
         free_monkey_object(tests[i].expected);
 }
 
+static monkey_array_t *
+create_int_array(int *int_arr, size_t length)
+{
+    cm_array_list *array_list = cm_array_list_init(length, free_monkey_object);
+    for (size_t i = 0; i < length; i++) {
+        cm_array_list_add(array_list, (void *) create_monkey_int(int_arr[i]));
+    }
+    return create_monkey_array(array_list);
+}
+
+static void
+test_builtin_functions(void)
+{
+    vm_testcase tests[] = {
+        {
+            "len(\"\")",
+            (monkey_object_t *) create_monkey_int(0)
+        },
+        {
+            "len(\"four\")",
+            (monkey_object_t *) create_monkey_int(4)
+        },
+        {
+            "len(\"hello world\")",
+            (monkey_object_t *) create_monkey_int(11)
+        },
+        {
+            "len(1)",
+            (monkey_object_t *) create_monkey_error("argument to `len` not supported, got INTEGER")
+        },
+        {
+            "len(\"one\", \"two\")",
+            (monkey_object_t *) create_monkey_error("wrong number of arguments. got=2, want=1")
+        },
+        {
+            "len([1, 2, 3])",
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            "len([])",
+            (monkey_object_t *) create_monkey_int(0)
+        },
+        {
+            "puts(\"hello\", \"world!\")",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "first([1, 2, 3])",
+            (monkey_object_t *) create_monkey_int(1)
+        },
+        {
+            "first([])",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "first(1)",
+            (monkey_object_t *) create_monkey_error("argument to `first` must be ARRAY, got INTEGER")
+        },
+        {
+            "last([1, 2, 3])",
+            (monkey_object_t *) create_monkey_int(3)
+        },
+        {
+            "last([])",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "last(1)",
+            (monkey_object_t *) create_monkey_error("argument to `last` must be ARRAY, got INTEGER")
+        },
+        {
+            "rest([1, 2, 3])",
+            (monkey_object_t *) create_int_array((int[]) {2, 3}, 2)
+        },
+        {
+            "rest([])",
+            (monkey_object_t *) create_monkey_null()
+        },
+        {
+            "push([], 1)",
+            (monkey_object_t *) create_int_array((int[]) {1}, 1)
+        },
+        {
+            "push(1, 1)",
+            (monkey_object_t *) create_monkey_error("argument to `push` must be ARRAY, got INTEGER")
+        }
+    };
+    print_test_separator_line();
+    printf("Testing builtin functions\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+}
+
 static void
 test_calling_functions_with_bindings(void)
 {
@@ -495,5 +590,6 @@ main(int argc, char **argv)
     test_calling_functions_with_bindings();
     test_calling_functions_with_bindings_and_arguments();
     test_calling_functions_with_wrong_arguments();
+    test_builtin_functions();
     return 0;
 }

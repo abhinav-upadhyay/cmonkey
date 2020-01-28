@@ -35,6 +35,7 @@
 #include <unistd.h>
 
 #include "ast.h"
+#include "builtins.h"
 #include "cmonkey_utils.h"
 #include "compiler.h"
 #include "environment.h"
@@ -202,6 +203,13 @@ repl(void)
 	monkey_object_t *globals[GLOBALS_SIZE] = {NULL};
 	cm_array_list *constants = cm_array_list_init(16, free_monkey_object);
 	symbol_table_t *symbol_table = symbol_table_init();
+	for (size_t i = 0; i < get_builtins_count(); i++) {
+		char *builtin_name = (char *) get_builtins_name(i);
+		if (builtin_name == NULL)
+			break;
+		symbol_define_builtin(symbol_table, i, builtin_name);
+	}
+
 	vm_t *machine = NULL;
 	environment_t *env = create_env();
 	printf("%s\n", MONKEY_FACE);

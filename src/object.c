@@ -449,6 +449,8 @@ free_monkey_object(void *v)
             instructions_free(compiled_fn->instructions);
             free(compiled_fn);
             break;
+        case MONKEY_BUILTIN:
+            break;
         default:
             free(object);
     }

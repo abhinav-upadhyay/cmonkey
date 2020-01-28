@@ -777,6 +777,50 @@ test_let_statement_scope(void)
 }
 
 static void
+test_builtins(void)
+{
+    compiler_test tests[] = {
+        {
+            "len([]);\n"
+            "push([], 1);",
+            9,
+            {
+                instruction_init(OPGETBUILTIN, 0),
+                instruction_init(OPARRAY, 0),
+                instruction_init(OPCALL, 1),
+                instruction_init(OPPOP),
+                instruction_init(OPGETBUILTIN, 5),
+                instruction_init(OPARRAY, 0),
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCALL, 2),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1, (monkey_object_t *) create_monkey_int(1))
+        },
+        {
+            "fn() {len([]);};",
+            2,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(1,
+                (monkey_object_t *) create_monkey_compiled_fn(
+                    create_compiled_fn_instructions(4,
+                    instruction_init(OPGETBUILTIN, 0),
+                    instruction_init(OPARRAY, 0),
+                    instruction_init(OPCALL, 1),
+                    instruction_init(OPRETURNVALUE)), 0, 0))
+        }
+    };
+
+    print_test_separator_line();
+    printf("Tesing builtin functions compilation\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
 test_integer_arithmetic(void)
 {
     compiler_test tests[] = {
@@ -867,4 +911,5 @@ main(int argc, char **argv)
     test_functions();
     test_function_calls();
     test_let_statement_scope();
+    test_builtins();
 }

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "builtins.h"
 #include "cmonkey_utils.h"
 #include "compiler.h"
 #include "object.h"
@@ -115,11 +116,33 @@ compiler_init(void)
         err(EXIT_FAILURE, "malloc failed");
     compiler->constants_pool = NULL;
     compiler->symbol_table = symbol_table_init();
+    for (size_t i = 0; i < get_builtins_count(); i++) {
+        char *builtin_name = (char *) get_builtins_name(i);
+        if (builtin_name == NULL)
+            break;
+        symbol_define_builtin(compiler->symbol_table, i, builtin_name);
+    }
     compiler->scope_index = 0;
     compiler->scopes = cm_array_list_init(16, _scope_free);
     compilation_scope_t *main_scope = scope_init();
     cm_array_list_add(compiler->scopes, main_scope);
     return compiler;
+}
+
+static void
+load_symbol(compiler_t * compiler, symbol_t *symbol)
+{
+    switch (symbol->scope) {
+    case GLOBAL:
+        emit(compiler, OPGETGLOBAL, symbol->index);
+        break;
+    case LOCAL:
+        emit(compiler, OPGETLOCAL, symbol->index);
+        break;
+    case BUILTIN:
+        emit(compiler, OPGETBUILTIN, symbol->index);
+        break;
+    }
 }
 
 static void *
@@ -356,10 +379,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             error.msg = get_err_msg("undefined variable: %s\n", ident_exp->value);
             return error;
         }
-        if (sym->scope == GLOBAL)
-            emit(compiler, OPGETGLOBAL, sym->index);
-        else
-            emit(compiler, OPGETLOCAL, sym->index);
+        load_symbol(compiler, sym);
         break;
     case ARRAY_LITERAL:
         array_exp = (array_literal_t *) expression_node;

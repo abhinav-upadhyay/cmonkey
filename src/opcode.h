@@ -39,7 +39,8 @@ typedef enum opcode_t {
     OPRETURNVALUE,
     OPRETURN,
     OPSETLOCAL,
-    OPGETLOCAL
+    OPGETLOCAL,
+    OPGETBUILTIN
 } opcode_t;
 
 typedef struct opcode_definition_t {
@@ -75,7 +76,8 @@ static opcode_definition_t opcode_definitions [] = {
     {"OPRETURNVALUE", "reeturn_value", {(size_t) 0}},
     {"OPRETURN", "return", {(size_t) 0}},
     {"OPSETLOCAL", "set_local", {(size_t) 1}},
-    {"OPGETLOCAL", "get_local", {(size_t) 1}}
+    {"OPGETLOCAL", "get_local", {(size_t) 1}},
+    {"OPGETBUILTIN", "get_builtin", {(size_t) 1}}
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];

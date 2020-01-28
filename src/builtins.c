@@ -32,6 +32,16 @@
 #include "builtins.h"
 #include "cmonkey_utils.h"
 
+const char *BUILTINS[MAX_BUILTINS] = {
+    "len",
+    "puts",
+    "first",
+    "last",
+    "rest",
+    "push",
+    "type",
+};
+
 static monkey_object_t *len(cm_list *);
 static monkey_object_t *first(cm_list *);
 static monkey_object_t *last(cm_list *);
@@ -39,20 +49,21 @@ static monkey_object_t *rest(cm_list *);
 static monkey_object_t *push(cm_list *);
 static monkey_object_t *monkey_puts(cm_list *); //puts is a C function
 static monkey_object_t *type(cm_list *);
+static char * builtin_inspect(monkey_object_t *);
+
+const monkey_builtin_t BUILTIN_LEN = {{MONKEY_BUILTIN, builtin_inspect}, len};
+const monkey_builtin_t BUILTIN_FIRST = {{MONKEY_BUILTIN, builtin_inspect}, first};
+const monkey_builtin_t BUILTIN_LAST = {{MONKEY_BUILTIN, builtin_inspect}, last};
+const monkey_builtin_t BUILTIN_REST = {{MONKEY_BUILTIN, builtin_inspect}, rest};
+const monkey_builtin_t BUILTIN_PUSH = {{MONKEY_BUILTIN, builtin_inspect}, push};
+const monkey_builtin_t BUILTIN_PUTS = {{MONKEY_BUILTIN, builtin_inspect}, monkey_puts};
+const monkey_builtin_t BUILTIN_TYPE = {{MONKEY_BUILTIN, builtin_inspect}, type};
 
 static char *
 builtin_inspect(monkey_object_t *object)
 {
     return "builtin function";
 }
-
-monkey_builtin_t BUILTIN_LEN = {{MONKEY_BUILTIN, builtin_inspect}, len};
-monkey_builtin_t BUILTIN_FIRST = {{MONKEY_BUILTIN, builtin_inspect}, first};
-monkey_builtin_t BUILTIN_LAST = {{MONKEY_BUILTIN, builtin_inspect}, last};
-monkey_builtin_t BUILTIN_REST = {{MONKEY_BUILTIN, builtin_inspect}, rest};
-monkey_builtin_t BUILTIN_PUSH = {{MONKEY_BUILTIN, builtin_inspect}, push};
-monkey_builtin_t BUILTIN_PUTS = {{MONKEY_BUILTIN, builtin_inspect}, monkey_puts};
-monkey_builtin_t BUILTIN_TYPE = {{MONKEY_BUILTIN, builtin_inspect}, type};
 
 static monkey_object_t *
 monkey_puts(cm_list *arguments)
@@ -109,7 +120,7 @@ len(cm_list *arguments)
             return (monkey_object_t *) create_monkey_int(hash_obj->pairs->nkeys);
         default:
             return (monkey_object_t *) create_monkey_error(
-                "argument to len not supported, got %s", get_type_name(arg->type));
+                "argument to `len` not supported, got %s", get_type_name(arg->type));
     }
 }
 
@@ -126,7 +137,7 @@ first(cm_list *arguments)
     monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
     if (arg->type != MONKEY_ARRAY) {
         return (monkey_object_t *) create_monkey_error(
-            "argument to first must be ARRAY, got %s", get_type_name(arg->type));
+            "argument to `first` must be ARRAY, got %s", get_type_name(arg->type));
     }
     array = (monkey_array_t *) arg;
     if (array->elements->length > 0)
@@ -148,7 +159,7 @@ last(cm_list *arguments)
     monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
     if (arg->type != MONKEY_ARRAY) {
         return (monkey_object_t *) create_monkey_error(
-            "argument to last must be ARRAY, got %s", get_type_name(arg->type)
+            "argument to `last` must be ARRAY, got %s", get_type_name(arg->type)
         );
     }
 
@@ -174,7 +185,7 @@ rest(cm_list *arguments)
 
     monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
     if (arg->type != MONKEY_ARRAY) {
-        return (monkey_object_t *) create_monkey_error("argument to rest must be ARRAY, got %s",
+        return (monkey_object_t *) create_monkey_error("argument to `rest` must be ARRAY, got %s",
         get_type_name(arg->type));
     }
 
@@ -210,7 +221,7 @@ push(cm_list *arguments)
     monkey_object_t *arg = (monkey_object_t *) arguments->head->data;
     if (arg->type != MONKEY_ARRAY) {
         return (monkey_object_t *)
-            create_monkey_error("argument to push must be ARRAY, got %s",
+            create_monkey_error("argument to `push` must be ARRAY, got %s",
             get_type_name(arg->type));
     }
 
@@ -231,19 +242,19 @@ monkey_builtin_t *
 get_builtins(const char *name)
 {
     if (strcmp(name, "len") == 0)
-        return &BUILTIN_LEN;
+        return (monkey_builtin_t *) &BUILTIN_LEN;
     else if (strcmp(name, "first") == 0)
-        return &BUILTIN_FIRST;
+        return (monkey_builtin_t *) &BUILTIN_FIRST;
     else if (strcmp(name, "last") == 0)
-        return &BUILTIN_LAST;
+        return (monkey_builtin_t *) &BUILTIN_LAST;
     else if (strcmp(name, "rest") == 0)
-        return &BUILTIN_REST;
+        return (monkey_builtin_t *) &BUILTIN_REST;
     else if (strcmp(name, "push") == 0)
-        return &BUILTIN_PUSH;
+        return (monkey_builtin_t *) &BUILTIN_PUSH;
     else if (strcmp(name, "puts") == 0)
-        return &BUILTIN_PUTS;
+        return (monkey_builtin_t *) &BUILTIN_PUTS;
     else if (strcmp(name, "type") == 0)
-        return &BUILTIN_TYPE;
+        return (monkey_builtin_t *) &BUILTIN_TYPE;
     else
         return NULL;
 }

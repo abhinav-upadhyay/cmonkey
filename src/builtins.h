@@ -33,8 +33,21 @@
 #include "cmonkey_utils.h"
 #include "object.h"
 
+#define MAX_BUILTINS 256
+
 typedef cm_hash_table *monkey_builtins_table;
 
 monkey_builtin_t *get_builtins(const char *);
+extern const char * BUILTINS[MAX_BUILTINS];
+extern const monkey_builtin_t BUILTIN_LEN;
+extern const monkey_builtin_t BUILTIN_FIRST;
+extern const monkey_builtin_t BUILTIN_LAST;
+extern const monkey_builtin_t BUILTIN_REST;
+extern const monkey_builtin_t BUILTIN_PUSH;
+extern const monkey_builtin_t BUILTIN_PUTS;
+extern const monkey_builtin_t BUILTIN_TYPE;
 
+
+#define get_builtins_count() sizeof(BUILTINS)/sizeof(BUILTINS[0])
+#define get_builtins_name(x) BUILTINS[x]
 #endif

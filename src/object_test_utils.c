@@ -64,7 +64,13 @@ test_monkey_object(monkey_object_t *obj, monkey_object_t *expected)
         test_array_object(obj, expected);
     else if (expected->type == MONKEY_HASH)
         test_hash_object(obj, expected);
-    else if (expected->type == MONKEY_COMPILED_FUNCTION) {
+    else if (expected->type == MONKEY_ERROR) {
+        monkey_error_t *actual_err = (monkey_error_t *) obj;
+        monkey_error_t *expected_err = (monkey_error_t *) expected;
+        test((strcmp(actual_err->message, expected_err->message) == 0),
+            "Expected error message %s, got %s\n",
+            expected_err->message, actual_err->message);
+    } else if (expected->type == MONKEY_COMPILED_FUNCTION) {
         instructions_t *expected_ins = ((monkey_compiled_fn_t *) expected)->instructions;
         instructions_t *actual_ins = ((monkey_compiled_fn_t *) obj)->instructions;
         char *expected_ins_string = instructions_to_string(expected_ins);

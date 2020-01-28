@@ -1,6 +1,7 @@
 #include <err.h>
 #include <stdlib.h>
 
+#include "builtins.h"
 #include "compiler.h"
 #include "object.h"
 #include "opcode.h"
@@ -391,6 +392,62 @@ build_hash(vm_t *vm, size_t size)
     return table;
 }
 
+static vm_error_t
+call_function(vm_t *vm, monkey_compiled_fn_t *callee, size_t num_args)
+{
+    vm_error_t vm_err;
+    if (callee->num_args != num_args) {
+        vm_err.code = VM_WRONG_NUMBER_ARGUMENTS;
+        vm_err.msg = get_err_msg("wrong number of arguments: want=%zu, got=%zu",
+            callee->num_args, num_args);
+        return vm_err;
+    }
+    frame_t *new_frame = frame_init(callee, vm->sp - num_args);
+    push_frame(vm, new_frame);
+    vm->sp = new_frame->bp + callee->num_locals;
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    free_monkey_object(callee);
+    return vm_err;
+}
+
+static vm_error_t
+call_builtin(vm_t *vm, monkey_builtin_t *callee, size_t num_args)
+{
+    vm_error_t vm_err;
+    cm_list *args = cm_list_init();
+    for (size_t i = vm->sp - num_args; i < vm->sp; i++) {
+        monkey_object_t *top = vm->stack[i];
+        cm_list_add(args, top);
+    }
+    monkey_object_t *result = callee->function(args);
+    cm_list_free(args, NULL);
+    vm_push(vm, result, false);
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    return vm_err;
+}
+
+static vm_error_t
+execute_call(vm_t *vm, size_t num_args)
+{
+    monkey_object_t *callee = vm->stack[vm->sp - 1 - num_args];
+    vm_error_t vm_err;
+    switch (callee->type) {
+    case MONKEY_COMPILED_FUNCTION:
+        vm_err = call_function(vm, (monkey_compiled_fn_t *) callee, num_args);
+        break;
+    case MONKEY_BUILTIN:
+        vm_err = call_builtin(vm, (monkey_builtin_t *) callee, num_args);
+        break;
+    default:
+        vm_err.code = VM_NON_FUNCTION;
+        vm_err.msg = get_err_msg("Calling non-function\n");
+        break;
+    }
+    return vm_err;
+}
+
 vm_error_t
 vm_run(vm_t *vm)
 {
@@ -404,12 +461,11 @@ vm_run(vm_t *vm)
     monkey_hash_t *hash_obj;
     monkey_object_t *index;
     monkey_object_t *left;
-    monkey_compiled_fn_t *compiled_fn;
     monkey_object_t *return_value;
-    frame_t *new_frame;
     frame_t *popped_frame = NULL;
     size_t ip;
     size_t num_args;
+    size_t builtin_idx;
     frame_t *current_frame = get_current_frame(vm);
     while (current_frame->ip < get_frame_instructions(current_frame)->length) {
         ip = current_frame->ip;
@@ -530,23 +586,10 @@ vm_run(vm_t *vm)
             break;
         case OPCALL:
             num_args = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
-            top = vm->stack[vm->sp - 1 - num_args];
             current_frame->ip++;
-            if (top->type != MONKEY_COMPILED_FUNCTION) {
-                vm_err.code = VM_NON_FUNCTION;
-                vm_err.msg = get_err_msg("Calling non-function\n");
+            vm_err = execute_call(vm, num_args);
+            if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
-            }
-            compiled_fn = (monkey_compiled_fn_t *) top;
-            if (compiled_fn->num_args != num_args) {
-                vm_err.code = VM_WRONG_NUMBER_ARGUMENTS;
-                vm_err.msg = get_err_msg("wrong number of arguments: want=%zu, got=%zu",
-                    compiled_fn->num_args, num_args);
-                return vm_err;
-            }
-            new_frame = frame_init(compiled_fn, vm->sp - num_args);
-            push_frame(vm, new_frame);
-            vm->sp = new_frame->bp + compiled_fn->num_locals;
             break;
         case OPRETURNVALUE:
             return_value = (monkey_object_t *) vm_pop(vm);
@@ -558,6 +601,13 @@ vm_run(vm_t *vm)
             popped_frame = pop_frame(vm);
             vm->sp = popped_frame->bp - 1;
             vm_push(vm, (monkey_object_t *) create_monkey_null(), false);
+            break;
+        case OPGETBUILTIN:
+            builtin_idx = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            current_frame->ip++;
+            const char *builtin_name = get_builtins_name(builtin_idx);
+            monkey_builtin_t *builtin = get_builtins(builtin_name);
+            vm_push(vm, (monkey_object_t *) builtin, false);
             break;
         default:
             op_def = opcode_definition_lookup(op);

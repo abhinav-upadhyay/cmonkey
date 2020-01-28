@@ -95,8 +95,8 @@ cm_list_free(cm_list *list, void (*free_data) (void *))
     while (list_node != NULL) {
         if (free_data)
             free_data(list_node->data);
-        else
-            free(list_node->data);
+        // else
+            // free(list_node->data);
         temp_node = list_node->next;
         free(list_node);
         list_node = temp_node;

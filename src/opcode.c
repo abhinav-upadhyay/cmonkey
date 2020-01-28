@@ -34,6 +34,7 @@ vinstruction_init(opcode_t op, va_list ap)
     case OPSETLOCAL:
     case OPGETLOCAL:
     case OPCALL:
+    case OPGETBUILTIN:
         operand = va_arg(ap, size_t);
         boperand = size_t_to_uint8_be(operand, 1);
         ins->bytes = create_uint8_array(2, op, boperand[0]);
@@ -165,6 +166,7 @@ instructions_to_string(instructions_t *instructions)
         case OPSETLOCAL:
         case OPGETLOCAL:
         case OPCALL:
+        case OPGETBUILTIN:
             operand = be_to_size_t(instructions->bytes + i + 1, 1);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);
