@@ -46,7 +46,8 @@ typedef enum monkey_object_type {
     MONKEY_BUILTIN,
     MONKEY_ARRAY,
     MONKEY_HASH,
-    MONKEY_COMPILED_FUNCTION
+    MONKEY_COMPILED_FUNCTION,
+    MONKEY_CLOSURE
 } monkey_object_type;
 
 static const char *type_names[] = {
@@ -60,9 +61,11 @@ static const char *type_names[] = {
     "BUILTIN",
     "ARRAY",
     "HASH",
-    "COMPILED_FUNCTION"
+    "COMPILED_FUNCTION",
+    "CLOSURE"
 };
 
+#define MAX_FREE_VARIABLES 256
 #define get_type_name(type) type_names[type]
 
 typedef struct monkey_object_t {
@@ -133,6 +136,13 @@ typedef struct monkey_hash_t {
     cm_hash_table *pairs;
 } monkey_hash_t;
 
+typedef struct monkey_closure_t {
+    monkey_object_t object;
+    monkey_compiled_fn_t *fn;
+    monkey_object_t *free_variables[MAX_FREE_VARIABLES];
+    size_t free_variables_count;
+} monkey_closure_t;
+
 char *inspect(monkey_object_t *);
 _Bool monkey_object_equals(void *, void *);
 size_t monkey_object_hash(void *); // non-static for tests
@@ -156,6 +166,7 @@ monkey_builtin_t *create_monkey_builtin(builtin_fn);
 monkey_array_t *create_monkey_array(cm_array_list *);
 monkey_hash_t *create_monkey_hash(cm_hash_table *);
 monkey_compiled_fn_t *create_monkey_compiled_fn(instructions_t *, size_t, size_t);
+monkey_closure_t *create_monkey_closure(monkey_compiled_fn_t *fn, cm_array_list *);
 void free_monkey_object(void *);
 
 #endif

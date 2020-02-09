@@ -42,6 +42,18 @@ vinstruction_init(opcode_t op, va_list ap)
         ins->size = 2;
         free(boperand);
         return ins;
+    case OPCLOSURE:
+        operand = va_arg(ap, size_t);
+        boperand = size_t_to_uint8_be(operand, 2);
+        ins->bytes = create_uint8_array(4, op, boperand[0], boperand[1], 0);
+        free(boperand);
+        operand = va_arg(ap, size_t);
+        boperand = size_t_to_uint8_be(operand, 1);
+        ins->bytes[3] = boperand[0];
+        ins->size = 4;
+        ins->length = 4;
+        free(boperand);
+        return ins;
     case OPADD:
     case OPSUB:
     case OPMUL:
@@ -175,6 +187,36 @@ instructions_to_string(instructions_t *instructions)
             } else {
                 char *temp = NULL;
                 int retval = asprintf(&temp, "%s\n%04zu %s %zu", string, i, op_def.name, operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+                free(string);
+                string = temp;
+            }
+            i++;
+            break;
+        case OPCLOSURE:
+            operand = be_to_size_t(instructions->bytes + i + 1, 2)    ;
+            if (string == NULL) {
+                int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+            } else {
+                char *temp = NULL;
+                int retval = asprintf(&temp, "%s\n%04zu %s %zu", string, i, op_def.name, operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+                free(string);
+                string = temp;
+            }
+            i += 2;
+            operand = be_to_size_t(instructions->bytes + i + 1, 1)    ;
+            if (string == NULL) {
+                int retval = asprintf(&string, " %zu", operand);
+                if (retval == -1)
+                    err(EXIT_FAILURE, "malloc failed");
+            } else {
+                char *temp = NULL;
+                int retval = asprintf(&temp, "%s %zu", string, operand);
                 if (retval == -1)
                     err(EXIT_FAILURE, "malloc failed");
                 free(string);

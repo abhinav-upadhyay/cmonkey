@@ -41,6 +41,12 @@ test_instruction_init(void)
             OPSETLOCAL, {(size_t) 255},
             2,
             create_uint8_array(2, OPSETLOCAL, 255)
+        },
+        {
+            "Test OPCLOSURE 65534 255",
+            OPCLOSURE, {(size_t) 65534, (size_t) 255},
+            4,
+            create_uint8_array(4, OPCLOSURE, 255, 254, 255)
         }
     };
     print_test_separator_line();
@@ -50,7 +56,11 @@ test_instruction_init(void)
     for (size_t i = 0; i < ntests; i++) {
         test t = test_cases[i];
         printf("%s\n", t.desc);
-        instructions_t *actual = instruction_init(t.op, t.operands[0]);
+        instructions_t *actual;
+        if (t.op != OPCLOSURE)
+            actual = instruction_init(t.op, t.operands[0]);
+        else
+            actual = instruction_init(t.op, t.operands[0], t.operands[1]);
         size_t actual_len = actual->length;
         size_t expected_len = t.expected_instructions_len;
         test(actual_len == expected_len, "Expected instruction length %zu, found %zu\n", expected_len, actual_len);
@@ -63,19 +73,21 @@ test_instruction_init(void)
 static void
 test_instructions_string(void)
 {
-    instructions_t *ins_array[4] = {
+    instructions_t *ins_array[5] = {
         instruction_init(OPADD),
         instruction_init(OPCONSTANT, 2),
         instruction_init(OPCONSTANT, 65535),
-        instruction_init(OPGETLOCAL, 1)
+        instruction_init(OPGETLOCAL, 1),
+        instruction_init(OPCLOSURE, 65535, 255)
     };
 
     const char *expected_string = "0000 OPADD\n" \
         "0001 OPCONSTANT 2\n" \
         "0004 OPCONSTANT 65535\n" \
-        "0007 OPGETLOCAL 1";
+        "0007 OPGETLOCAL 1\n" \
+        "0009 OPCLOSURE 65535 255";
     
-    instructions_t *flat_ins = flatten_instructions(4, ins_array);
+    instructions_t *flat_ins = flatten_instructions(5, ins_array);
     char *string = instructions_to_string(flat_ins);
     print_test_separator_line();
     printf("Testing instructions_to_string\n");
@@ -85,6 +97,8 @@ test_instructions_string(void)
     instructions_free(ins_array[0]);
     instructions_free(ins_array[1]);
     instructions_free(ins_array[2]);
+    instructions_free(ins_array[3]);
+    instructions_free(ins_array[4]);
 }
 
 int

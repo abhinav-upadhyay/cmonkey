@@ -48,13 +48,15 @@ vm_init(bytecode_t *bytecode)
     if (vm == NULL)
         err(EXIT_FAILURE, "malloc failed");
     monkey_compiled_fn_t *main_fn = create_monkey_compiled_fn(bytecode->instructions, 0, 0);
-    frame_t *main_frame = frame_init(main_fn, 0);
+    monkey_closure_t *main_closure = create_monkey_closure(main_fn, NULL);
+    frame_t *main_frame = frame_init(main_closure, 0);
     vm->frames[0] = main_frame;
     vm->frame_index = 1;
     vm->constants = bytecode->constants_pool;
     vm->sp = 0;
     for (size_t i = 0; i < GLOBALS_SIZE; i++)
         vm->globals[i] = NULL;
+    free_monkey_object(main_closure);
     free(main_fn);
     return vm;
 }
@@ -107,6 +109,21 @@ vm_push(vm_t *vm, monkey_object_t *obj, _Bool copy)
     }
     vm->stack[vm->sp++] = copy? copy_monkey_object(obj): obj;
     return error;
+}
+
+static vm_error_t
+vm_push_closure(vm_t *vm, size_t const_index)
+{
+    vm_error_t vm_err;
+    monkey_object_t *obj = (monkey_object_t *) cm_array_list_get(vm->constants, const_index);
+    if (obj->type != MONKEY_COMPILED_FUNCTION) {
+        vm_err.code = VM_NON_FUNCTION;
+        vm_err.msg = get_err_msg("not a function: %s\n", get_type_name(obj->type));
+        return vm_err;
+    }
+    monkey_compiled_fn_t *fn = (monkey_compiled_fn_t *) obj;
+    monkey_closure_t *closure = create_monkey_closure(fn, NULL);
+    return vm_push(vm, (monkey_object_t *) closure, false);
 }
 
 static monkey_object_t *
@@ -393,25 +410,6 @@ build_hash(vm_t *vm, size_t size)
 }
 
 static vm_error_t
-call_function(vm_t *vm, monkey_compiled_fn_t *callee, size_t num_args)
-{
-    vm_error_t vm_err;
-    if (callee->num_args != num_args) {
-        vm_err.code = VM_WRONG_NUMBER_ARGUMENTS;
-        vm_err.msg = get_err_msg("wrong number of arguments: want=%zu, got=%zu",
-            callee->num_args, num_args);
-        return vm_err;
-    }
-    frame_t *new_frame = frame_init(callee, vm->sp - num_args);
-    push_frame(vm, new_frame);
-    vm->sp = new_frame->bp + callee->num_locals;
-    vm_err.code = VM_ERROR_NONE;
-    vm_err.msg = NULL;
-    free_monkey_object(callee);
-    return vm_err;
-}
-
-static vm_error_t
 call_builtin(vm_t *vm, monkey_builtin_t *callee, size_t num_args)
 {
     vm_error_t vm_err;
@@ -429,13 +427,32 @@ call_builtin(vm_t *vm, monkey_builtin_t *callee, size_t num_args)
 }
 
 static vm_error_t
+call_closure(vm_t *vm, monkey_closure_t *closure, size_t num_args)
+{
+    vm_error_t vm_err;
+    if (closure->fn->num_args != num_args) {
+        vm_err.code = VM_WRONG_NUMBER_ARGUMENTS;
+        vm_err.msg = get_err_msg("wrong number of arguments: want=%zu, got=%zu",
+            closure->fn->num_args, num_args);
+        return vm_err;
+    }
+    frame_t *new_frame = frame_init(closure, vm->sp - num_args);
+    push_frame(vm, new_frame);
+    vm->sp = new_frame->bp + closure->fn->num_locals;
+    vm_err.code = VM_ERROR_NONE;
+    vm_err.msg = NULL;
+    free_monkey_object(closure);
+    return vm_err;
+}
+
+static vm_error_t
 execute_call(vm_t *vm, size_t num_args)
 {
     monkey_object_t *callee = vm->stack[vm->sp - 1 - num_args];
     vm_error_t vm_err;
     switch (callee->type) {
-    case MONKEY_COMPILED_FUNCTION:
-        vm_err = call_function(vm, (monkey_compiled_fn_t *) callee, num_args);
+    case MONKEY_CLOSURE:
+        vm_err = call_closure(vm, (monkey_closure_t *) callee, num_args);
         break;
     case MONKEY_BUILTIN:
         vm_err = call_builtin(vm, (monkey_builtin_t *) callee, num_args);
@@ -466,6 +483,7 @@ vm_run(vm_t *vm)
     size_t ip;
     size_t num_args;
     size_t builtin_idx;
+    size_t num_free_vars;
     frame_t *current_frame = get_current_frame(vm);
     while (current_frame->ip < get_frame_instructions(current_frame)->length) {
         ip = current_frame->ip;
@@ -608,6 +626,15 @@ vm_run(vm_t *vm)
             const char *builtin_name = get_builtins_name(builtin_idx);
             monkey_builtin_t *builtin = get_builtins(builtin_name);
             vm_push(vm, (monkey_object_t *) builtin, false);
+            break;
+        case OPCLOSURE:
+            const_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
+            current_frame->ip += 2;
+            num_free_vars = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            current_frame->ip++;
+            vm_err = vm_push_closure(vm, const_index);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
             break;
         default:
             op_def = opcode_definition_lookup(op);

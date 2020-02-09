@@ -136,6 +136,7 @@ inspect(monkey_object_t *obj)
     monkey_array_t *array;
     monkey_hash_t *hash_obj;
     monkey_compiled_fn_t *compiled_fn;
+    monkey_closure_t *closure;
     char *string = NULL;
     char *elements_string = NULL;
     int ret;
@@ -178,6 +179,12 @@ inspect(monkey_object_t *obj)
         case MONKEY_COMPILED_FUNCTION:
             compiled_fn = (monkey_compiled_fn_t *) obj;
             ret = asprintf(&string, "compiled function %p", compiled_fn);
+            if (ret == -1)
+                err(EXIT_FAILURE, "malloc failed");
+            return string;
+        case MONKEY_CLOSURE:
+            closure = (monkey_closure_t *) obj;
+            ret = asprintf(&string, "closure[%p]", closure);
             if (ret == -1)
                 err(EXIT_FAILURE, "malloc failed");
             return string;
@@ -253,6 +260,8 @@ monkey_object_equals(void *o1, void *o2)
     monkey_return_value_t *ret2;
     monkey_compiled_fn_t *fn1;
     monkey_compiled_fn_t *fn2;
+    monkey_closure_t *closure1;
+    monkey_closure_t *closure2;
     switch (obj1->type) {
         case MONKEY_ARRAY:
             array1 = (monkey_array_t *) obj1;
@@ -294,6 +303,18 @@ monkey_object_equals(void *o1, void *o2)
             fn1 = (monkey_compiled_fn_t *) obj1;
             fn2 = (monkey_compiled_fn_t *) obj2;
             return instructions_equals(fn1->instructions, fn2->instructions);
+        case MONKEY_CLOSURE:
+            closure1 = (monkey_closure_t *) obj1;
+            closure2 = (monkey_closure_t *) obj2;
+            if (!monkey_object_equals(closure1->fn, closure2->fn))
+                return false;
+            if (closure1->free_variables_count != closure2->free_variables_count)
+                return false;
+            for (size_t i = 0; i < closure1->free_variables_count; i++) {
+                if (!monkey_object_equals(closure1->free_variables[i], closure2->free_variables[i]))
+                    return false;
+            }
+            return true;
     }
 }
 
@@ -319,6 +340,28 @@ monkey_object_hash(void *object)
             // NULL for other object types
             return 0;
     }
+}
+
+monkey_closure_t *
+create_monkey_closure(monkey_compiled_fn_t *fn, cm_array_list *free_variables)
+{
+    monkey_closure_t *closure;
+    closure = malloc(sizeof(*closure));
+    if (closure == NULL)
+        err(EXIT_FAILURE, "malloc failed");
+    closure->fn = (monkey_compiled_fn_t *) copy_monkey_object((monkey_object_t *) fn);
+    if (free_variables != NULL) {
+        for (size_t i = 0; i < free_variables->length; i++)
+            closure->free_variables[i] = copy_monkey_object(cm_array_list_get(free_variables, i));
+        closure->free_variables_count = free_variables->length;
+    } else {
+        closure->free_variables_count = 0;
+    }
+    closure->object.inspect = inspect;
+    closure->object.type = MONKEY_CLOSURE;
+    closure->object.hash = NULL;
+    closure->object.equals = monkey_object_equals;
+    return closure;
 }
 
 monkey_int_t *
@@ -409,6 +452,7 @@ free_monkey_object(void *v)
     monkey_array_t *array;
     monkey_hash_t *hash_obj;
     monkey_compiled_fn_t *compiled_fn;
+    monkey_closure_t *closure;
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
@@ -451,6 +495,15 @@ free_monkey_object(void *v)
             break;
         case MONKEY_BUILTIN:
             break;
+        case MONKEY_CLOSURE:
+            closure = (monkey_closure_t *) object;
+            free_monkey_object(closure->fn);
+            for (size_t i = 0; i < closure->free_variables_count; i++) {
+                monkey_object_t *free_var = closure->free_variables[i];
+                free_monkey_object(free_var);
+            }
+            free(closure);
+            break;
         default:
             free(object);
     }
@@ -472,6 +525,7 @@ copy_monkey_object(monkey_object_t *object)
     monkey_array_t *array_obj;
     monkey_hash_t *hash_obj;
     monkey_compiled_fn_t *compiled_fn;
+    monkey_closure_t *closure;
     if (object == NULL)
         return (monkey_object_t *) create_monkey_null();
 
@@ -503,6 +557,20 @@ copy_monkey_object(monkey_object_t *object)
             compiled_fn = (monkey_compiled_fn_t *) object;
             return (monkey_object_t *) create_monkey_compiled_fn(copy_instructions(compiled_fn->instructions),
                 compiled_fn->num_locals, compiled_fn->num_args);
+        case MONKEY_CLOSURE:
+            closure = (monkey_closure_t *) object;
+            monkey_closure_t *copy_closure = malloc(sizeof(*closure));
+            if (copy_closure == NULL)
+                err(EXIT_FAILURE, "malloc failed");
+            copy_closure->fn = (monkey_compiled_fn_t *) copy_monkey_object((monkey_object_t *) closure->fn);
+            for (size_t i = 0; i < closure->free_variables_count; i++)
+                copy_closure->free_variables[i] = copy_monkey_object(closure->free_variables[i]);
+            copy_closure->free_variables_count = closure->free_variables_count;
+            copy_closure->object.inspect = inspect;
+            copy_closure->object.hash = NULL;
+            copy_closure->object.type = MONKEY_CLOSURE;
+            copy_closure->object.equals = monkey_object_equals;
+            return (monkey_object_t *) copy_closure;
         default:
             return NULL;
     }

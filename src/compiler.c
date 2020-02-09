@@ -440,7 +440,7 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
         monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins,
             num_locals, func_exp->parameters->length);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
-        emit(compiler, OPCONSTANT, constant_idx);
+        emit(compiler, OPCLOSURE, constant_idx, 0);
         break;
     case CALL_EXPRESSION:
         call_exp = (call_expression_t *) expression_node;

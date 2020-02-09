@@ -558,7 +558,7 @@ test_function_calls(void)
             "fn() {24}();",
             3,
             {
-                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCLOSURE, 1, 0),
                 instruction_init(OPCALL, 0),
                 instruction_init(OPPOP)
             },
@@ -573,7 +573,7 @@ test_function_calls(void)
             "let noArg = fn() {24}; noArg();",
             5,
             {
-                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCLOSURE, 1, 0),
                 instruction_init(OPSETGLOBAL, 0),
                 instruction_init(OPGETGLOBAL, 0),
                 instruction_init(OPCALL, 0),
@@ -589,7 +589,7 @@ test_function_calls(void)
             "let oneArg = fn(a) {a};\n oneArg(24);",
             6,
             {
-                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCLOSURE, 0, 0),
                 instruction_init(OPSETGLOBAL, 0),
                 instruction_init(OPGETGLOBAL, 0),
                 instruction_init(OPCONSTANT, 1),
@@ -606,7 +606,7 @@ test_function_calls(void)
             "let manyArg = fn(a, b, c) {a; b; c;};\n manyArg(24, 25, 26);",
             8,
             {
-                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCLOSURE, 0, 0),
                 instruction_init(OPSETGLOBAL, 0),
                 instruction_init(OPGETGLOBAL, 0),
                 instruction_init(OPCONSTANT, 1),
@@ -643,7 +643,7 @@ test_functions(void)
             "fn() {return 5 + 10}",
             2,
             {
-                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCLOSURE, 2, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(3,
@@ -660,7 +660,7 @@ test_functions(void)
             "fn() {5 + 10}",
             2,
             {
-                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCLOSURE, 2, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(3,
@@ -677,7 +677,7 @@ test_functions(void)
             "fn() {1; 2;}",
             2,
             {
-                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCLOSURE, 2, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(3,
@@ -694,7 +694,7 @@ test_functions(void)
             "fn() {}",
             2,
             {
-                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCLOSURE, 0, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(1,
@@ -718,7 +718,7 @@ test_let_statement_scope(void)
             {
                 instruction_init(OPCONSTANT, 0),
                 instruction_init(OPSETGLOBAL, 0),
-                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCLOSURE, 1, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(2,
@@ -734,7 +734,7 @@ test_let_statement_scope(void)
             "}",
             2,
             {
-                instruction_init(OPCONSTANT, 1),
+                instruction_init(OPCLOSURE, 1, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(2,
@@ -753,7 +753,7 @@ test_let_statement_scope(void)
             "}",
             2,
             {
-                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCLOSURE, 2, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(3,
@@ -801,7 +801,7 @@ test_builtins(void)
             "fn() {len([]);};",
             2,
             {
-                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPCLOSURE, 0, 0),
                 instruction_init(OPPOP)
             },
             create_constant_pool(1,
