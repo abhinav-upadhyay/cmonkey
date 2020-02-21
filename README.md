@@ -3,6 +3,10 @@ This is an implementation of the monkey language in C.
 Monkey is a programming language created by Thorsten Ball in the book
 [Writing an interpreter in go](https://interpreterbook.com/).
 
+[**EDIT**]
+Now this also includes a bytecode compiled version of monkey based on the
+second book by the author [Writing a compiler in go](https://compilerbook.com).
+
 ## BUILDING
 Requires GNU make to build the code.
 Tested mostly on Linux and NetBSD, bug reports welcome for other
