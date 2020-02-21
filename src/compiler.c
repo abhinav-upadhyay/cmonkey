@@ -599,7 +599,7 @@ get_bytecode(compiler_t *compiler)
     bytecode_t *bytecode;
     bytecode = malloc(sizeof(*bytecode));
     compilation_scope_t *scope = get_top_scope(compiler);
-    bytecode->instructions = scope->instructions;
+    bytecode->instructions = copy_instructions(scope->instructions);
     bytecode->constants_pool = compiler->constants_pool;
     return bytecode;
 }
@@ -615,6 +615,8 @@ void
 scope_free(compilation_scope_t *scope)
 {
     instructions_free(scope->instructions);
+    // if (scope->instructions)
+        // free(scope->instructions);
     free(scope);
 }
 

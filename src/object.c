@@ -39,9 +39,9 @@
 #include "object.h"
 #include "opcode.h"
 
-const monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, true};
-const monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals}, false};
-const monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL, NULL}};
+const monkey_bool_t MONKEY_TRUE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals, 1}, true};
+const monkey_bool_t MONKEY_FALSE_OBJ = {{MONKEY_BOOL, inspect, monkey_object_hash, monkey_object_equals, 1}, false};
+const monkey_null_t MONKEY_NULL_OBJ = {{MONKEY_NULL, inspect, NULL, NULL, 1}};
 
 static char *
 monkey_function_inspect(monkey_object_t *obj)
@@ -349,10 +349,11 @@ create_monkey_closure(monkey_compiled_fn_t *fn, cm_array_list *free_variables)
     closure = malloc(sizeof(*closure));
     if (closure == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    closure->fn = (monkey_compiled_fn_t *) copy_monkey_object((monkey_object_t *) fn);
+    fn->object.refcount++;
+    closure->fn = fn;
     if (free_variables != NULL) {
         for (size_t i = 0; i < free_variables->length; i++)
-            closure->free_variables[i] = copy_monkey_object(cm_array_list_get(free_variables, i));
+            closure->free_variables[i] = (monkey_object_t *) free_variables->array[i];
         closure->free_variables_count = free_variables->length;
     } else {
         closure->free_variables_count = 0;
@@ -361,6 +362,7 @@ create_monkey_closure(monkey_compiled_fn_t *fn, cm_array_list *free_variables)
     closure->object.type = MONKEY_CLOSURE;
     closure->object.hash = NULL;
     closure->object.equals = monkey_object_equals;
+    closure->object.refcount = 1;
     return closure;
 }
 
@@ -376,6 +378,7 @@ create_monkey_int(long value)
     int_obj->object.hash = monkey_object_hash;
     int_obj->object.equals = monkey_object_equals;
     int_obj->value = value;
+    int_obj->object.refcount = 1;
     return int_obj;
 }
 
@@ -393,6 +396,7 @@ create_monkey_compiled_fn(instructions_t *ins, size_t num_locals, size_t num_arg
     compiled_fn->object.inspect = inspect;
     compiled_fn->object.equals = monkey_object_equals;
     compiled_fn->object.hash = NULL;
+    compiled_fn->object.refcount = 1;
     return compiled_fn;
 }
 
@@ -408,6 +412,7 @@ create_monkey_return_value(monkey_object_t *value)
     ret->object.inspect = inspect;
     ret->object.equals = monkey_object_equals;
     ret->object.hash = NULL;
+    ret->object.refcount = 1;
     return ret;
 }
 
@@ -427,10 +432,11 @@ create_monkey_error(const char *fmt, ...)
     va_start(args, fmt);
     int ret = vasprintf(&message, fmt, args);
     if (ret == -1)
-        errx(EXIT_FAILURE, "malloc failed");
+        err(EXIT_FAILURE, "malloc failed");
     va_end(args);
 
     error->message = message;
+    error->object.refcount = 1;
     return error;
 }
 
@@ -453,59 +459,96 @@ free_monkey_object(void *v)
     monkey_hash_t *hash_obj;
     monkey_compiled_fn_t *compiled_fn;
     monkey_closure_t *closure;
+
     switch (object->type) {
         case MONKEY_BOOL:
         case MONKEY_NULL:
+        case MONKEY_BUILTIN:
             break;
         case MONKEY_INT:
-            free((monkey_int_t *) object);
-            break;
+            object->refcount--;
+            if (object->refcount == 0)
+                free((monkey_int_t *) object);
+            break;    
         case MONKEY_ERROR:
+            object->refcount--;
+            if (object->refcount > 0)
+                break;
             err_obj = (monkey_error_t *) object;
             free(err_obj->message);
             free(err_obj);
             break;
         case MONKEY_FUNCTION:
-            free_monkey_function_object((monkey_function_t *) object);
+            object->refcount--;
+            if (object->refcount == 0)
+                free_monkey_function_object((monkey_function_t *) object);
             break;
         case MONKEY_RETURN_VALUE:
+            object->refcount--;
             return_value = (monkey_return_value_t *) object;
             free_monkey_object(return_value->value);
-            free(return_value);
+            if (object->refcount == 0)
+                free(return_value);
             break;
         case MONKEY_STRING:
-            str_obj = (monkey_string_t *) object;
-            free(str_obj->value);
-            free(str_obj);
+            object->refcount--;
+            if (object->refcount == 0) {
+                str_obj = (monkey_string_t *) object;
+                free(str_obj->value);
+                free(str_obj);
+            }
             break;
         case MONKEY_ARRAY:
+            object->refcount--;
             array = (monkey_array_t *) object;
-            cm_array_list_free(array->elements);
-            free(array);
+            for (size_t i = 0; i < array->elements->length; i++)
+                free_monkey_object((monkey_object_t *) array->elements->array[i]);
+            if (object->refcount == 0) {
+                cm_array_list_free(array->elements);
+                free(array);
+            }
             break;
         case MONKEY_HASH:
+            object->refcount--;
             hash_obj = (monkey_hash_t *) object;
-            cm_hash_table_free(hash_obj->pairs);
-            free(hash_obj);
+            cm_array_list *keys = cm_hash_table_get_keys(hash_obj->pairs);
+            if (keys != NULL) {
+                for (size_t i = 0; i < keys->length; i++) {
+                    monkey_object_t *k = (monkey_object_t *) keys->array[i];
+                    monkey_object_t *v = (monkey_object_t *) cm_hash_table_get(hash_obj->pairs, (void *)k);
+                    free_monkey_object(k);
+                    free_monkey_object(v);
+                }
+            }
+
+            if (object->refcount == 0) {
+                cm_hash_table_free(hash_obj->pairs);
+                free(hash_obj);
+            }
+            cm_array_list_free(keys);
             break;
         case MONKEY_COMPILED_FUNCTION:
-            compiled_fn = (monkey_compiled_fn_t *) object;
-            instructions_free(compiled_fn->instructions);
-            free(compiled_fn);
-            break;
-        case MONKEY_BUILTIN:
+            object->refcount--;
+            if (object->refcount == 0) {
+                compiled_fn = (monkey_compiled_fn_t *) object;
+                instructions_free(compiled_fn->instructions);
+                free(compiled_fn);
+            }
             break;
         case MONKEY_CLOSURE:
+            object->refcount--;
             closure = (monkey_closure_t *) object;
             free_monkey_object(closure->fn);
             for (size_t i = 0; i < closure->free_variables_count; i++) {
                 monkey_object_t *free_var = closure->free_variables[i];
                 free_monkey_object(free_var);
             }
-            free(closure);
+            if (object->refcount == 0) {
+                free(closure);
+            }
             break;
         default:
-            free(object);
+            break;
     }
 }
 
@@ -518,62 +561,41 @@ _copy_monkey_object(void *v)
 monkey_object_t *
 copy_monkey_object(monkey_object_t *object)
 {
-    monkey_int_t *int_obj;
-    monkey_function_t *function_obj;
-    monkey_string_t *str_obj;
-    monkey_builtin_t *builtin;
-    monkey_array_t *array_obj;
-    monkey_hash_t *hash_obj;
-    monkey_compiled_fn_t *compiled_fn;
-    monkey_closure_t *closure;
     if (object == NULL)
         return (monkey_object_t *) create_monkey_null();
 
-    switch (object->type) {
-        case MONKEY_BOOL:
-        case MONKEY_NULL:
-            return object;
-        case MONKEY_INT:
-            int_obj = (monkey_int_t *) object;
-            return (monkey_object_t *) create_monkey_int(int_obj->value);
-        case MONKEY_FUNCTION:
-            function_obj = (monkey_function_t *) object;
-            return (monkey_object_t *) create_monkey_function(
-                function_obj->parameters, function_obj->body, function_obj->env);
-        case MONKEY_STRING:
-            str_obj = (monkey_string_t *) object;
-            return (monkey_object_t *) create_monkey_string(str_obj->value, str_obj->length);
-        case MONKEY_BUILTIN:
-            builtin = (monkey_builtin_t *) object;
-            return (monkey_object_t *) create_monkey_builtin(builtin->function);
-        case MONKEY_ARRAY:
-            array_obj = (monkey_array_t *) object;
-            return (monkey_object_t *) create_monkey_array(cm_array_list_copy(array_obj->elements, _copy_monkey_object));
-        case MONKEY_HASH:
-            hash_obj = (monkey_hash_t *) object;
-            return (monkey_object_t *) create_monkey_hash(cm_hash_table_copy(hash_obj->pairs,
-                _copy_monkey_object, _copy_monkey_object));
-        case MONKEY_COMPILED_FUNCTION:
-            compiled_fn = (monkey_compiled_fn_t *) object;
-            return (monkey_object_t *) create_monkey_compiled_fn(copy_instructions(compiled_fn->instructions),
-                compiled_fn->num_locals, compiled_fn->num_args);
-        case MONKEY_CLOSURE:
-            closure = (monkey_closure_t *) object;
-            monkey_closure_t *copy_closure = malloc(sizeof(*closure));
-            if (copy_closure == NULL)
-                err(EXIT_FAILURE, "malloc failed");
-            copy_closure->fn = (monkey_compiled_fn_t *) copy_monkey_object((monkey_object_t *) closure->fn);
-            for (size_t i = 0; i < closure->free_variables_count; i++)
-                copy_closure->free_variables[i] = copy_monkey_object(closure->free_variables[i]);
-            copy_closure->free_variables_count = closure->free_variables_count;
-            copy_closure->object.inspect = inspect;
-            copy_closure->object.hash = NULL;
-            copy_closure->object.type = MONKEY_CLOSURE;
-            copy_closure->object.equals = monkey_object_equals;
-            return (monkey_object_t *) copy_closure;
-        default:
-            return NULL;
+    if (object->type == MONKEY_BOOL || object->type == MONKEY_NULL)
+        return object;
+    
+    object->refcount++;
+    if (object->type == MONKEY_ARRAY) {
+        monkey_array_t *array_obj = (monkey_array_t *) object;
+        for (size_t i = 0; i < array_obj->elements->length; i++) {
+            monkey_object_t *o = (monkey_object_t *) cm_array_list_get(array_obj->elements, i);
+            copy_monkey_object(o);
+        }
     }
+
+    if (object->type == MONKEY_HASH) {
+        monkey_hash_t *hash = (monkey_hash_t *) object;
+        cm_array_list *keys = cm_hash_table_get_keys(hash->pairs);
+        for (size_t i = 0; i < keys->length; i++) {
+            monkey_object_t *k = (monkey_object_t *) keys->array[i];
+            monkey_object_t *v = (monkey_object_t *) cm_hash_table_get(hash->pairs, (void *) k);
+            copy_monkey_object(v);
+            copy_monkey_object(k);
+        }
+        cm_array_list_free(keys);
+    }
+
+    if (object->type == MONKEY_CLOSURE) {
+        monkey_closure_t *closure = (monkey_closure_t *) object;
+        closure->fn->object.refcount++;
+        for (size_t i = 0; i < closure->free_variables_count; i++)
+            copy_monkey_object(closure->free_variables[i]);
+    }
+
+    return object;
 }
 
 
@@ -591,6 +613,7 @@ create_monkey_function(cm_list *parameters, block_statement_t *body, environment
     function->object.inspect = inspect;
     function->object.hash = NULL;
     function->object.equals = monkey_object_equals;
+    function->object.refcount = 1;
     return function;
 }
 
@@ -618,6 +641,7 @@ create_monkey_string(const char *value, size_t length)
     string_obj->object.hash = monkey_object_hash;
     string_obj->object.inspect = inspect;
     string_obj->object.equals = monkey_object_equals;
+    string_obj->object.refcount = 1;
     return string_obj;
 }
 
@@ -631,6 +655,7 @@ create_monkey_builtin(builtin_fn function)
     builtin->object.inspect = inspect;
     builtin->object.hash = NULL;
     builtin->function = function;
+    builtin->object.refcount = 1;
     return builtin;
 }
 
@@ -645,6 +670,7 @@ create_monkey_array(cm_array_list *elements)
     array->object.hash = NULL;
     array->elements = elements;
     array->object.equals = monkey_object_equals;
+    array->object.refcount = 1;
     return array;
 }
 
@@ -659,5 +685,6 @@ create_monkey_hash(cm_hash_table *pairs)
     hash_obj->object.hash = NULL;
     hash_obj->object.equals = monkey_object_equals;
     hash_obj->pairs = pairs;
+    hash_obj->object.refcount = 1;
     return hash_obj;
 }

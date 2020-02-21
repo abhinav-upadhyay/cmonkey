@@ -49,6 +49,7 @@ dump_bytecode(bytecode_t *bytecode)
 {
     monkey_compiled_fn_t *fn;
     monkey_int_t *int_obj;
+    printf(" Instructions:\n%s\n", instructions_to_string(bytecode->instructions));
     if (bytecode->constants_pool == NULL)
         return;
     for (size_t i = 0; i < bytecode->constants_pool->length; i++) {
@@ -371,7 +372,7 @@ create_monkey_int_array(size_t count, ...)
 {
     va_list ap;
     va_start(ap, count);
-    cm_array_list *list = cm_array_list_init(count, free_monkey_object);
+    cm_array_list *list = cm_array_list_init(count, NULL);
     for (size_t i = 0; i < count; i++) {
         int val = va_arg(ap, int);
         cm_array_list_add(list, create_monkey_int(val));
@@ -399,7 +400,7 @@ test_array_literals(void)
 static monkey_hash_t *
 create_hash_table(size_t n, monkey_object_t *objects[n])
 {
-    cm_hash_table *table = cm_hash_table_init(monkey_object_hash, monkey_object_equals, free_monkey_object, free_monkey_object);
+    cm_hash_table *table = cm_hash_table_init(monkey_object_hash, monkey_object_equals, NULL, NULL);
     for (size_t i = 0; i < n; i += 2) {
         monkey_object_t *key = objects[i];
         monkey_object_t *value = objects[i + 1];
@@ -560,6 +561,7 @@ test_calling_functions_with_wrong_arguments(void)
             errx(EXIT_FAILURE, "compilation failed for input %s with error %s\n",
                 t.input, error.msg);
         bytecode_t *bytecode = get_bytecode(compiler);
+        // dump_bytecode(bytecode);
         vm_t *vm = vm_init(bytecode);
         vm_error_t vm_error = vm_run(vm);
         test(vm_error.code != VM_ERROR_NONE, "expected VM error but got no error\n");
@@ -567,9 +569,9 @@ test_calling_functions_with_wrong_arguments(void)
         free(vm_error.msg);
         parser_free(parser);
         program_free(program);
+        vm_free(vm);
         compiler_free(compiler);
         bytecode_free(bytecode);
-        vm_free(vm);
     }
 }
 
@@ -638,7 +640,7 @@ test_calling_functions_with_bindings_and_arguments(void)
 static monkey_array_t *
 create_int_array(int *int_arr, size_t length)
 {
-    cm_array_list *array_list = cm_array_list_init(length, free_monkey_object);
+    cm_array_list *array_list = cm_array_list_init(length, NULL);
     for (size_t i = 0; i < length; i++) {
         cm_array_list_add(array_list, (void *) create_monkey_int(int_arr[i]));
     }

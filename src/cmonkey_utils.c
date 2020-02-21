@@ -468,14 +468,14 @@ cm_array_list_add_at(cm_array_list *list, size_t index, void *value)
     return 1;
 }
 
-void *
-cm_array_list_get(cm_array_list *list, size_t index)
-{
-    if (index > list->length - 1)
-        return NULL;
+// void *
+// cm_array_list_get(cm_array_list *list, size_t index)
+// {
+//     if (index > list->length - 1)
+//         return NULL;
 
-    return list->array[index];
-}
+//     return list->array[index];
+// }
 
 void *
 cm_array_list_first(cm_array_list *list)
@@ -648,22 +648,16 @@ size_t_to_uint8_be(size_t val, size_t nbytes)
 size_t
 be_to_size_t(uint8_t *bytes, size_t bytes_count)
 {
-    assert(bytes_count != 0 && bytes_count <= 8);
     uint8_t *barray;
     uint16_t two_bytes = 0;
-    switch (bytes_count) {
-    case 1:
-        return (size_t) bytes[0];
-    case 2:
-        barray = (uint8_t *) &two_bytes;
-        if (bytes[0] == 0)
-            two_bytes = bytes[1] + bytes[0];
-        else
-            two_bytes = (bytes[0] << 8) + bytes[1];
-        return (size_t) two_bytes;
-    default:
-        err(EXIT_FAILURE, "We don't support operands of %zu bytes width", bytes_count);
-    }
+    // if (bytes_count != 2)
+        // err(EXIT_FAILURE, "We don't support operands of %zu bytes width", bytes_count);
+
+    barray = (uint8_t *) &two_bytes;
+    if (bytes[0] == 0)
+        return (size_t) bytes[1] + bytes[0];
+    else
+        return (size_t) (bytes[0] << 8) + bytes[1];
 }
 
 cm_stack *

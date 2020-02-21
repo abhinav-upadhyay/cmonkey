@@ -73,6 +73,7 @@ typedef struct monkey_object_t {
     char * (*inspect) (struct monkey_object_t *);
     size_t (*hash) (void *);
     _Bool (*equals) (void *, void *);
+    size_t refcount;
 } monkey_object_t;
 
 typedef struct monkey_int_t {

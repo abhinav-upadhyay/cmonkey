@@ -31,6 +31,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cmonkey_utils.h"
 #include "opcode.h"
@@ -132,8 +133,9 @@ copy_instructions(instructions_t *ins)
     ret->bytes = malloc(ins->length);
     if (ret->bytes == NULL)
         err(EXIT_FAILURE, "malloc failed");
-    for (size_t i = 0; i < ins->length; i++)
-        ret->bytes[i] = ins->bytes[i];
+    memcpy(ret->bytes, ins->bytes, ins->length);
+    // for (size_t i = 0; i < ins->length; i++)
+        // ret->bytes[i] = ins->bytes[i];
     ret->length = ins->length;
     ret->size = ins->size;
     return ret;
@@ -211,7 +213,7 @@ instructions_to_string(instructions_t *instructions)
         case OPCALL:
         case OPGETBUILTIN:
         case OPGETFREE:
-            operand = be_to_size_t(instructions->bytes + i + 1, 1);
+            operand = be_to_size_t_1(instructions->bytes + i + 1);
             if (string == NULL) {
                 int retval = asprintf(&string, "%04zu %s %zu", i, op_def.name, operand);
                 if (retval == -1)
@@ -241,7 +243,7 @@ instructions_to_string(instructions_t *instructions)
                 string = temp;
             }
             i += 2;
-            operand = be_to_size_t(instructions->bytes + i + 1, 1)    ;
+            operand = be_to_size_t_1(instructions->bytes + i + 1);
             if (string == NULL) {
                 int retval = asprintf(&string, " %zu", operand);
                 if (retval == -1)
@@ -319,8 +321,8 @@ concat_instructions(instructions_t *dst, instructions_t *src)
         dst->bytes[dst->length++] = src->bytes[i];
 }
 
-size_t
-decode_instructions_to_sizet(uint8_t *bytes, size_t nbytes)
-{
-    return be_to_size_t(bytes, nbytes);
-}
+// size_t
+// decode_instructions_to_sizet(uint8_t *bytes, size_t nbytes)
+// {
+//     return be_to_size_t(bytes, nbytes);
+// }

@@ -85,7 +85,8 @@ cm_array_list * cm_array_list_init(size_t, void (*free_func) (void *));
 cm_array_list * cm_array_list_init_size_t(size_t, size_t, ...);
 int cm_array_list_add(cm_array_list *, void *);
 int cm_array_list_add_at(cm_array_list *, size_t, void *);
-void *cm_array_list_get(cm_array_list *, size_t);
+// void *cm_array_list_get(cm_array_list *, size_t);
+#define cm_array_list_get(list, index) (index > (list->length - 1) ? NULL: list->array[index])
 void *cm_array_list_last(cm_array_list *);
 void *cm_array_list_first(cm_array_list *);
 void cm_array_list_remove(cm_array_list *, size_t);
@@ -119,6 +120,7 @@ size_t *create_size_t_array(size_t, ...);
 uint8_t *create_uint8_array(size_t, ...);
 uint8_t *size_t_to_uint8_be(size_t, size_t);
 size_t be_to_size_t(uint8_t *, size_t);
+#define be_to_size_t_1(bytes) ((size_t) (bytes)[0])
 cm_stack *cm_stack_init(void);
 void *cm_stack_pop(cm_stack *);
 void cm_stack_push(cm_stack *, void *);

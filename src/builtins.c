@@ -195,7 +195,7 @@ rest(cm_list *arguments)
         return (monkey_object_t *) create_monkey_null();
     }
 
-    rest_elements = cm_array_list_init(array->elements->length, &free_monkey_object);
+    rest_elements = cm_array_list_init(array->elements->length - 1, NULL);
     for (size_t i = 1; i < array->elements->length; i++) {
         monkey_object_t *obj = copy_monkey_object(array->elements->array[i]);
         cm_array_list_add(rest_elements, obj);
@@ -226,7 +226,7 @@ push(cm_list *arguments)
     }
 
     array = (monkey_array_t *) arg;
-    new_list_elements = cm_array_list_init(arguments->length + 1, free_monkey_object);
+    new_list_elements = cm_array_list_init(arguments->length + 1, NULL);
     for (size_t i = 0; i < array->elements->length; i++) {
         obj = copy_monkey_object(array->elements->array[i]);
         cm_array_list_add(new_list_elements, obj);

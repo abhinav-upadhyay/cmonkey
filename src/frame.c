@@ -54,8 +54,8 @@ frame_free(frame_t *frame)
     free(frame);
 }
 
-instructions_t *
-get_frame_instructions(frame_t *frame)
-{
-    return frame->cl->fn->instructions;
-}
+// instructions_t *
+// get_frame_instructions(frame_t *frame)
+// {
+//     return frame->cl->fn->instructions;
+// }

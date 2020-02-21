@@ -41,6 +41,6 @@ typedef struct frame_t {
 
 frame_t *frame_init(monkey_closure_t *, size_t);
 void frame_free(frame_t *);
-instructions_t *get_frame_instructions(frame_t *);
+#define get_frame_instructions(frame) frame->cl->fn->instructions
 
 #endif

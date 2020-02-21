@@ -116,6 +116,7 @@ static opcode_definition_t opcode_definitions [] = {
 };
 
 #define opcode_definition_lookup(op) opcode_definitions[op - 1];
+#define decode_instructions_to_sizet(bytes, nbytes) nbytes == 1? (bytes)[0]: be_to_size_t(bytes, nbytes)
 
 instructions_t *instruction_init(opcode_t, ...);
 instructions_t *vinstruction_init(opcode_t, va_list);
@@ -123,6 +124,5 @@ void instructions_free(instructions_t *);
 char *instructions_to_string(instructions_t *);
 instructions_t * flatten_instructions(size_t n, instructions_t *ins_array[n]);
 void concat_instructions(instructions_t *, instructions_t *);
-size_t decode_instructions_to_sizet(uint8_t *, size_t);
 instructions_t *copy_instructions(instructions_t *);
 #endif
