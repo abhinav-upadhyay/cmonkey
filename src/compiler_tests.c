@@ -551,6 +551,75 @@ create_compiled_fn_instructions(size_t nins, ...)
 }
 
 static void
+test_recursive_functions(void)
+{
+    compiler_test tests[] = {
+        {
+            "let countDown = fn(x) { countDown(x - 1);};\n"
+            "countDown(1)",
+            6,
+            {
+                instruction_init(OPCLOSURE, 1, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPCONSTANT, 2),
+                instruction_init(OPCALL, 1),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPCURRENTCLOSURE),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCONSTANT, 0),
+                    instruction_init(OPSUB),
+                    instruction_init(OPCALL, 1),
+                    instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_int(1))
+        },
+        {
+            "let wrapper = fn() {\n"
+            "   let countDown = fn(x) {\n"
+            "       countDown(x - 1);\n"
+            "   };\n"
+            "   countDown(1);\n"
+            "   }\n"
+            "wrapper();",
+            5,
+            {
+                instruction_init(OPCLOSURE, 3, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPGETGLOBAL, 0),
+                instruction_init(OPCALL, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(4,
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPCURRENTCLOSURE),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCONSTANT, 0),
+                    instruction_init(OPSUB),
+                    instruction_init(OPCALL, 1),
+                    instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_int(1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPCLOSURE, 1, 0),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCONSTANT, 2),
+                    instruction_init(OPCALL, 1),
+                    instruction_init(OPRETURNVALUE)), 1, 0))
+        }
+    };
+    print_test_separator_line();
+    printf("Testing recursive function calls\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+
+}
+
+static void
 test_function_calls(void)
 {
     compiler_test tests[] = {
@@ -631,6 +700,119 @@ test_function_calls(void)
     };
     print_test_separator_line();
     printf("Testing function calls\n");
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_compiler_tests(ntests, tests);
+}
+
+static void
+test_closures(void)
+{
+    compiler_test tests[] = {
+        {
+            "fn(a) {\n"
+            "  fn(b) {\n"
+            "    a + b\n"
+            "  }\n"
+            "};\n",
+            2,
+            {
+                instruction_init(OPCLOSURE, 1, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(2,
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(4,
+                instruction_init(OPGETFREE, 0),
+                instruction_init(OPGETLOCAL, 0),
+                instruction_init(OPADD),
+                instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(3,
+                instruction_init(OPGETLOCAL, 0),
+                instruction_init(OPCLOSURE, 0, 1),
+                instruction_init(OPRETURNVALUE)), 0, 1))
+        },
+        {
+            "fn(a) {\n"
+            "   fn(b) {\n"
+            "       fn(c) {\n"
+            "           a + b + c\n"
+            "       }\n"
+            "   }\n"
+            "}",
+            2,
+            {
+                instruction_init(OPCLOSURE, 2, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(3,
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPGETFREE, 0),
+                    instruction_init(OPGETFREE, 1),
+                    instruction_init(OPADD),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPADD),
+                    instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(4,
+                    instruction_init(OPGETFREE, 0),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCLOSURE, 0, 2),
+                    instruction_init(OPRETURNVALUE)), 0, 1),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(3,
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCLOSURE, 1, 1),
+                    instruction_init(OPRETURNVALUE)), 0, 1))
+        },
+        {
+            "let global = 55;\n"
+            "fn() {\n"
+            "   let a = 66;\n"
+            "   fn() {\n"
+            "       let b = 77;\n"
+            "       fn() {\n"
+            "           let c = 88;\n"
+            "           global + a + b + c;\n"
+            "       }\n"
+            "   }\n"
+            "}",
+            4,
+            {
+                instruction_init(OPCONSTANT, 0),
+                instruction_init(OPSETGLOBAL, 0),
+                instruction_init(OPCLOSURE, 6, 0),
+                instruction_init(OPPOP)
+            },
+            create_constant_pool(7,
+                (monkey_object_t *) create_monkey_int(55),
+                (monkey_object_t *) create_monkey_int(66),
+                (monkey_object_t *) create_monkey_int(77),
+                (monkey_object_t *) create_monkey_int(88),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(10,
+                    instruction_init(OPCONSTANT, 3),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPGETGLOBAL, 0),
+                    instruction_init(OPGETFREE, 0),
+                    instruction_init(OPADD),
+                    instruction_init(OPGETFREE, 1),
+                    instruction_init(OPADD),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPADD),
+                    instruction_init(OPRETURNVALUE)), 1, 0),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(6,
+                    instruction_init(OPCONSTANT, 2),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPGETFREE, 0),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCLOSURE, 4, 2),
+                    instruction_init(OPRETURNVALUE)), 1, 0),
+                (monkey_object_t *) create_monkey_compiled_fn(create_compiled_fn_instructions(5,
+                    instruction_init(OPCONSTANT, 1),
+                    instruction_init(OPSETLOCAL, 0),
+                    instruction_init(OPGETLOCAL, 0),
+                    instruction_init(OPCLOSURE, 5, 1),
+                    instruction_init(OPRETURNVALUE)), 1, 0))
+        }
+    };
+    print_test_separator_line();
+    printf("Testing closures compilation\n");
     size_t ntests = sizeof(tests) / sizeof(tests[0]);
     run_compiler_tests(ntests, tests);
 }
@@ -912,4 +1094,6 @@ main(int argc, char **argv)
     test_function_calls();
     test_let_statement_scope();
     test_builtins();
+    test_closures();
+    test_recursive_functions();
 }

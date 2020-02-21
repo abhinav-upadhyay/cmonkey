@@ -142,6 +142,12 @@ load_symbol(compiler_t * compiler, symbol_t *symbol)
     case BUILTIN:
         emit(compiler, OPGETBUILTIN, symbol->index);
         break;
+    case FREE:
+        emit(compiler, OPGETFREE, symbol->index);
+        break;
+    case FUNCTION_SCOPE:
+        emit(compiler, OPCURRENTCLOSURE, symbol->index);
+        break;
     }
 }
 
@@ -422,6 +428,8 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
     case FUNCTION_LITERAL:
         func_exp = (function_literal_t *) expression_node;
         compiler_enter_scope(compiler);
+        if (func_exp->name != NULL)
+            symbol_define_function(compiler->symbol_table, func_exp->name);
         cm_list_node *param_list_node = func_exp->parameters->head;
         while (param_list_node != NULL) {
             identifier_t *param = (identifier_t *) param_list_node->data;
@@ -435,12 +443,20 @@ compile_expression_node(compiler_t *compiler, expression_t *expression_node)
             replace_last_pop_with_return(compiler);
         if (!last_instruction_is(compiler, OPRETURNVALUE))
             emit(compiler, OPRETURN);
+
+        cm_array_list *free_symbols = cm_array_list_copy(compiler->symbol_table->free_symbols, _copy_symbol);
         size_t num_locals = compiler->symbol_table->nentries;
+        size_t free_symbols_count = free_symbols->length;
         instructions_t *ins = compiler_leave_scope(compiler);
+        for (size_t i = 0; i < free_symbols->length; i++) {
+            symbol_t *sym = cm_array_list_get(free_symbols, i);
+            load_symbol(compiler, sym);
+        }
+        cm_array_list_free2(free_symbols, free_symbol);
         monkey_compiled_fn_t *compiled_fn = create_monkey_compiled_fn(ins,
             num_locals, func_exp->parameters->length);
         constant_idx = add_constant(compiler, (monkey_object_t *) compiled_fn);
-        emit(compiler, OPCLOSURE, constant_idx, 0);
+        emit(compiler, OPCLOSURE, constant_idx, free_symbols_count);
         break;
     case CALL_EXPRESSION:
         call_exp = (call_expression_t *) expression_node;
@@ -470,6 +486,7 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
     block_statement_t *block_stmt;
     letstatement_t *let_stmt;
     return_statement_t *ret_stmt;
+    symbol_t *sym;
     size_t i;
     switch (statement_node->statement_type) {
     case EXPRESSION_STATEMENT:
@@ -489,10 +506,10 @@ compile_statement_node(compiler_t *compiler, statement_t *statement_node)
         break;
     case LET_STATEMENT:
         let_stmt = (letstatement_t *) statement_node;
+        sym = symbol_define(compiler->symbol_table, let_stmt->name->value);
         error = compile(compiler, (node_t *) let_stmt->value);
         if (error.code != COMPILER_ERROR_NONE)
             return error;
-        symbol_t *sym = symbol_define(compiler->symbol_table, let_stmt->name->value);
         if (sym->scope == GLOBAL)
             emit(compiler, OPSETGLOBAL, sym->index);
         else
@@ -571,7 +588,6 @@ scope_free(compilation_scope_t *scope)
     instructions_free(scope->instructions);
     free(scope);
 }
-
 
 instructions_t *
 compiler_leave_scope(compiler_t *compiler)

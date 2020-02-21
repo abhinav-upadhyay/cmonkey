@@ -1192,6 +1192,31 @@ test_parsing_hash_literal_with_integer_keys(void)
 }
 
 static void
+test_function_literal_with_name(void)
+{
+    const char *input = "let myfn = fn() {};";
+    print_test_separator_line();
+    printf("Testing function literal with name: %s\n", input);
+    lexer_t *lexer = lexer_init(input);
+    parser_t *parser = parser_init(lexer);
+    program_t *program = parse_program(parser);
+    check_parser_errors(parser);
+    test(program->nstatements == 1, "Expected 1 statement in program, found %zu\n", program->nstatements);
+    test(program->statements[0]->statement_type == LET_STATEMENT, "Expected LET_STATEMENT, got %s\n",
+        get_statement_type_name(program->statements[0]->statement_type));
+    letstatement_t *letstmt = (letstatement_t *) program->statements[0];
+    test(letstmt->value->expression_type == FUNCTION_LITERAL,
+        "Expected let statement value to be function literal, found %s\n",
+        get_expression_type_name(letstmt->value->expression_type));
+    function_literal_t *fn_literal = (function_literal_t *) letstmt->value;
+    test(strcmp(fn_literal->name, "myfn") == 0,
+    "Expected function name myfn, found %s\n", fn_literal->name);
+    parser_free(parser);
+    program_free(program);
+
+}
+
+static void
 test_parsing_while_expression(void)
 {
     const char *input = "while (x > 2) {\n"\
@@ -1256,6 +1281,7 @@ main(int argc, char **argv)
     test_parsing_hash_literal_with_integer_keys();
     test_parsing_hash_literal_bool_keys();
     test_parsing_while_expression();
+    test_function_literal_with_name();
     printf("All tests passed\n");
 
 }

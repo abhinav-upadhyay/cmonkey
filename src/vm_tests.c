@@ -17,6 +17,32 @@ typedef struct vm_testcase {
 
 
 static void
+dump_bytecode(bytecode_t *bytecode)
+{
+    monkey_compiled_fn_t *fn;
+    monkey_int_t *int_obj;
+    if (bytecode->constants_pool == NULL)
+        return;
+    for (size_t i = 0; i < bytecode->constants_pool->length; i++) {
+        monkey_object_t *constant = (monkey_object_t *) cm_array_list_get(bytecode->constants_pool, i);
+        printf("CONSTANT %zu %p %s:\n", i, constant, get_type_name(constant->type));
+        switch (constant->type) {
+        case MONKEY_COMPILED_FUNCTION:
+            fn = (monkey_compiled_fn_t *) constant;
+            printf(" Instructions:\n%s", instructions_to_string(fn->instructions));
+            break;
+        case MONKEY_INT:
+            int_obj = (monkey_int_t *) constant;
+            printf(" Value: %ld\n", int_obj->value);
+            break;
+        default:
+            break;
+        }
+        printf("\n");
+    }
+}
+
+static void
 run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
 {
     for (size_t i = 0; i < test_count; i++) {
@@ -44,6 +70,130 @@ run_vm_tests(size_t test_count, vm_testcase test_cases[test_count])
         bytecode_free(bytecode);
         vm_free(vm);
     }
+}
+
+static void
+test_recursive_closures(void)
+{
+    vm_testcase tests[] = {
+        {
+            "let countDown = fn(x) {\n"
+            "   if (x == 0) {\n"
+            "       return 0\n"
+            "   } else {\n"
+            "       return countDown(x - 1);\n"
+            "   }\n"
+            "}\n"
+            "countDown(1);\n",
+            (monkey_object_t *) create_monkey_int(0)
+        },
+        {
+            "let countDown = fn(x) {\n"
+            "   if (x == 0) {\n"
+            "       return 0\n"
+            "   } else {\n"
+            "       return countDown(x - 1);\n"
+            "   }\n"
+            "};\n"
+            "let wrapper = fn() {\n"
+            "   countDown(1);\n"
+            "};\n"
+            "wrapper();",
+            (monkey_object_t *) create_monkey_int(0)
+        },
+        {
+            "let wrapper = fn() {\n"
+            "   let countDown = fn(x) {\n"
+            "       if (x == 0) {\n"
+            "           return 0;\n"
+            "       } else {\n"
+            "           return countDown(x - 1);\n"
+            "       }\n"
+            "   };\n"
+            "   countDown(1);\n"
+            "};\n"
+            "wrapper();",
+            (monkey_object_t *) create_monkey_int(0)
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+
+}
+
+static void
+test_closures(void)
+{
+    vm_testcase tests[] = {
+        {
+            "let newClosure = fn(a) {\n"
+            "   fn() {a;}\n"
+            "};\n"
+            "let closure = newClosure(99);\n"
+            "closure();",
+            (monkey_object_t *) create_monkey_int(99)
+        },
+        {
+            "let newAdder = fn(a, b) {\n"
+            "   fn(c) {a + b + c;};\n"
+            "}\n"
+            "let adder = newAdder(1, 2);\n"
+            "adder(8);",
+            (monkey_object_t *) create_monkey_int(11)
+        },
+        {
+            "let newAdder = fn(a, b) {\n"
+            "   let c = a + b;\n"
+            "   fn(d) { c + d };\n"
+            "}\n"
+            "let adder = newAdder(1, 2);\n"
+            "adder(8);",
+            (monkey_object_t *) create_monkey_int(11)
+        },
+        {
+            "let newAdderOuter = fn(a, b) {\n"
+            "   let c = a + b;\n"
+            "   fn(d) {\n"
+            "       let e = d + c;\n"
+            "       fn(f) {\n"
+            "           e + f;\n"
+            "       }\n"
+            "   }\n"
+            "}\n"
+            "let newAdderInner = newAdderOuter(1, 2);\n"
+            "let adder = newAdderInner(3);\n"
+            "adder(8);\n",
+            (monkey_object_t *) create_monkey_int(14)
+        },
+        {
+            "let a = 1;\n"
+            "let newAdderOuter = fn(b) {\n"
+            "   fn(c) {\n"
+            "       fn(d) { a + b + c + d;}\n"
+            "   }\n"
+            "};\n"
+            "let newAdderInner = newAdderOuter(2);\n"
+            "let adder = newAdderInner(3);\n"
+            "adder(8);",
+            (monkey_object_t *) create_monkey_int(14)
+        },
+        {
+            "let newClosure = fn(a, b) {\n"
+            "   let one = fn() {a;}\n"
+            "   let two = fn() {b;}\n"
+            "   fn() {one() + two();};\n"
+            "};\n"
+            "let closure = newClosure(9, 90);\n"
+            "closure();",
+            (monkey_object_t *) create_monkey_int(99)
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
 }
 
 static void
@@ -591,5 +741,7 @@ main(int argc, char **argv)
     test_calling_functions_with_bindings_and_arguments();
     test_calling_functions_with_wrong_arguments();
     test_builtin_functions();
+    test_closures();
+    test_recursive_closures();
     return 0;
 }

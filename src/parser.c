@@ -571,7 +571,10 @@ function_literal_string(void *exp)
     char *func_string = NULL;
     char *func_token_literal = func->expression.node.token_literal(func);
     char *body_string = func->body->statement.node.string(func->body);
-    asprintf(&func_string, "%s(%s) %s", func_token_literal, params_string, body_string);
+    if (func->name != NULL)
+        asprintf(&func_string, "%s(%s) %s", func_token_literal, params_string, body_string);
+    else
+        asprintf(&func_string, "%s<%s>(%s) %s", func_token_literal, func->name, params_string, body_string);
     free(params_string);
     free(body_string);
     if (func_string == NULL)
@@ -732,6 +735,7 @@ create_function_literal(parser_t *parser)
     func->parameters = cm_list_init();
     func->token = token_copy(parser->cur_tok);
     func->body = NULL;
+    func->name = NULL;
     return func;
 }
 
@@ -903,6 +907,8 @@ free_function_literal(function_literal_t *function)
         free_statement((statement_t *) function->body);
     if (function->parameters)
         cm_list_free(function->parameters, free_identifier);
+    if (function->name != NULL)
+        free(function->name);
     token_free(function->token);
     free(function);
 }
@@ -1214,6 +1220,12 @@ parse_letstatement(parser_t *parser)
     }
     parser_next_token(parser);
     let_stmt->value = parse_expression(parser, LOWEST);
+    if (let_stmt->value->expression_type == FUNCTION_LITERAL) {
+        function_literal_t *fn_literal = (function_literal_t *) let_stmt->value;
+        fn_literal->name = strdup(let_stmt->name->value);
+        if (fn_literal->name == NULL)
+            err(EXIT_FAILURE, "malloc failed");
+    }
     if (parser->peek_tok->type == SEMICOLON)
         parser_next_token(parser);
 

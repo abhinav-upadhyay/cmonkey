@@ -196,6 +196,7 @@ typedef struct while_expression_t {
 typedef struct function_literal_t {
     expression_t expression;
     token_t *token;
+    char *name;
     cm_list *parameters;
     block_statement_t *body;
 } function_literal_t;

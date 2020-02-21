@@ -79,6 +79,163 @@ test_resolve_global(void)
 }
 
 static void
+test_define_and_resolve_function_name(void)
+{
+    print_test_separator_line();
+    printf("Testing function name resolution\n");
+    symbol_table_t *global = symbol_table_init();
+    symbol_define_function(global, "a");
+    symbol_t *expected = symbol_init("a", FUNCTION_SCOPE, 0);
+    symbol_t *actual = symbol_resolve(global, "a");
+    compare_symbols(expected, actual);
+    free_symbol_table(global);
+    free_symbol(expected);
+}
+
+static void
+test_shadowing_function_name(void)
+{
+    print_test_separator_line();
+    printf("Testing shadowing of function name\n");
+    symbol_table_t *global = symbol_table_init();
+    symbol_define_function(global, "a");
+    symbol_define(global, "a");
+    symbol_t *expected = symbol_init("a", GLOBAL, 0);
+    symbol_t *actual = symbol_resolve(global, "a");
+    compare_symbols(expected, actual);
+    free_symbol_table(global);
+    free_symbol(expected);
+}
+
+static void
+test_resolve_unresolvable_free(void)
+{
+    print_test_separator_line();
+    printf("Testing unresolvable free symbols\n");
+    symbol_table_t *global = symbol_table_init();
+    symbol_define(global, "a");
+
+    symbol_table_t *first_local = enclosed_symbol_table_init(global);
+    symbol_define(first_local, "c");
+
+    symbol_table_t *second_local = enclosed_symbol_table_init(first_local);
+    symbol_define(second_local, "e");
+    symbol_define(second_local, "f");
+
+    symbol_t *expected[] = {
+        symbol_init("a", GLOBAL, 0),
+        symbol_init("c", FREE, 0),
+        symbol_init("e", LOCAL, 0),
+        symbol_init("f", LOCAL, 1)
+    };
+
+    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++) {
+        symbol_t *expected_sym = expected[i];
+        symbol_t *actual = symbol_resolve(second_local, expected_sym->name);
+        test(actual != NULL, "Failed to resolve %s\n", expected_sym->name);
+        compare_symbols(expected_sym, actual);
+        free_symbol(expected_sym);
+    }
+
+    const char *unresolvable[] = {
+        "b",
+        "d"
+    };
+
+    for (size_t i = 0; i < sizeof(unresolvable) / sizeof(unresolvable[0]); i++) {
+        symbol_t *resolved = symbol_resolve(second_local, unresolvable[i]);
+        test(resolved == NULL, "name %s resolved, but was expected not to\n", unresolvable[i]);
+    }
+
+    free_symbol_table(second_local);
+    free_symbol_table(first_local);
+    free_symbol_table(global);
+}
+
+static void
+test_resolve_free(void)
+{
+    print_test_separator_line();
+    printf("Testing free symbols resolution\n");
+    symbol_table_t *global = symbol_table_init();
+    symbol_define(global, "a");
+    symbol_define(global, "b");
+
+    symbol_table_t *first_local = enclosed_symbol_table_init(global);
+    symbol_define(first_local, "c");
+    symbol_define(first_local, "d");
+
+    symbol_table_t *second_local = enclosed_symbol_table_init(first_local);
+    symbol_define(second_local, "e");
+    symbol_define(second_local, "f");
+
+    typedef struct {
+        symbol_table_t *table;
+        symbol_t *expected_symbols[10];
+        symbol_t *expected_free[10];
+        size_t expected_free_count;
+    } test;
+
+    test tests[] = {
+        {
+            first_local,
+            {
+                symbol_init("a", GLOBAL, 0),
+                symbol_init("b", GLOBAL, 1),
+                symbol_init("c", LOCAL, 0),
+                symbol_init("d", LOCAL, 1)
+            },
+            {},
+            0
+        },
+        {
+            second_local,
+            {
+                symbol_init("a", GLOBAL, 0),
+                symbol_init("b", GLOBAL, 1),
+                symbol_init("c", FREE, 0),
+                symbol_init("d", FREE, 1),
+                symbol_init("e", LOCAL, 0),
+                symbol_init("f", LOCAL, 1)
+            },
+            {
+                symbol_init("c", LOCAL, 0),
+                symbol_init("d", LOCAL, 1)
+            },
+            2
+        }
+    };
+
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+        test t = tests[i];
+        for (size_t j = 0; j < sizeof(t.expected_symbols) / sizeof(t.expected_symbols[0]); j++) {
+            symbol_t *expected_sym = t.expected_symbols[j];
+            if (expected_sym == NULL)
+                break;
+            symbol_t *actual_sym = symbol_resolve(t.table, expected_sym->name);
+            test(actual_sym != NULL, "name %s not resolvable\n", expected_sym->name);
+            compare_symbols(expected_sym, actual_sym);
+            free_symbol(expected_sym);
+        }
+        test(t.expected_free_count == t.table->free_symbols->length,
+            "Expected %zu free symbols, got %zu\n",
+            t.expected_free_count, t.table->free_symbols->length);
+       for (size_t j = 0; j < t.expected_free_count; j++) {
+           symbol_t *expected_sym = t.expected_free[j];
+           if (expected_sym == NULL)
+            break;
+           symbol_t *actual_sym = cm_array_list_get(t.table->free_symbols, j);
+           compare_symbols(expected_sym, actual_sym);
+           free_symbol(expected_sym);
+       }
+    }
+    free_symbol_table(global);
+    free_symbol_table(first_local);
+    free_symbol_table(second_local);
+
+}
+
+static void
 test_resolve_local(void)
 {
     print_test_separator_line();
@@ -210,5 +367,9 @@ main(int argc, char **argv)
     test_resolve_local();
     test_resolve_nested_local();
     test_define_resolve_builtins();
+    test_resolve_free();
+    test_resolve_unresolvable_free();
+    test_define_and_resolve_function_name();
+    test_shadowing_function_name();
     return 0;
 }

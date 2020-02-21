@@ -29,15 +29,18 @@ get_current_frame(vm_t *vm)
 static void
 push_frame(vm_t *vm, frame_t *frame)
 {
-    vm->frames[vm->frame_index] = frame;
-    vm->frame_index++;
+    vm->frames[vm->frame_index++] = frame;
 }
 
 static frame_t *
 pop_frame(vm_t *vm)
 {
     vm->frame_index--;
-    return vm->frames[vm->frame_index];
+    frame_t *f = vm->frames[vm->frame_index];
+    for (size_t i = 0; i < f->cl->fn->num_locals; i++)
+        free_monkey_object(vm->stack[f->bp + i]);
+
+    return f;
 }
 
 vm_t *
@@ -112,7 +115,7 @@ vm_push(vm_t *vm, monkey_object_t *obj, _Bool copy)
 }
 
 static vm_error_t
-vm_push_closure(vm_t *vm, size_t const_index)
+vm_push_closure(vm_t *vm, size_t const_index, size_t num_free_vars)
 {
     vm_error_t vm_err;
     monkey_object_t *obj = (monkey_object_t *) cm_array_list_get(vm->constants, const_index);
@@ -121,8 +124,15 @@ vm_push_closure(vm_t *vm, size_t const_index)
         vm_err.msg = get_err_msg("not a function: %s\n", get_type_name(obj->type));
         return vm_err;
     }
+    cm_array_list *free_vars = cm_array_list_init(num_free_vars, free_monkey_object);
+    for (size_t i = 0; i < num_free_vars; i++) {
+        monkey_object_t *free_var = vm->stack[vm->sp - num_free_vars + i];
+        cm_array_list_add(free_vars, free_var);
+    }
+    vm->sp -= num_free_vars;
     monkey_compiled_fn_t *fn = (monkey_compiled_fn_t *) obj;
-    monkey_closure_t *closure = create_monkey_closure(fn, NULL);
+    monkey_closure_t *closure = create_monkey_closure(fn, free_vars);
+    cm_array_list_free(free_vars);
     return vm_push(vm, (monkey_object_t *) closure, false);
 }
 
@@ -484,6 +494,7 @@ vm_run(vm_t *vm)
     size_t num_args;
     size_t builtin_idx;
     size_t num_free_vars;
+    monkey_closure_t *current_closure;
     frame_t *current_frame = get_current_frame(vm);
     while (current_frame->ip < get_frame_instructions(current_frame)->length) {
         ip = current_frame->ip;
@@ -571,7 +582,15 @@ vm_run(vm_t *vm)
         case OPGETLOCAL:
             sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
             current_frame->ip++;
-            vm_err = vm_push(vm, vm->stack[current_frame->bp + sym_index], false);
+            vm_err = vm_push(vm, vm->stack[current_frame->bp + sym_index], true);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPGETFREE:
+            sym_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            current_frame->ip++;
+            current_closure = get_current_frame(vm)->cl;
+            vm_err = vm_push(vm, current_closure->free_variables[sym_index], true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;
@@ -630,9 +649,15 @@ vm_run(vm_t *vm)
         case OPCLOSURE:
             const_index = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 2);
             current_frame->ip += 2;
-            num_free_vars = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 1, 1);
+            num_free_vars = decode_instructions_to_sizet(current_frame_instructions->bytes + ip + 3, 1);
             current_frame->ip++;
-            vm_err = vm_push_closure(vm, const_index);
+            vm_err = vm_push_closure(vm, const_index, num_free_vars);
+            if (vm_err.code != VM_ERROR_NONE)
+                return vm_err;
+            break;
+        case OPCURRENTCLOSURE:
+            current_closure = current_frame->cl;
+            vm_err = vm_push(vm, (monkey_object_t *) current_closure, true);
             if (vm_err.code != VM_ERROR_NONE)
                 return vm_err;
             break;

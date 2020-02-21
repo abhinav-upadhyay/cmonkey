@@ -508,16 +508,22 @@ cm_array_list_remove(cm_array_list *list, size_t index)
 }
 
 void
+cm_array_list_free2(cm_array_list *list, void (*free_func)(void *))
+{
+    if (free_func != NULL) {
+        for (size_t i = 0; i < list->length; i++)
+            free_func(list->array[i]);
+    }
+    free(list->array);
+    free(list);
+}
+
+void
 cm_array_list_free(cm_array_list *list)
 {
     if (list == NULL)
         return;
-    if (list->free_func != NULL) {
-        for (size_t i = 0; i < list->length; i++)
-            list->free_func(list->array[i]);
-    }
-    free(list->array);
-    free(list);
+    cm_array_list_free2(list, list->free_func);
 }
 
 char *
