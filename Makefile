@@ -8,16 +8,17 @@ OBJS := $(addprefix $(OBJDIR)/, lexer_tests.o lexer.o token.o repl.o \
 	cmonkey_utils.o parser_tracing.o parser_tests.o evaluator_tests.o object.o \
 	cmonkey_utils_tests.o environment.o builtins.o object_tests.o opcode.o \
 	opcode_tests.o compiler_tests.o object_test_utils.o compiler_tests.o compiler.o \
-	symbol_table_tests.o symbol_table.o vm.o vm_tests.o vmrepl.o frame.o)
+	symbol_table_tests.o symbol_table.o vm.o vm_tests.o vmrepl.o frame.o benchmark.o)
 BINS := $(addprefix $(BINDIR)/, lexer_tests parser_tests evaluator_tests \
 	cmonkey_utils_tests object_tests opcode_tests compiler_tests vm_tests \
-	symbol_table_tests monkey monkeyvm)
+	symbol_table_tests monkey monkeyvm benchmark)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	${COMPILE.c} ${OUTPUT_OPTION}  $<
 
 all: $(OBJS) $(BINS) lexer_tests parser_tests evaluator_tests cmonkey_utils_tests \
-	object_tests opcode_tests compiler_tests vm_tests symbol_table_tests monkey monkeyvm
+	object_tests opcode_tests compiler_tests vm_tests symbol_table_tests monkey monkeyvm \
+	benchmark
 
 $(OBJS): | $(OBJDIR)
 
@@ -93,6 +94,14 @@ monkeyvm:	${OBJDIR}/vmrepl.o ${OBJDIR}/lexer.o ${OBJDIR}/token.o $(OBJDIR)/parse
 		$(OBJDIR)/builtins.o $(OBJDIR)/vm.o $(OBJDIR)/compiler.o $(OBJDIR)/opcode.o \
 		$(OBJDIR)/symbol_table.o $(OBJDIR)/frame.o
 
+benchmark:	$(OBJDIR)/benchmark.o $(OBJDIR)/lexer.o $(OBJDIR)/token.o $(OBJDIR)/parser.o \
+	$(OBJDIR)/cmonkey_utils.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o $(OBJDIR)/environment.o \
+	$(OBJDIR)/builtins.o $(OBJDIR)/vm.o $(OBJDIR)/compiler.o $(OBJDIR)/opcode.o $(OBJDIR)/symbol_table.o \
+	$(OBJDIR)/frame.o
+	${CC} ${CFLAGS} -o $(BINDIR)/benchmark $(OBJDIR)/benchmark.o $(OBJDIR)/lexer.o $(OBJDIR)/token.o \
+		$(OBJDIR)/parser.o $(OBJDIR)/cmonkey_utils.o $(OBJDIR)/evaluator.o $(OBJDIR)/object.o \
+		$(OBJDIR)/environment.o $(OBJDIR)/builtins.o $(OBJDIR)/vm.o $(OBJDIR)/compiler.o $(OBJDIR)/opcode.o \
+		$(OBJDIR)/symbol_table.o $(OBJDIR)/frame.o
 
 clean:
 	rm -rf $(BINDIR) $(OBJDIR) core

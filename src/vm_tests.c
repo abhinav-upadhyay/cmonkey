@@ -124,6 +124,33 @@ test_recursive_closures(void)
 }
 
 static void
+test_recursive_fibonacci(void)
+{
+    vm_testcase tests[] = {
+        {
+            "let fibonacci = fn(x) {\n"
+            "   if (x == 0) {\n"
+            "       return 0;\n"
+            "   } else {\n"
+            "       if (x == 1) {\n"
+            "           return 1;\n"
+            "       } else {\n"
+            "           fibonacci(x - 1) + fibonacci(x - 2);\n"
+            "       }\n"
+            "   }\n"
+            "};\n"
+            "fibonacci(15);",
+            (monkey_object_t *) create_monkey_int(610)
+        }
+    };
+    size_t ntests = sizeof(tests) / sizeof(tests[0]);
+    run_vm_tests(ntests, tests);
+    for (size_t i = 0; i < ntests; i++)
+        free_monkey_object(tests[i].expected);
+
+}
+
+static void
 test_closures(void)
 {
     vm_testcase tests[] = {
@@ -743,5 +770,6 @@ main(int argc, char **argv)
     test_builtin_functions();
     test_closures();
     test_recursive_closures();
+    test_recursive_fibonacci();
     return 0;
 }
