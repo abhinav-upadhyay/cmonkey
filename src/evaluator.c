@@ -309,7 +309,6 @@ apply_function(monkey_object_t *function_obj, cm_list *arguments_list)
             extended_env = create_enclosed_env(function->env);
             arg_node = arguments_list->head;
             param_node = function->parameters->head;
-            assert(function->parameters->length == arguments_list->length);
             while (arg_node != NULL) {
                 identifier_t *param = (identifier_t *) param_node->data;
                 env_put(extended_env, strdup(param->value), copy_monkey_object(arg_node->data));

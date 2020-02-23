@@ -53,7 +53,7 @@ create_env(void)
     environment_t *env;
     env = malloc(sizeof(*env));
     if (env == NULL)
-        errx(EXIT_FAILURE, "malloc failed");
+        err(EXIT_FAILURE, "malloc failed");
     env->table = table;
     env->outer = NULL;
     return env;
@@ -63,7 +63,7 @@ environment_t *
 create_enclosed_env(environment_t *outer)
 {
     environment_t *env = create_env();
-    env->outer = copy_env(outer);
+    env->outer = outer;
     return env;
 }
 
@@ -89,9 +89,6 @@ env_get(environment_t *env, char *name)
 void
 env_free(environment_t *env)
 {
-    if (env->outer != NULL) {
-        env_free(env->outer);
-    }
     cm_hash_table_free(env->table);
     free(env);
 }
