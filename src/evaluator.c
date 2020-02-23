@@ -256,7 +256,7 @@ eval_identifier_expression(expression_t *exp, environment_t *env)
 static cm_array_list *
 eval_expressions_to_array_list(cm_array_list *expression_list, environment_t *env)
 {
-    cm_array_list *values = cm_array_list_init(expression_list->length, free_monkey_object);
+    cm_array_list *values = cm_array_list_init(expression_list->length, NULL);
     monkey_object_t *value;
     for (size_t i = 0; i < expression_list->length; i++) {
         value = monkey_eval((node_t *) expression_list->array[i], env);
@@ -412,7 +412,7 @@ static monkey_object_t *
 eval_hash_literal(hash_literal_t *hash_exp, environment_t *env)
 {
     cm_hash_table *pairs = cm_hash_table_init(monkey_object_hash,
-    monkey_object_equals, free_monkey_object, free_monkey_object);
+    monkey_object_equals, NULL, NULL);
     cm_array_list *keys = cm_hash_table_get_keys(hash_exp->pairs);
     if (keys != NULL) {
         for (size_t i = 0; i < keys->length; i++) {

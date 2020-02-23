@@ -564,7 +564,7 @@ copy_monkey_object(monkey_object_t *object)
     if (object == NULL)
         return (monkey_object_t *) create_monkey_null();
 
-    if (object->type == MONKEY_BOOL || object->type == MONKEY_NULL)
+    if (object->type == MONKEY_BOOL || object->type == MONKEY_NULL || object->type == MONKEY_BUILTIN)
         return object;
     
     object->refcount++;
